@@ -2,25 +2,23 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v0.2 — pick-by-voice прототип (личное использование)
-  Новое в v0.2:
-   • Кнопка «Фото листа»: OCR нескольких фото прямо в приложении (Tesseract.js)
-   • Слияние сканов: повторы НЕ дублируются, а заполняют пропуски
-   • Сортировка по локациям (порядок маршрута)
-   • Тап по Qty в таблице или по большому числу = ручная правка
-   • Поле «Total coli» + автосверка суммы
-   • Эко-экран: гаснет в чёрный через 20 с, экономит батарею (OLED)
+  PICKER v0.3 — pick-by-voice прототип (личное использование)
+  Новое в v0.3:
+   • AI-распознавание фото (Google Gemini, бесплатный ключ с aistudio.google.com)
+     Ключ хранится ТОЛЬКО в браузере телефона (localStorage), в код не вшит.
+   • Tesseract остался запасным путём (нет ключа / нет интернета)
+   • Починка слипшихся локаций: "003005" и "003.005" -> "003-005"
   Где что менять:
    • Текст озвучки позиции  -> функция itemPhrase()
    • Парсер/слияние         -> между метками PARSER_START / PARSER_END
-   • Щелчки AirPods         -> блок "AIRPODS"
+   • Промпт для AI          -> константа AI_PROMPT
 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0f14">
-<title>Picker v0.2</title>
+<title>Picker v0.3</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
   :root{
@@ -77,7 +75,6 @@
   .settings input[type=range]{flex:1;}
   .hint{color:var(--dim); font-size:12.5px; line-height:1.45; margin-top:6px;}
   .done-icon{font-size:48px; text-align:center; margin:16px 0 4px;}
-  /* эко-экран: почти всё чёрное, OLED-пиксели выключены */
   #eco{position:fixed; inset:0; background:#000; z-index:50;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;}
   #eco .e1{color:#39434f; font-size:60px; font-weight:800; font-variant-numeric:tabular-nums;}
@@ -90,13 +87,15 @@
 
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ЛИСТА ================= -->
 <div id="scrSetup">
-  <h1>Picker v0.2</h1>
+  <h1>Picker v0.3</h1>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div class="row">
     <button class="btn" id="btnPhoto">📷 Фото листа</button>
-    <button class="btn" id="btnClear" style="flex:0 0 32%">Очистить</button>
+    <button class="btn" id="btnKey" style="flex:0 0 18%">🔑</button>
+    <button class="btn" id="btnClear" style="flex:0 0 26%">Очистить</button>
   </div>
+  <div class="hint" id="aiState"></div>
   <input type="file" id="photoInput" accept="image/*" multiple hidden>
   <div id="ocrStatus" class="warn-line" hidden></div>
 
@@ -177,11 +176,11 @@
 'use strict';
 
 /* ================= СОСТОЯНИЕ ================= */
-let items = [];          // [{loc, qty, article, desc, taken, conflict}]
+let items = [];
 let idx = 0;
 let inWork = false;
 let repeatTimer = null;
-let manualQty = {};      // ручные правки: {"003-002": 3} — переживают повторный парсинг
+let manualQty = {};
 
 const $ = id => document.getElementById(id);
 
@@ -193,11 +192,11 @@ function normalizeScan(t){
     .replace(/\u00A0/g, ' ')
     .replace(/\|/g, ' ')                                   // палки таблицы
     .replace(/(\d)\s*[—–-]\s*(\d)/g, '$1-$2')              // "003 - 002" -> "003-002"
-    .replace(/(\d)[OoОо](?=\d)/g, function(_, a){ return a + '0'; }); // буква О между цифрами -> ноль
+    .replace(/(\d)[OoОо](?=\d)/g, function(_, a){ return a + '0'; }) // буква О -> ноль
+    .replace(/\b(\d{3})[.,](\d{3})\b/g, '$1-$2')           // "003.005" -> "003-005"
+    .replace(/\b(0\d\d)(0\d\d)\b/g, '$1-$2');              // "003005"  -> "003-005"
 }
 
-// Локация вида 003-002 = начало позиции. 8 цифр подряд = артикул.
-// Первое число из 1-2 цифр ДО артикула = количество (запасной вариант — сразу после).
 function parseList(raw){
   const text = normalizeScan(raw);
   const found = Array.from(text.matchAll(/\b\d{3}-\d{3}\b/g));
@@ -237,8 +236,7 @@ function parseList(raw){
   return out;
 }
 
-// СЛИЯНИЕ: одна локация = одна позиция. Повторы заполняют пропуски,
-// расхождения по Qty помечаются конфликтом (показываем, не угадываем).
+// СЛИЯНИЕ: одна локация = одна позиция, повторы заполняют пропуски
 function foldItems(rawItems){
   const out = [];
   for (let k = 0; k < rawItems.length; k++){
@@ -256,7 +254,6 @@ function foldItems(rawItems){
   return out;
 }
 
-// Ищем "Total coli 29" в отсканированном тексте
 function detectTotal(raw){
   const m = normalizeScan(raw).match(/total\s*coli[^0-9]{0,12}(\d{1,3})\b/i);
   return m ? parseInt(m[1], 10) : null;
@@ -266,7 +263,6 @@ function detectTotal(raw){
 /* ================= ЧИСЛА -> СЛОВА ================= */
 const DIGITS = ['ноль','один','два','три','четыре','пять','шесть','семь','восемь','девять'];
 
-// "003-002" -> "ноль три, ноль два"  (003 -> 03)
 function locToSpeech(loc){
   return loc.split('-').map(function(g){
     const short = g.replace(/^0/, '');
@@ -422,7 +418,7 @@ function sayAll(){
 let wakeLock = null;
 async function keepAwake(){
   try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }
-  catch(e){ /* не критично */ }
+  catch(e){}
 }
 document.addEventListener('visibilitychange', function(){
   if (document.visibilityState === 'visible' && inWork) keepAwake();
@@ -497,7 +493,7 @@ async function podToggle(on){
   }
 }
 
-/* ================= ЭКО-ЭКРАН (батарея) ================= */
+/* ================= ЭКО-ЭКРАН ================= */
 let lastTouch = Date.now(), ecoShown = false;
 document.addEventListener('pointerdown', function(){
   lastTouch = Date.now();
@@ -515,27 +511,27 @@ function showEco(){
 }
 function hideEco(){ ecoShown = false; $('eco').hidden = true; }
 
-/* ================= OCR ФОТО (Tesseract.js) ================= */
-// уменьшение + ч/б + контраст: так распознаётся точнее и быстрее
-function preprocess(file){
+/* ================= ЗАГРУЗКА КАРТИНКИ В CANVAS ================= */
+function loadToCanvas(file, maxSide, gray){
   return new Promise(function(res, rej){
     const img = new Image();
     img.onload = function(){
-      const maxSide = 2000;
       const k = Math.min(1, maxSide / Math.max(img.width, img.height));
       const c = document.createElement('canvas');
       c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
       const ctx = c.getContext('2d');
       ctx.drawImage(img, 0, 0, c.width, c.height);
-      const d = ctx.getImageData(0, 0, c.width, c.height);
-      const p = d.data;
-      for (let i = 0; i < p.length; i += 4){
-        let g = 0.299 * p[i] + 0.587 * p[i+1] + 0.114 * p[i+2];
-        g = (g - 128) * 1.25 + 138;            // контраст + чуть света
-        g = g < 0 ? 0 : g > 255 ? 255 : g;
-        p[i] = p[i+1] = p[i+2] = g;
+      if (gray){
+        const d = ctx.getImageData(0, 0, c.width, c.height);
+        const p = d.data;
+        for (let i = 0; i < p.length; i += 4){
+          let g = 0.299 * p[i] + 0.587 * p[i+1] + 0.114 * p[i+2];
+          g = (g - 128) * 1.25 + 138;
+          g = g < 0 ? 0 : g > 255 ? 255 : g;
+          p[i] = p[i+1] = p[i+2] = g;
+        }
+        ctx.putImageData(d, 0, 0);
       }
-      ctx.putImageData(d, 0, 0);
       URL.revokeObjectURL(img.src);
       res(c);
     };
@@ -544,6 +540,66 @@ function preprocess(file){
   });
 }
 
+/* ================= AI-РАСПОЗНАВАНИЕ (Google Gemini) ================= */
+// Ключ хранится только в localStorage этого телефона. Бесплатный, без карты:
+// aistudio.google.com -> Get API key -> Create API key
+const AI_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+const AI_PROMPT =
+  'You see a photo of a warehouse picking list. The table has columns: Location, Qty, Article, Description.\n' +
+  'Transcribe EVERY row. Output exactly one line per row in this format:\n' +
+  'LOCATION QTY ARTICLE DESCRIPTION\n' +
+  '- LOCATION: 3 digits, dash, 3 digits (example: 003-002)\n' +
+  '- QTY: integer\n' +
+  '- ARTICLE: 8 digits\n' +
+  '- DESCRIPTION: the printed text\n' +
+  'If a field is unreadable, write ? in its place.\n' +
+  'If the sheet header shows a "Total coli" number, add a final line: Total coli: N\n' +
+  'Output nothing else: no markdown, no comments, no code fences.';
+
+function aiKey(){
+  try { return localStorage.getItem('aikey') || ''; } catch(e){ return ''; }
+}
+function updateAiState(){
+  $('aiState').innerHTML = aiKey()
+    ? 'AI-распознавание: <b style="color:var(--go)">подключено ✓</b> (фото читает Gemini)'
+    : 'AI не настроен — фото читает грубый офлайн-движок. Нажми 🔑 и вставь бесплатный ключ с aistudio.google.com.';
+}
+
+async function aiRecognize(canvas, key){
+  const b64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+  let lastErr = 'модели недоступны';
+  for (let i = 0; i < AI_MODELS.length; i++){
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
+      AI_MODELS[i] + ':generateContent?key=' + encodeURIComponent(key);
+    let resp;
+    try {
+      resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [
+            { text: AI_PROMPT },
+            { inline_data: { mime_type: 'image/jpeg', data: b64 } }
+          ]}],
+          generationConfig: { temperature: 0 }
+        })
+      });
+    } catch(e){ throw new Error('нет связи с Google'); }
+    if (resp.status === 404){ lastErr = 'модель ' + AI_MODELS[i] + ' недоступна'; continue; }
+    if (resp.status === 429) throw new Error('лимит запросов — подожди минуту');
+    if (resp.status === 400 || resp.status === 403) throw new Error('ключ не принят (' + resp.status + ')');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
+    const txt = parts.map(function(p){ return p.text || ''; }).join('\n')
+      .replace(/```[a-z]*\n?/gi, '').trim();
+    if (txt) return txt;
+    lastErr = 'пустой ответ';
+  }
+  throw new Error(lastErr);
+}
+
+/* ================= OCR ФОТО: AI или Tesseract ================= */
 function ruStatus(s){
   if (s === 'recognizing text') return 'распознаю';
   if (s === 'loading language traineddata') return 'загружаю модель (первый раз ~10 МБ)';
@@ -554,40 +610,64 @@ function ruStatus(s){
 let ocrBusy = false, ocrCur = 0, ocrTotal = 0;
 async function ocrPhotos(files){
   if (!files.length || ocrBusy) return;
-  if (typeof Tesseract === 'undefined'){
-    $('ocrStatus').hidden = false;
-    $('ocrStatus').textContent = 'OCR-движок не загрузился (нет интернета?). Используй «Сканировать текст» с клавиатуры.';
-    return;
-  }
   ocrBusy = true; $('btnPhoto').disabled = true;
   const st = $('ocrStatus'); st.hidden = false;
   ocrTotal = files.length;
-  try {
-    const worker = await Tesseract.createWorker('eng', 1, {
-      logger: function(m){
-        if (m.status && typeof m.progress === 'number'){
-          st.textContent = 'Фото ' + ocrCur + '/' + ocrTotal + ': ' + ruStatus(m.status) +
-            '… ' + Math.round(m.progress * 100) + '%';
-        }
+  let aiOk = false;
+
+  // 1) Основной путь: AI (если есть ключ)
+  const key = aiKey();
+  if (key){
+    try {
+      for (let i = 0; i < files.length; i++){
+        ocrCur = i + 1;
+        st.textContent = 'Фото ' + ocrCur + '/' + ocrTotal + ': AI читает…';
+        const canvas = await loadToCanvas(files[i], 1600, false);
+        const txt = await aiRecognize(canvas, key);
+        $('raw').value += '\n' + txt;
       }
-    });
-    await worker.setParameters({
-      tessedit_pageseg_mode: '6',         // читаем построчно, как таблицу
-      preserve_interword_spaces: '1'
-    });
-    for (let i = 0; i < files.length; i++){
-      ocrCur = i + 1;
-      st.textContent = 'Фото ' + ocrCur + '/' + ocrTotal + ': подготовка…';
-      const canvas = await preprocess(files[i]);
-      const r = await worker.recognize(canvas);
-      $('raw').value += '\n' + r.data.text;
+      aiOk = true;
+      st.hidden = true;
+      doParse();
+    } catch(err){
+      st.textContent = 'AI не сработал: ' + (err && err.message ? err.message : err) +
+        '. Пробую офлайн-движок…';
     }
-    await worker.terminate();
-    st.hidden = true;
-    doParse();
-  } catch(err){
-    st.textContent = 'OCR не сработал: ' + (err && err.message ? err.message : err) +
-      '. Запасной путь — «Сканировать текст» с клавиатуры.';
+  }
+
+  // 2) Запасной путь: Tesseract (нет ключа или AI упал)
+  if (!aiOk){
+    if (typeof Tesseract === 'undefined'){
+      st.textContent = 'Нет ни AI-ключа, ни OCR-движка (интернет?). Используй «Сканировать текст» с клавиатуры.';
+    } else {
+      try {
+        const worker = await Tesseract.createWorker('eng', 1, {
+          logger: function(m){
+            if (m.status && typeof m.progress === 'number'){
+              st.textContent = 'Фото ' + ocrCur + '/' + ocrTotal + ': ' + ruStatus(m.status) +
+                '… ' + Math.round(m.progress * 100) + '%';
+            }
+          }
+        });
+        await worker.setParameters({
+          tessedit_pageseg_mode: '6',
+          preserve_interword_spaces: '1'
+        });
+        for (let i = 0; i < files.length; i++){
+          ocrCur = i + 1;
+          st.textContent = 'Фото ' + ocrCur + '/' + ocrTotal + ': подготовка…';
+          const canvas = await loadToCanvas(files[i], 2000, true);
+          const r = await worker.recognize(canvas);
+          $('raw').value += '\n' + r.data.text;
+        }
+        await worker.terminate();
+        st.hidden = true;
+        doParse();
+      } catch(err){
+        st.textContent = 'OCR не сработал: ' + (err && err.message ? err.message : err) +
+          '. Запасной путь — «Сканировать текст» с клавиатуры.';
+      }
+    }
   }
   ocrBusy = false; $('btnPhoto').disabled = false;
 }
@@ -598,7 +678,7 @@ function doParse(){
   const det = detectTotal(raw);
   if (det != null && !$('expTotal').value) $('expTotal').value = det;
   items = foldItems(parseList(raw));
-  items.forEach(function(it){                       // ручные правки поверх
+  items.forEach(function(it){
     if (manualQty[it.loc] != null){ it.qty = manualQty[it.loc]; it.conflict = false; }
   });
   items.sort(function(a, b){ return a.loc < b.loc ? -1 : a.loc > b.loc ? 1 : 0; });
@@ -687,6 +767,15 @@ $('photoInput').addEventListener('change', function(e){
   ocrPhotos(Array.prototype.slice.call(e.target.files));
   e.target.value = '';
 });
+$('btnKey').addEventListener('click', function(){
+  const v = prompt('API-ключ Google AI Studio (бесплатный, вида AIza…).\nПусто = удалить ключ.', aiKey());
+  if (v === null) return;
+  try {
+    if (v.trim()) localStorage.setItem('aikey', v.trim());
+    else localStorage.removeItem('aikey');
+  } catch(e){ alert('Не удалось сохранить ключ.'); }
+  updateAiState();
+});
 $('btnClear').addEventListener('click', function(){
   $('raw').value = ''; $('parseOut').innerHTML = '';
   $('expTotal').value = ''; $('btnStart').hidden = true;
@@ -721,6 +810,8 @@ $('btnNew').addEventListener('click', function(){ location.reload(); });
 $('podChk').addEventListener('change', function(e){ podToggle(e.target.checked); });
 $('repChk').addEventListener('change', scheduleRepeat);
 $('repSec').addEventListener('change', scheduleRepeat);
+
+updateAiState();
 </script>
 </body>
 </html>
