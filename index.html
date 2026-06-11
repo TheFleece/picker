@@ -6,7 +6,7 @@
   Новое в v0.3:
    • AI-распознавание фото (Google Gemini, бесплатный ключ с aistudio.google.com)
      Ключ хранится ТОЛЬКО в браузере телефона (localStorage), в код не вшит.
-   • Tesseract остался запасным путём (нет ключа / нет интернета)
+   • Без ключа: подсказка + «Сканировать текст» с клавиатуры iPhone
    • Починка слипшихся локаций: "003005" и "003.005" -> "003-005"
   Где что менять:
    • Текст озвучки позиции  -> функция itemPhrase()
@@ -18,8 +18,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0f14">
-<title>Picker v0.3</title>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<title>Picker v0.4</title>
 <style>
   :root{
     --bg:#0b0f14; --card:#141a22; --line:#243040;
@@ -81,13 +80,14 @@
   #eco .e2{color:#2c473a; font-size:42px; font-weight:800;}
   #eco .e3{color:#23292f; font-size:13px; margin-top:20px;}
   [hidden]{display:none !important;}
+  .btn-retry{background:#1a2535; border-color:var(--warn); color:var(--warn); margin-top:8px; font-size:17px; padding:14px;}
 </style>
 </head>
 <body>
 
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ЛИСТА ================= -->
 <div id="scrSetup">
-  <h1>Picker v0.3</h1>
+  <h1>Picker v0.4</h1>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div class="row">
@@ -98,6 +98,7 @@
   <div class="hint" id="aiState"></div>
   <input type="file" id="photoInput" accept="image/*" multiple hidden>
   <div id="ocrStatus" class="warn-line" hidden></div>
+  <button class="btn btn-retry" id="btnRetry" hidden>🔄 Повторить (тот же лист)</button>
 
   <textarea id="raw"
     placeholder="Сюда попадает текст с фото (кнопка выше). Можно добавить и скан с клавиатуры — «Сканировать текст». Повторные сканы того же листа НЕ дублируются: они заполняют пропуски."></textarea>
@@ -543,31 +544,44 @@ function loadToCanvas(file, maxSide, gray){
 /* ================= AI-РАСПОЗНАВАНИЕ (Google Gemini) ================= */
 // Ключ хранится только в localStorage этого телефона. Бесплатный, без карты:
 // aistudio.google.com -> Get API key -> Create API key
-const AI_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+// НЕ вставляй ключ в код — репо публичное, боты воруют ключи.
+
+// Пробуем по очереди, пока одна не ответит нормально.
+// Если всем 503 — не откатываемся на мусор, а даём кнопку "Повторить".
+const AI_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash-latest'
+];
+
 const AI_PROMPT =
   'You see a photo of a warehouse picking list. The table has columns: Location, Qty, Article, Description.\n' +
-  'Transcribe EVERY row. Output exactly one line per row in this format:\n' +
+  'Transcribe EVERY data row (skip header row). Output exactly one line per row:\n' +
   'LOCATION QTY ARTICLE DESCRIPTION\n' +
-  '- LOCATION: 3 digits, dash, 3 digits (example: 003-002)\n' +
-  '- QTY: integer\n' +
-  '- ARTICLE: 8 digits\n' +
-  '- DESCRIPTION: the printed text\n' +
-  'If a field is unreadable, write ? in its place.\n' +
-  'If the sheet header shows a "Total coli" number, add a final line: Total coli: N\n' +
-  'Output nothing else: no markdown, no comments, no code fences.';
+  'Rules:\n' +
+  '- LOCATION: always 3 digits, dash, 3 digits (example: 003-002)\n' +
+  '- QTY: integer 1-99\n' +
+  '- ARTICLE: exactly 8 digits\n' +
+  '- DESCRIPTION: the printed product name text\n' +
+  'If a field is unreadable or missing, write ? in its place.\n' +
+  'If the sheet shows a "Total coli" number, add one last line: Total coli: N\n' +
+  'Output NOTHING else — no headers, no markdown, no explanations, no code fences.';
 
 function aiKey(){
   try { return localStorage.getItem('aikey') || ''; } catch(e){ return ''; }
 }
+
 function updateAiState(){
   $('aiState').innerHTML = aiKey()
-    ? 'AI-распознавание: <b style="color:var(--go)">подключено ✓</b> (фото читает Gemini)'
-    : 'AI не настроен — фото читает грубый офлайн-движок. Нажми 🔑 и вставь бесплатный ключ с aistudio.google.com.';
+    ? 'AI-распознавание: <b style="color:var(--go)">подключено ✓</b> — фото читает Gemini'
+    : 'AI не настроен. Нажми 🔑 и вставь бесплатный ключ с <b>aistudio.google.com</b>. ' +
+      'Без ключа используй «Сканировать текст» (кнопка на клавиатуре iPhone).';
 }
 
 async function aiRecognize(canvas, key){
-  const b64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-  let lastErr = 'модели недоступны';
+  const b64 = canvas.toDataURL('image/jpeg', 0.88).split(',')[1];
+  let lastErr = 'все модели недоступны';
   for (let i = 0; i < AI_MODELS.length; i++){
     const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
       AI_MODELS[i] + ':generateContent?key=' + encodeURIComponent(key);
@@ -584,92 +598,90 @@ async function aiRecognize(canvas, key){
           generationConfig: { temperature: 0 }
         })
       });
-    } catch(e){ throw new Error('нет связи с Google'); }
-    if (resp.status === 404){ lastErr = 'модель ' + AI_MODELS[i] + ' недоступна'; continue; }
-    if (resp.status === 429) throw new Error('лимит запросов — подожди минуту');
-    if (resp.status === 400 || resp.status === 403) throw new Error('ключ не принят (' + resp.status + ')');
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    } catch(e){ throw new Error('no_network'); }
+
+    if (resp.status === 503 || resp.status === 502){
+      lastErr = '503_unavailable'; continue;   // пробуем следующую модель
+    }
+    if (resp.status === 429) throw new Error('429_ratelimit');
+    if (resp.status === 400) throw new Error('400_badkey');
+    if (resp.status === 403) throw new Error('403_forbidden');
+    if (resp.status === 404){ lastErr = '404_model_' + AI_MODELS[i]; continue; }
+    if (!resp.ok) throw new Error('http_' + resp.status);
+
     const data = await resp.json();
     const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
     const txt = parts.map(function(p){ return p.text || ''; }).join('\n')
       .replace(/```[a-z]*\n?/gi, '').trim();
-    if (txt) return txt;
-    lastErr = 'пустой ответ';
+    if (txt) return { text: txt, model: AI_MODELS[i] };
+    lastErr = 'empty_response';
   }
   throw new Error(lastErr);
 }
 
-/* ================= OCR ФОТО: AI или Tesseract ================= */
-function ruStatus(s){
-  if (s === 'recognizing text') return 'распознаю';
-  if (s === 'loading language traineddata') return 'загружаю модель (первый раз ~10 МБ)';
-  if (s === 'loading tesseract core') return 'загружаю движок';
-  return 'готовлюсь';
+/* ================= OCR ФОТО: только AI, retry при ошибке ================= */
+let ocrBusy = false;
+let pendingFiles = [];   // хранятся для retry без повторного выбора файлов
+
+function showOcrErr(msg){
+  const st = $('ocrStatus');
+  st.hidden = false;
+  st.textContent = msg;
+  $('btnRetry').hidden = false;
 }
 
-let ocrBusy = false, ocrCur = 0, ocrTotal = 0;
 async function ocrPhotos(files){
-  if (!files.length || ocrBusy) return;
-  ocrBusy = true; $('btnPhoto').disabled = true;
-  const st = $('ocrStatus'); st.hidden = false;
-  ocrTotal = files.length;
-  let aiOk = false;
+  if (!files.length) return;
+  pendingFiles = Array.prototype.slice.call(files);
+  await runAI();
+}
 
-  // 1) Основной путь: AI (если есть ключ)
+async function runAI(){
+  if (ocrBusy) return;
   const key = aiKey();
-  if (key){
-    try {
-      for (let i = 0; i < files.length; i++){
-        ocrCur = i + 1;
-        st.textContent = 'Фото ' + ocrCur + '/' + ocrTotal + ': AI читает…';
-        const canvas = await loadToCanvas(files[i], 1600, false);
-        const txt = await aiRecognize(canvas, key);
-        $('raw').value += '\n' + txt;
-      }
-      aiOk = true;
-      st.hidden = true;
-      doParse();
-    } catch(err){
-      st.textContent = 'AI не сработал: ' + (err && err.message ? err.message : err) +
-        '. Пробую офлайн-движок…';
+  if (!key){
+    showOcrErr('Нет AI-ключа. Нажми 🔑 и вставь ключ — затем нажми 📷 снова.');
+    return;
+  }
+  ocrBusy = true;
+  $('btnPhoto').disabled = true;
+  $('btnRetry').hidden = true;
+  const st = $('ocrStatus');
+  st.hidden = false;
+
+  try {
+    let allText = '';
+    for (let i = 0; i < pendingFiles.length; i++){
+      st.textContent = 'Фото ' + (i + 1) + '/' + pendingFiles.length + ': AI читает…';
+      const canvas = await loadToCanvas(pendingFiles[i], 1600, false);
+      const result = await aiRecognize(canvas, key);
+      allText += '\n' + result.text;
     }
+    // результат заменяет textarea (не добавляется к старому мусору)
+    $('raw').value = allText.trim();
+    st.hidden = true;
+    pendingFiles = [];
+    doParse();
+  } catch(err){
+    const code = err.message || '';
+    let msg;
+    if (code === 'no_network')
+      msg = 'Нет связи с Google. Проверь Wi-Fi/мобильный интернет и нажми 🔄';
+    else if (code === '503_unavailable')
+      msg = 'Google временно недоступен (503). Подожди ~30 секунд и нажми 🔄';
+    else if (code === '429_ratelimit')
+      msg = 'Слишком много запросов (429). Подожди минуту и нажми 🔄';
+    else if (code === '400_badkey')
+      msg = 'Ключ не принят (400). Нажми 🔑, удали ключ и вставь заново, затем 🔄';
+    else if (code === '403_forbidden')
+      msg = 'Доступ запрещён (403). Проверь ключ через 🔑 и нажми 🔄';
+    else
+      msg = 'Ошибка: ' + code + '. Нажми 🔄 чтобы попробовать снова.';
+    showOcrErr(msg);
   }
 
-  // 2) Запасной путь: Tesseract (нет ключа или AI упал)
-  if (!aiOk){
-    if (typeof Tesseract === 'undefined'){
-      st.textContent = 'Нет ни AI-ключа, ни OCR-движка (интернет?). Используй «Сканировать текст» с клавиатуры.';
-    } else {
-      try {
-        const worker = await Tesseract.createWorker('eng', 1, {
-          logger: function(m){
-            if (m.status && typeof m.progress === 'number'){
-              st.textContent = 'Фото ' + ocrCur + '/' + ocrTotal + ': ' + ruStatus(m.status) +
-                '… ' + Math.round(m.progress * 100) + '%';
-            }
-          }
-        });
-        await worker.setParameters({
-          tessedit_pageseg_mode: '6',
-          preserve_interword_spaces: '1'
-        });
-        for (let i = 0; i < files.length; i++){
-          ocrCur = i + 1;
-          st.textContent = 'Фото ' + ocrCur + '/' + ocrTotal + ': подготовка…';
-          const canvas = await loadToCanvas(files[i], 2000, true);
-          const r = await worker.recognize(canvas);
-          $('raw').value += '\n' + r.data.text;
-        }
-        await worker.terminate();
-        st.hidden = true;
-        doParse();
-      } catch(err){
-        st.textContent = 'OCR не сработал: ' + (err && err.message ? err.message : err) +
-          '. Запасной путь — «Сканировать текст» с клавиатуры.';
-      }
-    }
-  }
-  ocrBusy = false; $('btnPhoto').disabled = false;
+  ocrBusy = false;
+  $('btnPhoto').disabled = false;
 }
 
 /* ================= ЭКРАН 1: РАЗБОР И ТАБЛИЦА ================= */
@@ -776,10 +788,12 @@ $('btnKey').addEventListener('click', function(){
   } catch(e){ alert('Не удалось сохранить ключ.'); }
   updateAiState();
 });
+$('btnRetry').addEventListener('click', function(){ if (pendingFiles.length) runAI(); });
 $('btnClear').addEventListener('click', function(){
   $('raw').value = ''; $('parseOut').innerHTML = '';
   $('expTotal').value = ''; $('btnStart').hidden = true;
-  items = []; manualQty = {};
+  $('ocrStatus').hidden = true; $('btnRetry').hidden = true;
+  items = []; manualQty = {}; pendingFiles = [];
 });
 $('btnParse').addEventListener('click', doParse);
 $('expTotal').addEventListener('input', function(){ if (items.length) renderParse(); });
