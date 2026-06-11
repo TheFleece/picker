@@ -2,92 +2,107 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v0.3 — pick-by-voice прототип (личное использование)
-  Новое в v0.3:
-   • AI-распознавание фото (Google Gemini, бесплатный ключ с aistudio.google.com)
-     Ключ хранится ТОЛЬКО в браузере телефона (localStorage), в код не вшит.
-   • Без ключа: подсказка + «Сканировать текст» с клавиатуры iPhone
-   • Починка слипшихся локаций: "003005" и "003.005" -> "003-005"
-  Где что менять:
-   • Текст озвучки позиции  -> функция itemPhrase()
-   • Парсер/слияние         -> между метками PARSER_START / PARSER_END
-   • Промпт для AI          -> константа AI_PROMPT
+  PICKER v0.5
+  Новое:
+  • ВСЕ фото → ОДИН запрос Gemini (фикс 429 «too many requests»)
+  • Частичное кол-во: «Взял меньше» → зачёркнутый план, красный факт
+  • Пауза / Продолжить (перерыв, помогаю коллеге и т.д.)
+  • Голосовые команды (🎙): «взял» «назад» «повтори» «артикул» «пауза»
+    «продолжи» «сводка» «взял меньше» «конец»
 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0f14">
-<title>Picker v0.4</title>
+<title>Picker v0.5</title>
 <style>
-  :root{
-    --bg:#0b0f14; --card:#141a22; --line:#243040;
-    --txt:#e8eef5; --dim:#8fa1b3;
-    --go:#2dd46f; --go-press:#24b35d;
-    --warn:#ffb020; --bad:#ff5d5d;
-  }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  body{margin:0; background:var(--bg); color:var(--txt);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    padding:12px; padding-bottom:44px;}
-  body.work{background:#000;}
-  h1{font-size:20px; margin:4px 0 2px;}
-  .sub{color:var(--dim); font-size:13px; margin:0 0 14px;}
-  textarea{width:100%; min-height:130px; background:var(--card); color:var(--txt);
-    border:1px solid var(--line); border-radius:12px; padding:12px; font-size:15px;}
-  .btn{display:block; width:100%; border:1px solid var(--line); border-radius:14px;
-    padding:16px; font-size:18px; font-weight:600; color:var(--txt);
-    background:var(--card); margin-top:10px;}
-  .btn:active{transform:scale(.98);}
-  .btn:disabled{opacity:.5;}
-  .btn-go{background:var(--go); color:#06250f; font-size:26px; padding:24px; border:none;}
-  .btn-go:active{background:var(--go-press);}
-  .btn-small{padding:11px; font-size:15px; font-weight:500; color:var(--dim);}
-  .row{display:flex; gap:10px;}
-  .row .btn{flex:1;}
-  table{width:100%; border-collapse:collapse; margin-top:12px; font-size:14px;}
-  td,th{padding:7px 4px; border-bottom:1px solid var(--line); text-align:left;}
-  th{color:var(--dim); font-weight:500; font-size:12px;}
-  .num{font-variant-numeric:tabular-nums;}
-  .qcell{text-decoration:underline dotted; text-underline-offset:3px; min-width:34px;}
-  .bad-cell{color:var(--bad); font-weight:700;}
-  .ok-line{color:var(--go); font-size:15px; margin-top:10px;}
-  .warn-line{color:var(--warn); font-size:14px; margin-top:8px;}
-  .totline{display:flex; align-items:center; gap:8px; margin-top:12px; font-size:15px; color:var(--dim);}
-  .totline input{width:74px; font-size:16px; background:var(--card); color:var(--txt);
-    border:1px solid var(--line); border-radius:8px; padding:7px;}
-  .progress{display:flex; justify-content:space-between; color:var(--dim); font-size:15px; margin:4px 0 8px;}
-  .card{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px 12px; text-align:center;}
-  body.work .card{background:#0a0e13;}
-  #locBig{font-size:clamp(54px,19vw,100px); font-weight:800; letter-spacing:1px;
-    font-variant-numeric:tabular-nums; line-height:1.05;}
-  #qtyBig{font-size:clamp(40px,14vw,72px); font-weight:800; color:var(--go); margin-top:2px;}
-  #qtyBig.unknown{color:var(--bad); text-decoration:underline dotted;}
-  #descTxt{color:var(--dim); font-size:15px; margin-top:10px; min-height:20px; word-break:break-word;}
-  #artTxt{color:var(--dim); font-size:14px; margin-top:4px; font-variant-numeric:tabular-nums;}
-  .settings{margin-top:14px; background:var(--card); border:1px solid var(--line);
-    border-radius:14px; padding:12px; font-size:15px;}
-  body.work .settings{background:#0a0e13;}
-  .settings label{display:flex; align-items:center; gap:8px; margin:9px 0;}
-  .settings input[type=number]{width:64px; font-size:16px; background:var(--bg);
-    color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:6px;}
-  .settings input[type=range]{flex:1;}
-  .hint{color:var(--dim); font-size:12.5px; line-height:1.45; margin-top:6px;}
-  .done-icon{font-size:48px; text-align:center; margin:16px 0 4px;}
-  #eco{position:fixed; inset:0; background:#000; z-index:50;
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;}
-  #eco .e1{color:#39434f; font-size:60px; font-weight:800; font-variant-numeric:tabular-nums;}
-  #eco .e2{color:#2c473a; font-size:42px; font-weight:800;}
-  #eco .e3{color:#23292f; font-size:13px; margin-top:20px;}
-  [hidden]{display:none !important;}
-  .btn-retry{background:#1a2535; border-color:var(--warn); color:var(--warn); margin-top:8px; font-size:17px; padding:14px;}
+:root{
+  --bg:#0b0f14;--card:#141a22;--line:#243040;
+  --txt:#e8eef5;--dim:#8fa1b3;
+  --go:#2dd46f;--go-press:#24b35d;
+  --warn:#ffb020;--bad:#ff5d5d;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{margin:0;background:var(--bg);color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding:12px;padding-bottom:44px;}
+body.work{background:#000;}
+h1{font-size:20px;margin:4px 0 2px;}
+.sub{color:var(--dim);font-size:13px;margin:0 0 14px;}
+textarea{width:100%;min-height:110px;background:var(--card);color:var(--txt);
+  border:1px solid var(--line);border-radius:12px;padding:12px;font-size:15px;}
+.btn{display:block;width:100%;border:1px solid var(--line);border-radius:14px;
+  padding:16px;font-size:18px;font-weight:600;color:var(--txt);
+  background:var(--card);margin-top:10px;}
+.btn:active{transform:scale(.98);}
+.btn:disabled{opacity:.35;}
+.btn-go{background:var(--go);color:#06250f;font-size:26px;padding:24px;border:none;}
+.btn-go:active{background:var(--go-press);}
+.btn-small{padding:11px;font-size:15px;font-weight:500;color:var(--dim);}
+.btn-retry{background:#1a2535;border-color:var(--warn);color:var(--warn);margin-top:8px;font-size:17px;padding:14px;}
+.btn-warn{background:#251809;border-color:var(--warn);color:var(--warn);}
+.btn-stt{background:#0f1e33;border-color:#3a6bbd;color:#7ab3ff;}
+.btn-stt.listening{background:#250f0f;border-color:var(--bad);color:var(--bad);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.btn-stt.listening{animation:pulse 1s infinite;}
+.row{display:flex;gap:10px;}
+.row .btn{flex:1;}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px;}
+td,th{padding:7px 4px;border-bottom:1px solid var(--line);text-align:left;}
+th{color:var(--dim);font-weight:500;font-size:12px;}
+.num{font-variant-numeric:tabular-nums;}
+.qcell{text-decoration:underline dotted;text-underline-offset:3px;min-width:34px;}
+.bad-cell{color:var(--bad);font-weight:700;}
+.ok-line{color:var(--go);font-size:15px;margin-top:10px;}
+.warn-line{color:var(--warn);font-size:14px;margin-top:8px;}
+.partial-badge{color:var(--warn);}
+.totline{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:15px;color:var(--dim);}
+.totline input{width:74px;font-size:16px;background:var(--card);color:var(--txt);
+  border:1px solid var(--line);border-radius:8px;padding:7px;}
+.progress{display:flex;justify-content:space-between;color:var(--dim);font-size:15px;margin:4px 0 8px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 12px;text-align:center;}
+body.work .card{background:#0a0e13;}
+#locBig{font-size:clamp(54px,19vw,100px);font-weight:800;letter-spacing:1px;
+  font-variant-numeric:tabular-nums;line-height:1.05;}
+#qtyBig{font-weight:800;color:var(--go);margin-top:4px;line-height:1.15;}
+#qtyBig.normal{font-size:clamp(40px,14vw,72px);}
+#qtyBig.unknown{font-size:clamp(40px,14vw,72px);color:var(--bad);text-decoration:underline dotted;}
+#qtyBig.partial{font-size:clamp(28px,10vw,52px);}
+#qtyBig .q-orig{color:var(--dim);text-decoration:line-through;font-size:.85em;display:block;}
+#qtyBig .q-act{color:var(--bad);display:block;font-size:1.15em;}
+#descTxt{color:var(--dim);font-size:15px;margin-top:10px;min-height:20px;word-break:break-word;}
+#artTxt{color:var(--dim);font-size:14px;margin-top:4px;font-variant-numeric:tabular-nums;}
+.settings{margin-top:14px;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:12px;font-size:15px;}
+body.work .settings{background:#0a0e13;}
+.settings label{display:flex;align-items:center;gap:8px;margin:9px 0;}
+.settings input[type=number]{width:64px;font-size:16px;background:var(--bg);
+  color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px;}
+.settings input[type=range]{flex:1;}
+.hint{color:var(--dim);font-size:12.5px;line-height:1.5;margin-top:6px;}
+.done-icon{font-size:48px;text-align:center;margin:16px 0 4px;}
+/* Эко-экран */
+#eco{position:fixed;inset:0;background:#000;z-index:50;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;}
+#eco .e1{color:#39434f;font-size:60px;font-weight:800;font-variant-numeric:tabular-nums;}
+#eco .e2{color:#2c473a;font-size:42px;font-weight:800;}
+#eco .e3{color:#23292f;font-size:13px;margin-top:20px;}
+/* Экран паузы */
+#pauseOverlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:45;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:24px;gap:4px;}
+#pauseOverlay .pi{font-size:72px;line-height:1;}
+#pauseOverlay .pl{font-size:30px;font-weight:800;color:var(--warn);margin-top:6px;}
+#pauseOverlay .pp{color:var(--dim);font-size:16px;margin-top:8px;}
+[hidden]{display:none !important;}
 </style>
 </head>
 <body>
 
-<!-- ================= ЭКРАН 1: ЗАГРУЗКА ЛИСТА ================= -->
+<!-- ===== ЭКРАН 1: ЗАГРУЗКА ===== -->
 <div id="scrSetup">
-  <h1>Picker v0.4</h1>
+  <h1>Picker v0.5</h1>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div class="row">
@@ -98,10 +113,9 @@
   <div class="hint" id="aiState"></div>
   <input type="file" id="photoInput" accept="image/*" multiple hidden>
   <div id="ocrStatus" class="warn-line" hidden></div>
-  <button class="btn btn-retry" id="btnRetry" hidden>🔄 Повторить (тот же лист)</button>
+  <button class="btn btn-retry" id="btnRetry" hidden>🔄 Повторить (те же фото)</button>
 
-  <textarea id="raw"
-    placeholder="Сюда попадает текст с фото (кнопка выше). Можно добавить и скан с клавиатуры — «Сканировать текст». Повторные сканы того же листа НЕ дублируются: они заполняют пропуски."></textarea>
+  <textarea id="raw" placeholder="Сюда попадает текст с фото. Можно также нажать сюда и использовать «Сканировать текст» с клавиатуры iPhone. Повторные сканы НЕ дублируются — они заполняют пропуски."></textarea>
 
   <button class="btn" id="btnParse">Распознать лист</button>
 
@@ -114,7 +128,7 @@
   <button class="btn btn-go" id="btnStart" hidden>СТАРТ</button>
 </div>
 
-<!-- ================= ЭКРАН 2: РАБОТА ================= -->
+<!-- ===== ЭКРАН 2: РАБОТА ===== -->
 <div id="scrWork" hidden>
   <div class="progress">
     <span id="posTxt">1 / 1</span>
@@ -123,707 +137,633 @@
 
   <div class="card">
     <div id="locBig">000-000</div>
-    <div id="qtyBig">× 0</div>
+    <div id="qtyBig" class="normal">× 0</div>
     <div id="descTxt"></div>
     <div id="artTxt"></div>
   </div>
 
   <button class="btn btn-go" id="btnTake">ВЗЯЛ</button>
-  <div class="row">
+
+  <div class="row" style="margin-top:10px">
+    <button class="btn" id="btnPause">⏸ Пауза</button>
     <button class="btn" id="btnRepeat">Повтор</button>
     <button class="btn" id="btnBack">Назад</button>
   </div>
   <div class="row">
     <button class="btn" id="btnArt">Артикул</button>
+    <button class="btn btn-warn" id="btnPartial">⚠ Взял меньше</button>
+    <button class="btn btn-stt" id="btnVoice">🎙</button>
+  </div>
+  <div class="row">
     <button class="btn" id="btnSum">Сводка</button>
   </div>
 
   <div class="settings">
     <label><input type="checkbox" id="repChk" checked>
       Автоповтор каждые <input type="number" id="repSec" value="8" min="3" max="60"> сек</label>
-    <label>Скорость речи
-      <input type="range" id="rate" min="0.7" max="1.4" step="0.05" value="1.0"></label>
-    <label><input type="checkbox" id="podChk">
-      Щелчки AirPods (экспериментально)</label>
-    <label><input type="checkbox" id="ecoChk" checked>
-      Эко-экран (гаснет через 20 с)</label>
-    <div class="hint">Щелчки: 1 = ВЗЯЛ · 2 = Повтор · 3 = Назад. Вынутый наушник может сработать как «Взял». Несовместимо с фоновой музыкой.<br>
-    Тест батареи: включи щелчки → заблокируй телефон. Если озвучка продолжается — можно работать с выключенным экраном.<br>
-    Тап по большому числу × — исправить количество вручную.</div>
+    <label>Скорость речи <input type="range" id="rate" min="0.7" max="1.4" step="0.05" value="1.0"></label>
+    <label><input type="checkbox" id="podChk">Щелчки AirPods (эксп.)</label>
+    <label><input type="checkbox" id="ecoChk" checked>Эко-экран (гаснет через 20 с)</label>
+    <div class="hint">
+      Щелчки: 1 = ВЗЯЛ · 2 = Повтор · 3 = Назад<br>
+      🎙 Голосовые: «взял» «назад» «повтори» «артикул» «пауза» «продолжи» «сводка» «взял меньше» «конец»<br>
+      Тап по большому числу × — исправить Qty вручную
+    </div>
   </div>
 
   <button class="btn btn-small" id="btnFinish">Закончить и показать итог</button>
   <button class="btn btn-small" id="btnEdit">✎ Назад к списку</button>
 </div>
 
-<!-- ================= ЭКРАН 3: ИТОГ ================= -->
+<!-- ===== ЭКРАН 3: ИТОГ ===== -->
 <div id="scrDone" hidden>
   <div class="done-icon">✅</div>
-  <h1 style="text-align:center" id="doneHead">Лист готов</h1>
+  <h1 style="text-align:center">Лист готов</h1>
   <p class="sub" style="text-align:center" id="doneSub"></p>
   <div id="doneTable"></div>
-  <button class="btn" id="btnSayAll">🔊 Озвучить весь итог</button>
+  <button class="btn" id="btnSayAll">🔊 Озвучить итог</button>
   <button class="btn" id="btnNew">Новый лист</button>
 </div>
 
-<!-- ================= ЭКО-ЭКРАН ================= -->
+<!-- ===== ЭКО-ЭКРАН ===== -->
 <div id="eco" hidden>
   <div class="e1" id="ecoLoc">000-000</div>
   <div class="e2" id="ecoQty">× 0</div>
   <div class="e3">коснись экрана, чтобы вернуть</div>
 </div>
 
+<!-- ===== ПАУЗА-ЭКРАН ===== -->
+<div id="pauseOverlay" hidden>
+  <div class="pi">⏸</div>
+  <div class="pl">ПАУЗА</div>
+  <div class="pp" id="pauseInfo"></div>
+  <button class="btn btn-go" id="btnResume" style="margin-top:28px;max-width:300px">▶ ПРОДОЛЖИТЬ</button>
+</div>
+
 <script>
 'use strict';
 
-/* ================= СОСТОЯНИЕ ================= */
-let items = [];
-let idx = 0;
-let inWork = false;
+/* ===== СОСТОЯНИЕ ===== */
+let items = [];   // {loc, qty, actualQty, article, desc, taken, conflict}
+let idx   = 0;
+let inWork  = false;
+let paused  = false;
 let repeatTimer = null;
-let manualQty = {};
+let manualQty   = {};
+let pendingFiles = [];
 
 const $ = id => document.getElementById(id);
 
-/* ================= ПАРСЕР И СЛИЯНИЕ ================= */
-// ===PARSER_START===
-// Чистка типичных косяков OCR перед разбором
+/* ===== ПАРСЕР + СЛИЯНИЕ ===== */
 function normalizeScan(t){
   return String(t)
-    .replace(/\u00A0/g, ' ')
-    .replace(/\|/g, ' ')                                   // палки таблицы
-    .replace(/(\d)\s*[—–-]\s*(\d)/g, '$1-$2')              // "003 - 002" -> "003-002"
-    .replace(/(\d)[OoОо](?=\d)/g, function(_, a){ return a + '0'; }) // буква О -> ноль
-    .replace(/\b(\d{3})[.,](\d{3})\b/g, '$1-$2')           // "003.005" -> "003-005"
-    .replace(/\b(0\d\d)(0\d\d)\b/g, '$1-$2');              // "003005"  -> "003-005"
+    .replace(/\u00A0/g,' ').replace(/\|/g,' ')
+    .replace(/(\d)\s*[—–-]\s*(\d)/g,'$1-$2')
+    .replace(/(\d)[OoОо](?=\d)/g,(_,a)=>a+'0')
+    .replace(/\b(\d{3})[.,](\d{3})\b/g,'$1-$2')
+    .replace(/\b(0\d\d)(0\d\d)\b/g,'$1-$2');
 }
-
 function parseList(raw){
   const text = normalizeScan(raw);
   const found = Array.from(text.matchAll(/\b\d{3}-\d{3}\b/g));
   const out = [];
-  for (let i = 0; i < found.length; i++){
-    const m = found[i];
-    const segStart = m.index + m[0].length;
-    const segEnd = (i + 1 < found.length) ? found[i + 1].index : text.length;
-    const tokens = text.slice(segStart, segEnd).split(/\s+/).filter(Boolean);
-
-    let article = null, qty = null;
-    const artIdx = tokens.findIndex(t => /^\d{8}$/.test(t));
-    if (artIdx !== -1) article = tokens[artIdx];
-
-    let qtyIdx = -1;
-    const limit = (artIdx !== -1) ? artIdx : tokens.length;
-    for (let j = 0; j < limit; j++){
-      if (/^\d{1,2}$/.test(tokens[j])) { qtyIdx = j; break; }
+  for(let i=0;i<found.length;i++){
+    const m=found[i];
+    const seg=text.slice(m.index+m[0].length,(i+1<found.length)?found[i+1].index:text.length);
+    const tok=seg.split(/\s+/).filter(Boolean);
+    let article=null,qty=null;
+    const ai=tok.findIndex(t=>/^\d{8}$/.test(t));
+    if(ai!==-1)article=tok[ai];
+    let qi=-1;
+    for(let j=0;j<(ai!==-1?ai:tok.length);j++){if(/^\d{1,2}$/.test(tok[j])){qi=j;break;}}
+    if(qi===-1&&ai!==-1)for(let j=ai+1;j<Math.min(tok.length,ai+3);j++){if(/^\d{1,2}$/.test(tok[j])){qi=j;break;}}
+    if(qi!==-1)qty=parseInt(tok[qi],10);
+    const desc=[];
+    for(let j=0;j<tok.length;j++){
+      if(j===ai||j===qi)continue;
+      if(ai!==-1&&j<ai)continue;
+      desc.push(tok[j]);if(desc.length>=8)break;
     }
-    if (qtyIdx === -1 && artIdx !== -1){
-      for (let j = artIdx + 1; j < Math.min(tokens.length, artIdx + 3); j++){
-        if (/^\d{1,2}$/.test(tokens[j])) { qtyIdx = j; break; }
-      }
-    }
-    if (qtyIdx !== -1) qty = parseInt(tokens[qtyIdx], 10);
-
-    const desc = [];
-    for (let j = 0; j < tokens.length; j++){
-      if (j === artIdx || j === qtyIdx) continue;
-      if (artIdx !== -1 && j < artIdx) continue;
-      desc.push(tokens[j]);
-      if (desc.length >= 8) break;
-    }
-    out.push({ loc: m[0], qty: qty, article: article, desc: desc.join(' '),
-               taken: false, conflict: false });
+    out.push({loc:m[0],qty,actualQty:null,article,desc:desc.join(' '),taken:false,conflict:false});
   }
   return out;
 }
-
-// СЛИЯНИЕ: одна локация = одна позиция, повторы заполняют пропуски
-function foldItems(rawItems){
-  const out = [];
-  for (let k = 0; k < rawItems.length; k++){
-    const it = rawItems[k];
-    const ex = out.find(function(e){
-      return e.loc === it.loc &&
-        (e.article === it.article || !e.article || !it.article);
-    });
-    if (!ex){ out.push(it); continue; }
-    if (ex.qty == null && it.qty != null) ex.qty = it.qty;
-    else if (ex.qty != null && it.qty != null && ex.qty !== it.qty) ex.conflict = true;
-    if (!ex.article && it.article) ex.article = it.article;
-    if ((it.desc || '').length > (ex.desc || '').length) ex.desc = it.desc;
+function foldItems(raw){
+  const out=[];
+  for(const it of raw){
+    const ex=out.find(e=>e.loc===it.loc&&(e.article===it.article||!e.article||!it.article));
+    if(!ex){out.push(it);continue;}
+    if(ex.qty==null&&it.qty!=null)ex.qty=it.qty;
+    else if(ex.qty!=null&&it.qty!=null&&ex.qty!==it.qty)ex.conflict=true;
+    if(!ex.article&&it.article)ex.article=it.article;
+    if((it.desc||'').length>(ex.desc||'').length)ex.desc=it.desc;
   }
   return out;
 }
-
 function detectTotal(raw){
-  const m = normalizeScan(raw).match(/total\s*coli[^0-9]{0,12}(\d{1,3})\b/i);
-  return m ? parseInt(m[1], 10) : null;
+  const m=normalizeScan(raw).match(/total\s*coli[^0-9]{0,12}(\d{1,3})\b/i);
+  return m?parseInt(m[1],10):null;
 }
-// ===PARSER_END===
 
-/* ================= ЧИСЛА -> СЛОВА ================= */
-const DIGITS = ['ноль','один','два','три','четыре','пять','шесть','семь','восемь','девять'];
-
+/* ===== ЧИСЛА → СЛОВА ===== */
+const DIGITS=['ноль','один','два','три','четыре','пять','шесть','семь','восемь','девять'];
+const QTY_W={1:'одну',2:'две',3:'три',4:'четыре',5:'пять',6:'шесть',7:'семь',
+  8:'восемь',9:'девять',10:'десять',11:'одиннадцать',12:'двенадцать',
+  13:'тринадцать',14:'четырнадцать',15:'пятнадцать',16:'шестнадцать',
+  17:'семнадцать',18:'восемнадцать',19:'девятнадцать',20:'двадцать'};
 function locToSpeech(loc){
-  return loc.split('-').map(function(g){
-    const short = g.replace(/^0/, '');
-    return short.split('').map(d => DIGITS[+d]).join(' ');
-  }).join(', ');
+  return loc.split('-').map(g=>g.replace(/^0/,'').split('').map(d=>DIGITS[+d]).join(' ')).join(', ');
 }
-
-const QTY_WORDS = {1:'одну',2:'две',3:'три',4:'четыре',5:'пять',6:'шесть',7:'семь',
-  8:'восемь',9:'девять',10:'десять',11:'одиннадцать',12:'двенадцать',13:'тринадцать',
-  14:'четырнадцать',15:'пятнадцать',16:'шестнадцать',17:'семнадцать',18:'восемнадцать',
-  19:'девятнадцать',20:'двадцать'};
-function qtyToSpeech(n){ return QTY_WORDS[n] || String(n); }
-
+function qtyToSpeech(n){return QTY_W[n]||String(n);}
 function shtuk(n){
-  const a = n % 10, b = n % 100;
-  if (a === 1 && b !== 11) return 'штуку';
-  if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return 'штуки';
-  return 'штук';
+  const a=n%10,b=n%100;
+  if(a===1&&b!==11)return'штуку';
+  if(a>=2&&a<=4&&(b<12||b>14))return'штуки';
+  return'штук';
 }
-
-function articleToSpeech(a){
-  return a ? a.replace(/(\d\d)(?=\d)/g, '$1 ') : 'артикул не распознан';
-}
-
-// >>> ФОРМАТ ОЗВУЧКИ ПОЗИЦИИ — менять тут <<<
+function articleToSpeech(a){return a?a.replace(/(\d\d)(?=\d)/g,'$1 '):'артикул не распознан';}
 function itemPhrase(it){
-  const q = (it.qty != null)
-    ? 'Взять ' + qtyToSpeech(it.qty) + ' ' + shtuk(it.qty) + '.'
-    : 'Количество не распознано, посмотри на экран.';
-  return 'Локация ' + locToSpeech(it.loc) + '. ' + q;
+  const eff=it.actualQty!=null?it.actualQty:it.qty;
+  if(eff==null)return 'Локация '+locToSpeech(it.loc)+'. Количество не распознано.';
+  if(eff===0) return 'Локация '+locToSpeech(it.loc)+'. Товара нет, пропускаем.';
+  let q='Взять '+qtyToSpeech(eff)+' '+shtuk(eff)+'.';
+  if(it.actualQty!=null)q+=' По плану '+it.qty+'.';
+  return 'Локация '+locToSpeech(it.loc)+'. '+q;
 }
 
-/* ================= ОЗВУЧКА (TTS) ================= */
-let ruVoice = null;
+/* ===== TTS ===== */
+let ruVoice=null;
 function pickVoice(){
-  const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
-  ruVoice = vs.find(v => /^ru/i.test(v.lang) && /milena/i.test(v.name))
-         || vs.find(v => /^ru/i.test(v.lang)) || null;
+  const vs=window.speechSynthesis?speechSynthesis.getVoices():[];
+  ruVoice=vs.find(v=>/^ru/i.test(v.lang)&&/milena/i.test(v.name))||vs.find(v=>/^ru/i.test(v.lang))||null;
 }
-if (window.speechSynthesis){
-  speechSynthesis.onvoiceschanged = pickVoice;
-  pickVoice();
-}
-
+if(window.speechSynthesis){speechSynthesis.onvoiceschanged=pickVoice;pickVoice();}
 function speak(text){
-  if (!window.speechSynthesis) return;
+  if(!window.speechSynthesis)return;
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'ru-RU';
-  if (ruVoice) u.voice = ruVoice;
-  u.rate = parseFloat($('rate').value) || 1;
-  setTimeout(function(){ speechSynthesis.speak(u); }, 60);
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='ru-RU';if(ruVoice)u.voice=ruVoice;
+  u.rate=parseFloat($('rate').value)||1;
+  setTimeout(()=>speechSynthesis.speak(u),60);
   scheduleRepeat();
 }
-
 function speakSeq(arr){
-  if (!window.speechSynthesis) return;
+  if(!window.speechSynthesis)return;
   speechSynthesis.cancel();
-  setTimeout(function(){
-    arr.forEach(function(t){
-      const u = new SpeechSynthesisUtterance(t);
-      u.lang = 'ru-RU';
-      if (ruVoice) u.voice = ruVoice;
-      u.rate = parseFloat($('rate').value) || 1;
-      speechSynthesis.speak(u);
-    });
-  }, 60);
+  setTimeout(()=>arr.forEach(t=>{
+    const u=new SpeechSynthesisUtterance(t);
+    u.lang='ru-RU';if(ruVoice)u.voice=ruVoice;
+    u.rate=parseFloat($('rate').value)||1;
+    speechSynthesis.speak(u);
+  }),60);
 }
 
-/* ================= АВТОПОВТОР ================= */
+/* ===== АВТОПОВТОР ===== */
 function scheduleRepeat(){
   clearTimeout(repeatTimer);
-  if (!inWork || !$('repChk').checked) return;
-  const sec = Math.max(3, parseInt($('repSec').value, 10) || 8);
-  repeatTimer = setTimeout(function(){ sayItem(); }, sec * 1000);
+  if(!inWork||paused||!$('repChk').checked)return;
+  const s=Math.max(3,parseInt($('repSec').value,10)||8);
+  repeatTimer=setTimeout(()=>sayItem(),s*1000);
 }
 
-/* ================= ЛОГИКА СБОРКИ ================= */
+/* ===== РАБОТА ===== */
 function render(){
-  const it = items[idx];
-  $('posTxt').textContent = (idx + 1) + ' / ' + items.length;
-  const takenSum = items.filter(i => i.taken).reduce((s, i) => s + (i.qty || 0), 0);
-  $('takenTxt').textContent = 'взято ' + takenSum + ' шт';
-  $('locBig').textContent = it.loc;
-  if (it.qty != null){
-    $('qtyBig').textContent = '× ' + it.qty;
-    $('qtyBig').classList.remove('unknown');
-  } else {
-    $('qtyBig').textContent = '× ?';
-    $('qtyBig').classList.add('unknown');
+  if(!items.length)return;
+  const it=items[idx];
+  $('posTxt').textContent=(idx+1)+' / '+items.length;
+  const sum=items.filter(i=>i.taken).reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
+  $('takenTxt').textContent='взято '+sum+' шт';
+  $('locBig').textContent=it.loc;
+
+  // Отображение количества
+  const qb=$('qtyBig');
+  qb.className='';
+  if(it.actualQty!=null){
+    // Зачёркнутый план + красный факт
+    qb.classList.add('partial');
+    qb.innerHTML='<span class="q-orig">× '+it.qty+'</span><span class="q-act">× '+it.actualQty+'</span>';
+  }else if(it.qty!=null){
+    qb.classList.add('normal');
+    qb.textContent='× '+it.qty;
+  }else{
+    qb.classList.add('unknown');
+    qb.textContent='× ?';
   }
-  $('descTxt').textContent = it.desc || '';
-  $('artTxt').textContent = it.article ? ('Артикул: ' + it.article) : 'Артикул не распознан';
-  if (ecoShown){
-    $('ecoLoc').textContent = it.loc;
-    $('ecoQty').textContent = '× ' + (it.qty != null ? it.qty : '?');
+  $('descTxt').textContent=it.desc||'';
+  $('artTxt').textContent=it.article?('Артикул: '+it.article):'Артикул не распознан';
+  if(ecoShown){
+    $('ecoLoc').textContent=it.loc;
+    const eff=it.actualQty!=null?it.actualQty:it.qty;
+    $('ecoQty').textContent='× '+(eff!=null?eff:'?');
   }
 }
-
-function sayItem(){ render(); speak(itemPhrase(items[idx])); }
+function sayItem(){if(!paused){render();speak(itemPhrase(items[idx]));}}
 
 function take(){
-  items[idx].taken = true;
-  beep(880, 90);
-  if (idx + 1 < items.length){ idx++; sayItem(); }
-  else { finish(); }
+  if(paused||!inWork)return;
+  items[idx].taken=true;
+  beep(880,90);
+  if(idx+1<items.length){idx++;sayItem();}else{finish();}
 }
-
 function back(){
-  if (idx > 0){ idx--; items[idx].taken = false; }
-  beep(440, 90);
-  sayItem();
+  if(paused)return;
+  if(idx>0){idx--;items[idx].taken=false;items[idx].actualQty=null;}
+  beep(440,90);sayItem();
 }
-
 function midSummary(){
-  const done = items.filter(i => i.taken);
-  const sum = done.reduce((s, i) => s + (i.qty || 0), 0);
-  speak('Взято ' + done.length + ' из ' + items.length + ' позиций. Всего ' + sum + ' штук.');
+  const done=items.filter(i=>i.taken);
+  const sum=done.reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
+  speak('Взято '+done.length+' из '+items.length+' позиций. Всего '+sum+' штук.');
 }
-
-function finish(){
-  inWork = false;
-  clearTimeout(repeatTimer);
-  hideEco();
-  $('scrWork').hidden = true;
-  $('scrDone').hidden = false;
-  const taken = items.filter(i => i.taken);
-  const sum = taken.reduce((s, i) => s + (i.qty || 0), 0);
-  const exp = parseInt($('expTotal').value, 10);
-  let check = '';
-  if (!isNaN(exp)) check = (sum === exp) ? ' = Total coli ✓' : ' (Total coli: ' + exp + '!)';
-  $('doneSub').textContent = taken.length + ' позиций · ' + sum + ' штук' + check;
-  let html = '<table><tr><th>Локация</th><th>Qty</th><th>✓</th></tr>';
-  items.forEach(function(it){
-    html += '<tr><td class="num">' + it.loc + '</td><td class="num">' +
-      (it.qty != null ? it.qty : '?') + '</td><td>' + (it.taken ? '✅' : '—') + '</td></tr>';
-  });
-  html += '</table>';
-  $('doneTable').innerHTML = html;
-  beep(880, 80); setTimeout(function(){ beep(1320, 120); }, 140);
-  speak('Лист готов. ' + taken.length + ' позиций, ' + sum + ' штук. Сверь с бумагой.');
-}
-
-function sayAll(){
-  const phrases = ['Итог по листу.'];
-  items.forEach(function(it){
-    if (it.taken) phrases.push(locToSpeech(it.loc) + ' — ' + (it.qty != null ? it.qty : 'не распознано') + '.');
-  });
-  speakSeq(phrases);
-}
-
-/* ================= WAKE LOCK ================= */
-let wakeLock = null;
-async function keepAwake(){
-  try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }
-  catch(e){}
-}
-document.addEventListener('visibilitychange', function(){
-  if (document.visibilityState === 'visible' && inWork) keepAwake();
-});
-
-/* ================= БИП ================= */
-let actx = null;
-function ensureAudio(){
-  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-        if (actx.state === 'suspended') actx.resume(); } catch(e){}
-}
-function beep(freq, ms){
-  try {
-    if (!actx) return;
-    const o = actx.createOscillator(), g = actx.createGain();
-    o.frequency.value = freq; o.connect(g); g.connect(actx.destination);
-    g.gain.setValueAtTime(0.12, actx.currentTime);
-    o.start(); o.stop(actx.currentTime + ms / 1000);
-  } catch(e){}
-}
-
-/* ================= AIRPODS (щелчки по ножке) ================= */
-function silentWavURL(){
-  const rate = 8000, len = rate * 2;
-  const buf = new ArrayBuffer(44 + len * 2);
-  const v = new DataView(buf);
-  const ws = function(o, s){ for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
-  ws(0, 'RIFF'); v.setUint32(4, 36 + len * 2, true); ws(8, 'WAVE'); ws(12, 'fmt ');
-  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true);
-  v.setUint16(32, 2, true); v.setUint16(34, 16, true);
-  ws(36, 'data'); v.setUint32(40, len * 2, true);
-  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
-}
-
-let pod = null, podGuard = 0;
-function stemAction(kind){
-  if (!inWork) return;
-  const now = Date.now();
-  if (now < podGuard) return;
-  podGuard = now + 300;
-  if (kind === 'take') take();
-  else if (kind === 'repeat') sayItem();
-  else back();
-}
-
-async function podToggle(on){
-  if (on){
-    if (!pod){
-      pod = new Audio(silentWavURL());
-      pod.loop = true;
-      pod.volume = 0.01;
-      pod.addEventListener('pause', function(){
-        if ($('podChk').checked){ stemAction('take'); pod.play(); }
-      });
-    }
-    try { await pod.play(); } catch(e){
-      alert('Не удалось включить аудио-канал. Попробуй ещё раз.');
-      $('podChk').checked = false; return;
-    }
-    if ('mediaSession' in navigator){
-      try {
-        navigator.mediaSession.metadata = new MediaMetadata({ title: 'Picker · щелчок = Взял' });
-        navigator.mediaSession.setActionHandler('pause', function(){ stemAction('take'); pod.play(); });
-        navigator.mediaSession.setActionHandler('play',  function(){ stemAction('take'); pod.play(); });
-        navigator.mediaSession.setActionHandler('nexttrack', function(){ stemAction('repeat'); });
-        navigator.mediaSession.setActionHandler('previoustrack', function(){ stemAction('back'); });
-      } catch(e){}
-    }
-  } else if (pod){
-    pod.pause();
+function setPartialQty(){
+  if(paused)return;
+  const it=items[idx];
+  const v=prompt('Сколько взял по факту?\n(по плану: '+(it.qty!=null?it.qty:'?')+')',
+    it.actualQty!=null?it.actualQty:'');
+  if(v===null)return;
+  const n=parseInt(v,10);
+  if(!isNaN(n)&&n>=0){
+    it.actualQty=n;render();
+    speak(n===0?'Ноль, товара нет. Пропускаем.':
+      'Записал '+qtyToSpeech(n)+' '+shtuk(n)+(it.qty!=null&&n<it.qty?', по плану было '+it.qty+'.':'.'));
   }
 }
+function finish(){
+  inWork=false;paused=false;clearTimeout(repeatTimer);hideEco();hidePause();
+  $('scrWork').hidden=true;$('scrDone').hidden=false;
+  const taken=items.filter(i=>i.taken);
+  const partial=items.filter(i=>i.taken&&i.actualQty!=null);
+  const sum=taken.reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
+  const exp=parseInt($('expTotal').value,10);
+  let check='';
+  if(!isNaN(exp))check=(sum===exp)?' = Total coli ✓':' (план: '+exp+', разница '+(exp-sum)+')';
+  $('doneSub').textContent=taken.length+' позиций · '+sum+' штук'+check
+    +(partial.length?' · '+partial.length+' неполных':'');
 
-/* ================= ЭКО-ЭКРАН ================= */
-let lastTouch = Date.now(), ecoShown = false;
-document.addEventListener('pointerdown', function(){
-  lastTouch = Date.now();
-  if (ecoShown) hideEco();
-});
-setInterval(function(){
-  if (inWork && $('ecoChk').checked && !ecoShown && Date.now() - lastTouch > 20000) showEco();
-}, 3000);
-function showEco(){
-  if (!items.length) return;
-  ecoShown = true;
-  $('ecoLoc').textContent = items[idx].loc;
-  $('ecoQty').textContent = '× ' + (items[idx].qty != null ? items[idx].qty : '?');
-  $('eco').hidden = false;
+  // Таблица итога
+  let html='<table><tr><th>Локация</th><th>Взяли</th><th>По плану</th><th>✓</th></tr>';
+  items.forEach(it=>{
+    const eff=it.actualQty!=null?it.actualQty:(it.qty!=null?it.qty:'-');
+    const isPartial=it.taken&&it.actualQty!=null;
+    const rowClass=isPartial?' class="partial-badge"':'';
+    html+=`<tr><td class="num">${it.loc}</td><td class="num${rowClass}">${eff}</td>`
+      +`<td class="num">${it.qty!=null?it.qty:'?'}</td>`
+      +`<td>${it.taken?(isPartial?'⚠️':'✅'):'—'}</td></tr>`;
+  });
+  html+='</table>';
+  if(partial.length)html+=`<p class="warn-line">⚠️ ${partial.length} позиций — не полное кол-во. Подчеркни на бумаге.</p>`;
+  $('doneTable').innerHTML=html;
+
+  beep(880,80);setTimeout(()=>beep(1320,120),140);
+  speak('Лист готов. '+taken.length+' позиций, '+sum+' штук.'
+    +(partial.length?' Неполных: '+partial.length+'.':'')+' Сверь с бумагой.');
 }
-function hideEco(){ ecoShown = false; $('eco').hidden = true; }
+function sayAll(){
+  const ph=['Итог.'];
+  items.filter(i=>i.taken).forEach(it=>{
+    const eff=it.actualQty!=null?it.actualQty:it.qty;
+    ph.push(locToSpeech(it.loc)+' — '+(eff!=null?eff:'?')+(it.actualQty!=null?', сокращено':'')+'.');
+  });
+  speakSeq(ph);
+}
 
-/* ================= ЗАГРУЗКА КАРТИНКИ В CANVAS ================= */
-function loadToCanvas(file, maxSide, gray){
-  return new Promise(function(res, rej){
-    const img = new Image();
-    img.onload = function(){
-      const k = Math.min(1, maxSide / Math.max(img.width, img.height));
-      const c = document.createElement('canvas');
-      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-      const ctx = c.getContext('2d');
-      ctx.drawImage(img, 0, 0, c.width, c.height);
-      if (gray){
-        const d = ctx.getImageData(0, 0, c.width, c.height);
-        const p = d.data;
-        for (let i = 0; i < p.length; i += 4){
-          let g = 0.299 * p[i] + 0.587 * p[i+1] + 0.114 * p[i+2];
-          g = (g - 128) * 1.25 + 138;
-          g = g < 0 ? 0 : g > 255 ? 255 : g;
-          p[i] = p[i+1] = p[i+2] = g;
-        }
-        ctx.putImageData(d, 0, 0);
-      }
-      URL.revokeObjectURL(img.src);
-      res(c);
+/* ===== ПАУЗА / ПРОДОЛЖИТЬ ===== */
+function pauseWork(){
+  if(!inWork)return;
+  paused=true;clearTimeout(repeatTimer);
+  speechSynthesis&&speechSynthesis.cancel();
+  hideEco();
+  $('pauseInfo').textContent='позиция '+(idx+1)+' / '+items.length+' · '+items[idx].loc;
+  $('pauseOverlay').hidden=false;
+}
+function resumeWork(){
+  if(!inWork)return;
+  paused=false;hidePause();sayItem();
+}
+function hidePause(){$('pauseOverlay').hidden=true;}
+
+/* ===== WAKE LOCK ===== */
+let wakeLock=null;
+async function keepAwake(){
+  try{if('wakeLock'in navigator)wakeLock=await navigator.wakeLock.request('screen');}catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&inWork)keepAwake();});
+
+/* ===== БИП ===== */
+let actx=null;
+function ensureAudio(){
+  try{actx=actx||new(window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==='suspended')actx.resume();}catch(e){}
+}
+function beep(freq,ms){
+  try{if(!actx)return;
+    const o=actx.createOscillator(),g=actx.createGain();
+    o.frequency.value=freq;o.connect(g);g.connect(actx.destination);
+    g.gain.setValueAtTime(0.12,actx.currentTime);
+    o.start();o.stop(actx.currentTime+ms/1000);}catch(e){}
+}
+
+/* ===== AIRPODS ===== */
+function silentWavURL(){
+  const rate=8000,len=rate*2,buf=new ArrayBuffer(44+len*2),v=new DataView(buf);
+  const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  ws(0,'RIFF');v.setUint32(4,36+len*2,true);ws(8,'WAVE');ws(12,'fmt ');
+  v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);
+  v.setUint16(32,2,true);v.setUint16(34,16,true);
+  ws(36,'data');v.setUint32(40,len*2,true);
+  return URL.createObjectURL(new Blob([buf],{type:'audio/wav'}));
+}
+let pod=null,podGuard=0;
+function stemAction(kind){
+  if(!inWork||paused)return;
+  const now=Date.now();if(now<podGuard)return;podGuard=now+300;
+  if(kind==='take')take();else if(kind==='repeat')sayItem();else back();
+}
+async function podToggle(on){
+  if(on){
+    if(!pod){pod=new Audio(silentWavURL());pod.loop=true;pod.volume=0.01;
+      pod.addEventListener('pause',()=>{if($('podChk').checked){stemAction('take');pod.play();}});}
+    try{await pod.play();}catch(e){alert('Не удалось включить аудио-канал.');$('podChk').checked=false;return;}
+    if('mediaSession'in navigator){try{
+      navigator.mediaSession.metadata=new MediaMetadata({title:'Picker · щелчок = Взял'});
+      navigator.mediaSession.setActionHandler('pause',()=>{stemAction('take');pod.play();});
+      navigator.mediaSession.setActionHandler('play',()=>{stemAction('take');pod.play();});
+      navigator.mediaSession.setActionHandler('nexttrack',()=>stemAction('repeat'));
+      navigator.mediaSession.setActionHandler('previoustrack',()=>stemAction('back'));
+    }catch(e){}}
+  }else if(pod){pod.pause();}
+}
+
+/* ===== ЭКО-ЭКРАН ===== */
+let lastTouch=Date.now(),ecoShown=false;
+document.addEventListener('pointerdown',()=>{lastTouch=Date.now();if(ecoShown)hideEco();});
+setInterval(()=>{if(inWork&&!paused&&$('ecoChk').checked&&!ecoShown&&Date.now()-lastTouch>20000)showEco();},3000);
+function showEco(){if(!items.length)return;ecoShown=true;
+  $('ecoLoc').textContent=items[idx].loc;
+  const eff=items[idx].actualQty!=null?items[idx].actualQty:items[idx].qty;
+  $('ecoQty').textContent='× '+(eff!=null?eff:'?');$('eco').hidden=false;}
+function hideEco(){ecoShown=false;$('eco').hidden=true;}
+
+/* ===== CANVAS LOADER ===== */
+function loadToCanvas(file,maxSide){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=function(){
+      const k=Math.min(1,maxSide/Math.max(img.width,img.height));
+      const c=document.createElement('canvas');
+      c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(img.src);res(c);
     };
-    img.onerror = rej;
-    img.src = URL.createObjectURL(file);
+    img.onerror=rej;img.src=URL.createObjectURL(file);
   });
 }
 
-/* ================= AI-РАСПОЗНАВАНИЕ (Google Gemini) ================= */
-// Ключ хранится только в localStorage этого телефона. Бесплатный, без карты:
-// aistudio.google.com -> Get API key -> Create API key
-// НЕ вставляй ключ в код — репо публичное, боты воруют ключи.
+/* ===== AI-РАСПОЗНАВАНИЕ — ОДИН ЗАПРОС НА ВСЕ ФОТО ===== */
+// Ключ хранится ТОЛЬКО в localStorage. НЕ вставляй его в код файла.
+// Если репозиторий публичный — ключ украдут боты за минуты.
+const AI_MODELS=['gemini-2.5-flash','gemini-2.0-flash','gemini-2.0-flash-lite','gemini-1.5-flash-latest'];
 
-// Пробуем по очереди, пока одна не ответит нормально.
-// Если всем 503 — не откатываемся на мусор, а даём кнопку "Повторить".
-const AI_MODELS = [
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
-  'gemini-1.5-flash-latest'
-];
-
-const AI_PROMPT =
-  'You see a photo of a warehouse picking list. The table has columns: Location, Qty, Article, Description.\n' +
-  'Transcribe EVERY data row (skip header row). Output exactly one line per row:\n' +
-  'LOCATION QTY ARTICLE DESCRIPTION\n' +
-  'Rules:\n' +
-  '- LOCATION: always 3 digits, dash, 3 digits (example: 003-002)\n' +
-  '- QTY: integer 1-99\n' +
-  '- ARTICLE: exactly 8 digits\n' +
-  '- DESCRIPTION: the printed product name text\n' +
-  'If a field is unreadable or missing, write ? in its place.\n' +
-  'If the sheet shows a "Total coli" number, add one last line: Total coli: N\n' +
-  'Output NOTHING else — no headers, no markdown, no explanations, no code fences.';
-
-function aiKey(){
-  try { return localStorage.getItem('aikey') || ''; } catch(e){ return ''; }
+// Промпт вынесен отдельно, чтобы было легко редактировать
+function buildPrompt(n){
+  const multi=n>1?'These are '+n+' photos of the SAME picking list. Extract ALL unique rows (same Location = one row).\n':'';
+  return multi+
+    'Photo(s) of a warehouse picking list with columns: Location, Qty, Article, Description.\n'+
+    'Output each data row on one line: LOCATION QTY ARTICLE DESCRIPTION\n'+
+    'LOCATION=3digits-3digits  QTY=integer  ARTICLE=8digits  unreadable=?\n'+
+    'If "Total coli" visible anywhere: add last line: Total coli: N\n'+
+    'Output NOTHING else — no headers, no markdown, no explanations.';
 }
 
+function aiKey(){try{return localStorage.getItem('aikey')||'';}catch(e){return'';}}
 function updateAiState(){
-  $('aiState').innerHTML = aiKey()
-    ? 'AI-распознавание: <b style="color:var(--go)">подключено ✓</b> — фото читает Gemini'
-    : 'AI не настроен. Нажми 🔑 и вставь бесплатный ключ с <b>aistudio.google.com</b>. ' +
-      'Без ключа используй «Сканировать текст» (кнопка на клавиатуре iPhone).';
+  $('aiState').innerHTML=aiKey()
+    ?'AI-распознавание: <b style="color:var(--go)">подключено ✓</b> — фото читает Gemini'
+    :'AI не настроен. Нажми 🔑 и вставь бесплатный ключ с <b>aistudio.google.com</b>.<br>'+
+     'Без ключа: нажми на поле выше и используй «Сканировать текст» на клавиатуре.';
 }
 
-async function aiRecognize(canvas, key){
-  const b64 = canvas.toDataURL('image/jpeg', 0.88).split(',')[1];
-  let lastErr = 'все модели недоступны';
-  for (let i = 0; i < AI_MODELS.length; i++){
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-      AI_MODELS[i] + ':generateContent?key=' + encodeURIComponent(key);
+async function aiRecognizeAll(canvases,key){
+  // Все картинки в ОДНОМ запросе — фикс 429
+  const parts=[{text:buildPrompt(canvases.length)}];
+  for(const c of canvases)
+    parts.push({inline_data:{mime_type:'image/jpeg',data:c.toDataURL('image/jpeg',0.80).split(',')[1]}});
+
+  let lastErr='все модели вернули ошибку';
+  for(const model of AI_MODELS){
+    const url='https://generativelanguage.googleapis.com/v1beta/models/'
+      +model+':generateContent?key='+encodeURIComponent(key);
     let resp;
-    try {
-      resp = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [
-            { text: AI_PROMPT },
-            { inline_data: { mime_type: 'image/jpeg', data: b64 } }
-          ]}],
-          generationConfig: { temperature: 0 }
-        })
-      });
-    } catch(e){ throw new Error('no_network'); }
+    try{resp=await fetch(url,{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts}],generationConfig:{temperature:0}})
+    });}catch(e){throw new Error('no_network');}
 
-    if (resp.status === 503 || resp.status === 502){
-      lastErr = '503_unavailable'; continue;   // пробуем следующую модель
-    }
-    if (resp.status === 429) throw new Error('429_ratelimit');
-    if (resp.status === 400) throw new Error('400_badkey');
-    if (resp.status === 403) throw new Error('403_forbidden');
-    if (resp.status === 404){ lastErr = '404_model_' + AI_MODELS[i]; continue; }
-    if (!resp.ok) throw new Error('http_' + resp.status);
+    if(resp.status===503||resp.status===502){lastErr='503_unavailable';continue;}
+    if(resp.status===429)throw new Error('429_ratelimit');
+    if(resp.status===400)throw new Error('400_badkey');
+    if(resp.status===403)throw new Error('403_forbidden');
+    if(resp.status===404){lastErr='404_'+model;continue;}
+    if(!resp.ok)throw new Error('http_'+resp.status);
 
-    const data = await resp.json();
-    const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
-    const txt = parts.map(function(p){ return p.text || ''; }).join('\n')
-      .replace(/```[a-z]*\n?/gi, '').trim();
-    if (txt) return { text: txt, model: AI_MODELS[i] };
-    lastErr = 'empty_response';
+    const data=await resp.json();
+    const rp=(((data.candidates||[])[0]||{}).content||{}).parts||[];
+    const txt=rp.map(p=>p.text||'').join('\n').replace(/```[a-z]*\n?/gi,'').trim();
+    if(txt)return txt;
+    lastErr='empty_response';
   }
   throw new Error(lastErr);
 }
 
-/* ================= OCR ФОТО: только AI, retry при ошибке ================= */
-let ocrBusy = false;
-let pendingFiles = [];   // хранятся для retry без повторного выбора файлов
-
-function showOcrErr(msg){
-  const st = $('ocrStatus');
-  st.hidden = false;
-  st.textContent = msg;
-  $('btnRetry').hidden = false;
-}
+/* ===== OCR ОБРАБОТЧИК ===== */
+let ocrBusy=false;
+function showOcrErr(msg){$('ocrStatus').hidden=false;$('ocrStatus').textContent=msg;$('btnRetry').hidden=false;}
 
 async function ocrPhotos(files){
-  if (!files.length) return;
-  pendingFiles = Array.prototype.slice.call(files);
+  if(!files.length)return;
+  pendingFiles=Array.prototype.slice.call(files);
   await runAI();
 }
-
 async function runAI(){
-  if (ocrBusy) return;
-  const key = aiKey();
-  if (!key){
-    showOcrErr('Нет AI-ключа. Нажми 🔑 и вставь ключ — затем нажми 📷 снова.');
-    return;
-  }
-  ocrBusy = true;
-  $('btnPhoto').disabled = true;
-  $('btnRetry').hidden = true;
-  const st = $('ocrStatus');
-  st.hidden = false;
-
-  try {
-    let allText = '';
-    for (let i = 0; i < pendingFiles.length; i++){
-      st.textContent = 'Фото ' + (i + 1) + '/' + pendingFiles.length + ': AI читает…';
-      const canvas = await loadToCanvas(pendingFiles[i], 1600, false);
-      const result = await aiRecognize(canvas, key);
-      allText += '\n' + result.text;
-    }
-    // результат заменяет textarea (не добавляется к старому мусору)
-    $('raw').value = allText.trim();
-    st.hidden = true;
-    pendingFiles = [];
-    doParse();
-  } catch(err){
-    const code = err.message || '';
+  if(ocrBusy)return;
+  const key=aiKey();
+  if(!key){showOcrErr('Нет AI-ключа. Нажми 🔑 и вставь ключ, потом снова 📷.');return;}
+  ocrBusy=true;$('btnPhoto').disabled=true;$('btnRetry').hidden=true;
+  const st=$('ocrStatus');st.hidden=false;
+  try{
+    st.textContent='Подготовка '+pendingFiles.length+' фото…';
+    // Параллельная подготовка холстов
+    const canvases=await Promise.all(pendingFiles.map(f=>loadToCanvas(f,1200)));
+    st.textContent='AI читает лист (один запрос, '+canvases.length+' фото)…';
+    const txt=await aiRecognizeAll(canvases,key);
+    $('raw').value=txt;st.hidden=true;
+    pendingFiles=[];doParse();
+  }catch(err){
+    const c=err.message||'';
     let msg;
-    if (code === 'no_network')
-      msg = 'Нет связи с Google. Проверь Wi-Fi/мобильный интернет и нажми 🔄';
-    else if (code === '503_unavailable')
-      msg = 'Google временно недоступен (503). Подожди ~30 секунд и нажми 🔄';
-    else if (code === '429_ratelimit')
-      msg = 'Слишком много запросов (429). Подожди минуту и нажми 🔄';
-    else if (code === '400_badkey')
-      msg = 'Ключ не принят (400). Нажми 🔑, удали ключ и вставь заново, затем 🔄';
-    else if (code === '403_forbidden')
-      msg = 'Доступ запрещён (403). Проверь ключ через 🔑 и нажми 🔄';
-    else
-      msg = 'Ошибка: ' + code + '. Нажми 🔄 чтобы попробовать снова.';
+    if(c==='no_network')        msg='Нет связи с Google. Проверь интернет и нажми 🔄';
+    else if(c==='503_unavailable')msg='Google временно недоступен (503). Подожди ~30 сек и нажми 🔄';
+    else if(c==='429_ratelimit') msg='Слишком много запросов (429). Подожди 1 минуту и нажми 🔄';
+    else if(c==='400_badkey')    msg='Ключ не принят (400). Проверь ключ через 🔑 и нажми 🔄';
+    else if(c==='403_forbidden') msg='Доступ запрещён (403). Проверь ключ через 🔑 и нажми 🔄';
+    else                         msg='Ошибка: '+c+'. Нажми 🔄 чтобы попробовать снова.';
     showOcrErr(msg);
   }
-
-  ocrBusy = false;
-  $('btnPhoto').disabled = false;
+  ocrBusy=false;$('btnPhoto').disabled=false;
 }
 
-/* ================= ЭКРАН 1: РАЗБОР И ТАБЛИЦА ================= */
+/* ===== ЭКРАН 1: ПАРСЕР ===== */
 function doParse(){
-  const raw = $('raw').value;
-  const det = detectTotal(raw);
-  if (det != null && !$('expTotal').value) $('expTotal').value = det;
-  items = foldItems(parseList(raw));
-  items.forEach(function(it){
-    if (manualQty[it.loc] != null){ it.qty = manualQty[it.loc]; it.conflict = false; }
-  });
-  items.sort(function(a, b){ return a.loc < b.loc ? -1 : a.loc > b.loc ? 1 : 0; });
+  const raw=$('raw').value;
+  const det=detectTotal(raw);
+  if(det!=null&&!$('expTotal').value)$('expTotal').value=det;
+  items=foldItems(parseList(raw));
+  items.forEach(it=>{if(manualQty[it.loc]!=null){it.qty=manualQty[it.loc];it.conflict=false;}});
+  items.sort((a,b)=>a.loc<b.loc?-1:a.loc>b.loc?1:0);
   renderParse();
 }
-
 function renderParse(){
-  const out = $('parseOut');
-  if (!items.length){
-    out.innerHTML = '<p class="warn-line">Не нашёл ни одной локации вида 003-002. Проверь скан.</p>';
-    $('btnStart').hidden = true;
-    return;
-  }
-  const sum = items.reduce(function(s, i){ return s + (i.qty || 0); }, 0);
-  const miss = items.filter(function(i){ return i.qty == null; }).length;
-  const conf = items.filter(function(i){ return i.conflict; }).length;
-
-  let html = '<table><tr><th>Локация</th><th>Qty ✎</th><th>Артикул</th><th>Описание</th></tr>';
-  items.forEach(function(it, i){
-    const bad = (it.qty == null || it.conflict) ? ' bad-cell' : '';
-    html += '<tr><td class="num">' + it.loc + '</td>' +
-      '<td class="num qcell' + bad + '" data-i="' + i + '">' +
-      (it.qty != null ? it.qty : '?') + (it.conflict ? ' ⚠' : '') + '</td>' +
-      '<td class="num' + (!it.article ? ' bad-cell' : '') + '">' + (it.article || '?') + '</td>' +
-      '<td>' + (it.desc || '') + '</td></tr>';
+  const out=$('parseOut');
+  if(!items.length){out.innerHTML='<p class="warn-line">Не нашёл ни одной локации вида 003-002.</p>';$('btnStart').hidden=true;return;}
+  const sum=items.reduce((s,i)=>s+(i.qty||0),0);
+  const miss=items.filter(i=>i.qty==null).length;
+  const conf=items.filter(i=>i.conflict).length;
+  let html='<table><tr><th>Локация</th><th>Qty ✎</th><th>Артикул</th><th>Описание</th></tr>';
+  items.forEach((it,i)=>{
+    const bad=(it.qty==null||it.conflict)?' bad-cell':'';
+    html+=`<tr><td class="num">${it.loc}</td>`
+      +`<td class="num qcell${bad}" data-i="${i}">${it.qty!=null?it.qty:'?'}${it.conflict?' ⚠':''}</td>`
+      +`<td class="num${!it.article?' bad-cell':''}">${it.article||'?'}</td>`
+      +`<td>${it.desc||''}</td></tr>`;
   });
-  html += '</table>';
-
-  const exp = parseInt($('expTotal').value, 10);
-  let line = 'Позиций: ' + items.length + ' · Сумма Qty: ' + sum;
-  let cls = 'ok-line';
-  if (!isNaN(exp)){
-    if (sum === exp) line += ' = Total coli ✓';
-    else { line += ' ≠ Total coli (' + exp + '), разница ' + (exp - sum); cls = 'warn-line'; }
-  } else {
-    line += ' — сверь с «Total coli» на листе';
-  }
-  html += '<p class="' + cls + '">' + line + '</p>';
-  if (miss || conf){
-    html += '<p class="warn-line">⚠️ ' +
-      (miss ? miss + ' позиций без Qty. ' : '') +
-      (conf ? conf + ' с расхождением между сканами. ' : '') +
-      'Нажми на число в столбце Qty, чтобы исправить, или добавь ещё одно фото — пропуски дольются сами.</p>';
-  }
-  out.innerHTML = html;
-  out.querySelectorAll('.qcell').forEach(function(el){
-    el.addEventListener('click', function(){
-      editQty(parseInt(el.getAttribute('data-i'), 10));
-    });
-  });
-  $('btnStart').hidden = false;
+  html+='</table>';
+  const exp=parseInt($('expTotal').value,10);
+  let line='Позиций: '+items.length+' · Сумма Qty: '+sum,cls='ok-line';
+  if(!isNaN(exp)){if(sum===exp)line+=' = Total coli ✓';else{line+=' ≠ Total coli ('+exp+'), разница '+(exp-sum);cls='warn-line';}}
+  else line+=' — сверь с «Total coli» на листе';
+  html+=`<p class="${cls}">${line}</p>`;
+  if(miss||conf)html+=`<p class="warn-line">⚠️ ${miss?miss+' позиций без Qty. ':''}${conf?conf+' с расхождением. ':''}Нажми на число в Qty, чтобы исправить.</p>`;
+  out.innerHTML=html;
+  out.querySelectorAll('.qcell').forEach(el=>el.addEventListener('click',()=>editQty(+el.dataset.i)));
+  $('btnStart').hidden=false;
 }
-
 function editQty(i){
-  const it = items[i];
-  if (!it) return;
-  const v = prompt('Qty для ' + it.loc + ':', it.qty != null ? it.qty : '');
-  if (v === null) return;
-  const n = parseInt(v, 10);
-  if (!isNaN(n) && n >= 0){
-    manualQty[it.loc] = n;
-    it.qty = n; it.conflict = false;
-    renderParse();
-  }
+  const it=items[i];if(!it)return;
+  const v=prompt('Qty для '+it.loc+':',it.qty!=null?it.qty:'');
+  if(v===null)return;const n=parseInt(v,10);
+  if(!isNaN(n)&&n>=0){manualQty[it.loc]=n;it.qty=n;it.conflict=false;renderParse();}
 }
-
 function startWork(){
-  if (!items.length) return;
-  idx = 0;
-  items.forEach(function(i){ i.taken = false; });
-  inWork = true;
-  lastTouch = Date.now();
+  if(!items.length)return;
+  idx=0;paused=false;
+  items.forEach(i=>{i.taken=false;i.actualQty=null;});
+  inWork=true;lastTouch=Date.now();
   document.body.classList.add('work');
-  $('scrSetup').hidden = true;
-  $('scrDone').hidden = true;
-  $('scrWork').hidden = false;
-  ensureAudio();
-  pickVoice();
-  keepAwake();
-  sayItem();
+  $('scrSetup').hidden=true;$('scrDone').hidden=true;$('scrWork').hidden=false;
+  ensureAudio();pickVoice();keepAwake();sayItem();
 }
 
-/* ================= ПРИВЯЗКА КНОПОК ================= */
-$('btnPhoto').addEventListener('click', function(){ $('photoInput').click(); });
-$('photoInput').addEventListener('change', function(e){
-  ocrPhotos(Array.prototype.slice.call(e.target.files));
-  e.target.value = '';
-});
-$('btnKey').addEventListener('click', function(){
-  const v = prompt('API-ключ Google AI Studio (бесплатный, вида AIza…).\nПусто = удалить ключ.', aiKey());
-  if (v === null) return;
-  try {
-    if (v.trim()) localStorage.setItem('aikey', v.trim());
-    else localStorage.removeItem('aikey');
-  } catch(e){ alert('Не удалось сохранить ключ.'); }
+/* ===== ГОЛОСОВЫЕ КОМАНДЫ (STT) ===== */
+const VCMDS=[
+  {w:['взял меньше','меньше','частично','не хватает'],     a:'partial'},
+  {w:['взял','готово','следующий','дальше','ок'],          a:'take'},
+  {w:['назад','предыдущий','вернуть','вернись'],          a:'back'},
+  {w:['повтори','повторить','ещё раз','снова'],           a:'repeat'},
+  {w:['артикул','номер'],                                  a:'article'},
+  {w:['количество','сколько'],                             a:'qty'},
+  {w:['пауза','стоп','остановить','перерыв'],              a:'pause'},
+  {w:['продолжи','продолжить','продолжай','поехали'],      a:'resume'},
+  {w:['итог','сводка'],                                    a:'summary'},
+  {w:['конец','финиш','закончил','всё'],                   a:'finish'},
+];
+function matchVCmd(t){
+  const lo=t.toLowerCase();
+  for(const c of VCMDS)if(c.w.some(w=>lo.includes(w)))return c.a;
+  return null;
+}
+
+let sttR=null;
+function startVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){speak('Голосовые команды недоступны в этом браузере.');return;}
+  // Повторный тап — остановить
+  if(sttR){try{sttR.stop();}catch(e){}sttR=null;resetVBtn();return;}
+
+  const r=new SR();
+  r.lang='ru-RU';r.continuous=false;r.interimResults=false;r.maxAlternatives=3;
+  sttR=r;
+  $('btnVoice').textContent='🔴';$('btnVoice').classList.add('listening');
+
+  r.onresult=e=>{
+    const alts=Array.from(e.results[0]).map(a=>a.transcript);
+    let action=null;
+    for(const alt of alts){action=matchVCmd(alt);if(action)break;}
+    if(!action){speak('Не понял, скажи ещё раз.');return;}
+    if(action==='take')take();
+    else if(action==='back')back();
+    else if(action==='repeat')sayItem();
+    else if(action==='article')speak(articleToSpeech(items[idx]&&items[idx].article));
+    else if(action==='qty'){const q=items[idx]&&(items[idx].actualQty!=null?items[idx].actualQty:items[idx].qty);speak(q!=null?qtyToSpeech(q)+' '+shtuk(q):'не распознано');}
+    else if(action==='pause')pauseWork();
+    else if(action==='resume')resumeWork();
+    else if(action==='summary')midSummary();
+    else if(action==='partial')setPartialQty();
+    else if(action==='finish')finish();
+  };
+  r.onerror=ev=>{
+    if(ev.error==='no-speech')speak('Не слышу, попробуй снова.');
+    else if(ev.error!=='aborted')speak('Ошибка микрофона.');
+  };
+  r.onend=()=>{sttR=null;resetVBtn();};
+  try{r.start();}catch(e){sttR=null;resetVBtn();}
+}
+function resetVBtn(){$('btnVoice').textContent='🎙';$('btnVoice').classList.remove('listening');}
+
+/* ===== ПРИВЯЗКА КНОПОК ===== */
+$('btnPhoto').addEventListener('click',()=>$('photoInput').click());
+$('photoInput').addEventListener('change',e=>{ocrPhotos(Array.prototype.slice.call(e.target.files));e.target.value='';});
+$('btnRetry').addEventListener('click',()=>{if(pendingFiles.length)runAI();});
+$('btnKey').addEventListener('click',()=>{
+  const v=prompt('API-ключ Google AI Studio (вида AIza… или AQ…).\nПусто = удалить.',aiKey());
+  if(v===null)return;
+  try{v.trim()?localStorage.setItem('aikey',v.trim()):localStorage.removeItem('aikey');}catch(e){}
   updateAiState();
 });
-$('btnRetry').addEventListener('click', function(){ if (pendingFiles.length) runAI(); });
-$('btnClear').addEventListener('click', function(){
-  $('raw').value = ''; $('parseOut').innerHTML = '';
-  $('expTotal').value = ''; $('btnStart').hidden = true;
-  $('ocrStatus').hidden = true; $('btnRetry').hidden = true;
-  items = []; manualQty = {}; pendingFiles = [];
+$('btnClear').addEventListener('click',()=>{
+  $('raw').value='';$('parseOut').innerHTML='';$('expTotal').value='';
+  $('btnStart').hidden=true;$('ocrStatus').hidden=true;$('btnRetry').hidden=true;
+  items=[];manualQty={};pendingFiles=[];
 });
-$('btnParse').addEventListener('click', doParse);
-$('expTotal').addEventListener('input', function(){ if (items.length) renderParse(); });
-$('btnStart').addEventListener('click', startWork);
-
-$('btnTake').addEventListener('click', take);
-$('btnRepeat').addEventListener('click', sayItem);
-$('btnBack').addEventListener('click', back);
-$('btnArt').addEventListener('click', function(){ speak(articleToSpeech(items[idx].article)); });
-$('btnSum').addEventListener('click', midSummary);
-$('btnFinish').addEventListener('click', finish);
-$('btnEdit').addEventListener('click', function(){
-  inWork = false; clearTimeout(repeatTimer); hideEco();
-  document.body.classList.remove('work');
-  $('scrWork').hidden = true; $('scrSetup').hidden = false;
+$('btnParse').addEventListener('click',doParse);
+$('expTotal').addEventListener('input',()=>{if(items.length)renderParse();});
+$('btnStart').addEventListener('click',startWork);
+$('btnTake').addEventListener('click',take);
+$('btnPause').addEventListener('click',pauseWork);
+$('btnResume').addEventListener('click',resumeWork);
+$('btnRepeat').addEventListener('click',sayItem);
+$('btnBack').addEventListener('click',back);
+$('btnArt').addEventListener('click',()=>speak(articleToSpeech(items[idx]&&items[idx].article)));
+$('btnPartial').addEventListener('click',setPartialQty);
+$('btnVoice').addEventListener('click',startVoice);
+$('btnSum').addEventListener('click',midSummary);
+$('btnFinish').addEventListener('click',finish);
+$('btnEdit').addEventListener('click',()=>{
+  inWork=false;paused=false;clearTimeout(repeatTimer);hideEco();hidePause();
+  document.body.classList.remove('work');$('scrWork').hidden=true;$('scrSetup').hidden=false;
 });
-$('qtyBig').addEventListener('click', function(){
-  const it = items[idx];
-  const v = prompt('Qty для ' + it.loc + ':', it.qty != null ? it.qty : '');
-  if (v === null) return;
-  const n = parseInt(v, 10);
-  if (!isNaN(n) && n >= 0){
-    manualQty[it.loc] = n; it.qty = n; it.conflict = false; render();
-  }
+$('qtyBig').addEventListener('click',()=>{
+  if(!items[idx])return;
+  const it=items[idx];
+  const v=prompt('Qty для '+it.loc+':',it.qty!=null?it.qty:'');
+  if(v===null)return;const n=parseInt(v,10);
+  if(!isNaN(n)&&n>=0){manualQty[it.loc]=n;it.qty=n;it.conflict=false;render();}
 });
-$('btnSayAll').addEventListener('click', sayAll);
-$('btnNew').addEventListener('click', function(){ location.reload(); });
-$('podChk').addEventListener('change', function(e){ podToggle(e.target.checked); });
-$('repChk').addEventListener('change', scheduleRepeat);
-$('repSec').addEventListener('change', scheduleRepeat);
+$('btnSayAll').addEventListener('click',sayAll);
+$('btnNew').addEventListener('click',()=>location.reload());
+$('podChk').addEventListener('change',e=>podToggle(e.target.checked));
+$('repChk').addEventListener('change',scheduleRepeat);
+$('repSec').addEventListener('change',scheduleRepeat);
 
 updateAiState();
 </script>
