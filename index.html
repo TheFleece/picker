@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v1.1 — pick-by-voice для склада (личный инструмент)
+  PICKER v1.2 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -23,7 +23,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0f14">
-<title>Picker v1.1</title>
+<title>Picker v1.2</title>
 <style>
 :root{
   --bg:#0b0f14;--card:#141a22;--line:#243040;
@@ -113,6 +113,7 @@ body.work .settings{background:#0a0e13;}
 #eco .e1{color:#39434f;font-size:60px;font-weight:800;font-variant-numeric:tabular-nums;}
 #eco .e2{color:#2c473a;font-size:42px;font-weight:800;}
 #eco .e3{color:#23292f;font-size:13px;margin-top:20px;}
+#eco .em{position:absolute;top:18px;right:20px;font-size:22px;opacity:.55;}
 #eco .ed{color:#44505c;font-size:19px;font-weight:600;max-width:92%;text-align:center;
   word-break:break-word;line-height:1.3;margin-top:6px;}
 /* Помощь */
@@ -142,7 +143,7 @@ body.work .settings{background:#0a0e13;}
 
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
-  <h1>Picker v1.1</h1>
+  <h1>Picker v1.2</h1>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div id="resumeBar" class="resume-bar" hidden>
@@ -284,7 +285,7 @@ body.work .settings{background:#0a0e13;}
     </ul>
 
     <h4>Правда про AirPods + iOS</h4>
-    <p>Пока микрофон <b>активен</b> (🔴), iOS перехватывает щелчок ножки — это ограничение Apple, Safari бессилен. Поэтому в режиме «Клик = 🎙»: щёлкнул → сказал команду → мик сам выключился. Щёлкать по красному мику не нужно.<br>
+    <p>Приложение регистрируется в iOS как «конференция», поэтому щелчок ножки работает <b>и при активном микрофоне</b> (🔴). Если на конкретной версии iOS щелчок при 🔴 всё-таки не доходит — дублируй голосом, команды работают всегда.<br>
     При активном микрофоне AirPods переходят в «телефонный» звук (более плоский) — норма для Bluetooth, после команды вернётся обычное качество.<br>
     Голос работает только в Safari, <b>не</b> из иконки на домашнем экране.</p>
 
@@ -320,6 +321,7 @@ body.work .settings{background:#0a0e13;}
 
 <!-- ================= ЭКО-ЭКРАН ================= -->
 <div id="eco" hidden>
+  <div class="em" id="ecoMic"></div>
   <div class="e1" id="ecoLoc">000-000</div>
   <div class="e2" id="ecoQty">× 0</div>
   <div class="ed" id="ecoDesc"></div>
@@ -533,18 +535,43 @@ function micUI(){
     if(micMuted){b.textContent='🔇';b.classList.add('muted');}
     else b.textContent='🎙∞';
   } else b.textContent='🎙';
+  const em=$('ecoMic');
+  if(em)em.textContent=micActive?'🔴':(settings.voiceMode==='always'?(micMuted?'🔇':'🎙'):'');
 }
+function reportMicState(){
+  try{
+    if('mediaSession'in navigator&&navigator.mediaSession.setMicrophoneActive)
+      navigator.mediaSession.setMicrophoneActive(micActive);
+  }catch(e){}
+}
+function micToggleByUser(){
+  if(settings.voiceMode==='always'){
+    micMuted=!micMuted;
+    if(micMuted)micStop();else micSchedule(100);
+    micUI();
+  }else{
+    pushToTalk();
+  }
+}
+/* Сторож: режим «Всегда» не имеет права умереть.
+   Если мик должен слушать, но молчит >3.5с — реанимируем. */
+let lastMicTry=0;
+setInterval(function(){
+  if(shouldAutoListen()&&!micActive&&!ttsSpeaking&&Date.now()-lastMicTry>3500)micStart();
+},4000);
+
 function micStart(){
   if(micActive||ttsSpeaking)return;
   updateAudio();
   if(!inWork||paused)return;
+  lastMicTry=Date.now();
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR)return;
   const gen=++recGen;
   const r=new SR();
   r.lang='ru-RU';r.continuous=false;r.interimResults=true;r.maxAlternatives=1;
   cmdFired=false;recObj=r;
-  r.onstart=function(){if(gen!==recGen)return;micActive=true;micUI();};
+  r.onstart=function(){if(gen!==recGen)return;micActive=true;micUI();reportMicState();};
   r.onresult=function(e){
     if(gen!==recGen||ttsSpeaking||cmdFired)return;
     let t='';
@@ -566,30 +593,30 @@ function micStart(){
   };
   r.onend=function(){
     if(gen!==recGen)return;
-    micActive=false;micUI();
+    micActive=false;micUI();reportMicState();
     const wasPush=pushSession;pushSession=false;
     clearTimeout(pushTimeoutT);
     updateAudio();
     if(shouldAutoListen()){
-      micSchedule(cmdFired?650:300);
+      micSchedule(cmdFired?650:450);
     }else if(wasPush&&!cmdFired){
       beep(330,80);   // кнопочная сессия кончилась без команды
     }
   };
-  try{r.start();}catch(e){micActive=false;micUI();}
+  try{r.start();}catch(e){recObj=null;micActive=false;micUI();if(shouldAutoListen())micSchedule(800);}
 }
 function micSchedule(d){clearTimeout(micResumeT);micResumeT=setTimeout(micStart,d);}
 function micStop(){
   recGen++;            // все колбэки старого распознавателя — в мусор
   if(recObj){try{recObj.stop();}catch(e){}recObj=null;}
   clearTimeout(micResumeT);clearTimeout(pushTimeoutT);
-  pushSession=false;micActive=false;micUI();updateAudio();
+  pushSession=false;micActive=false;micUI();updateAudio();reportMicState();
 }
 function micStopForTTS(){
   // мягкая остановка на время озвучки; рестарт сделает micResumeAfterTTS
   recGen++;clearTimeout(micResumeT);
   if(recObj){try{recObj.stop();}catch(e){}recObj=null;}
-  micActive=false;micUI();
+  micActive=false;micUI();reportMicState();
 }
 function micResumeAfterTTS(){
   if(shouldAutoListen())micSchedule(250);
@@ -865,7 +892,7 @@ let pod=null,podGuard=0;
 function stemAction(kind){
   if(!inWork||paused)return;
   const now=Date.now();if(now<podGuard)return;podGuard=now+300;
-  if(settings.podAction==='mic'&&kind==='take'){pushToTalk();return;}
+  if(settings.podAction==='mic'&&kind==='take'){micToggleByUser();return;}
   if(kind==='take')take();else if(kind==='repeat')sayItem();else back();
 }
 async function podToggle(on){
@@ -882,7 +909,10 @@ async function podToggle(on){
       navigator.mediaSession.setActionHandler('play',function(){stemAction('take');pod.play();});
       navigator.mediaSession.setActionHandler('nexttrack',function(){stemAction('repeat');});
       navigator.mediaSession.setActionHandler('previoustrack',function(){stemAction('back');});
-    }catch(e){}}
+    }catch(e){}
+    try{navigator.mediaSession.setActionHandler('togglemicrophone',function(){
+      stemAction('take');reportMicState();
+    });}catch(e){}}
   }else if(pod){pod.pause();}
 }
 
@@ -1057,6 +1087,11 @@ function startWork(resume){
   document.body.classList.add('work');
   $('scrSetup').hidden=true;$('scrDone').hidden=true;$('scrWork').hidden=false;
   ensureAudio();pickVoice();keepAwake();updateAudio();armBackGuard();
+  if('mediaSession'in navigator){
+    try{navigator.mediaSession.setActionHandler('togglemicrophone',function(){
+      stemAction('take');reportMicState();
+    });}catch(e){}
+  }
   saveSession();
   sayItem();   // после озвучки speak() сам включит мик (режим «Всегда»)
 }
@@ -1113,13 +1148,7 @@ $('btnArt').addEventListener('click',function(){if(Date.now()>=uiShield)speak(ar
 $('btnPartial').addEventListener('click',function(){if(Date.now()>=uiShield)setPartialQty();});
 $('btnVoice').addEventListener('click',function(){
   if(Date.now()<uiShield)return;
-  if(settings.voiceMode==='always'){
-    micMuted=!micMuted;
-    if(micMuted)micStop();else micSchedule(100);
-    micUI();
-  }else{
-    pushToTalk();
-  }
+  micToggleByUser();
 });
 $('btnSum').addEventListener('click',function(){if(Date.now()>=uiShield)midSummary();});
 $('btnViewSummary').addEventListener('click',function(){if(Date.now()>=uiShield)showInterimSummary();});
