@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v1.5 — pick-by-voice для склада (личный инструмент)
+  PICKER v1.6 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -23,7 +23,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0f14">
-<title>Picker v1.5</title>
+<title>Picker v1.6</title>
 <style>
 :root{
   --bg:#0b0f14;--card:#141a22;--line:#243040;
@@ -123,6 +123,10 @@ body.work .settings{background:#0a0e13;}
 #helpModal p,#helpModal li{color:var(--dim);font-size:14.5px;line-height:1.55;}
 #helpModal ul{padding-left:18px;margin:4px 0;}
 #helpModal b{color:var(--txt);}
+/* Плашка восстановления щелчков */
+#tapBanner{position:fixed;left:12px;right:12px;bottom:14px;z-index:60;
+  background:#102016;border:1px solid var(--go);border-radius:14px;
+  padding:13px;text-align:center;font-size:15px;font-weight:600;}
 /* Пауза */
 #pauseOverlay{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:45;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -143,7 +147,7 @@ body.work .settings{background:#0a0e13;}
 
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
-  <h1>Picker v1.5</h1>
+  <h1>Picker v1.6</h1>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div id="resumeBar" class="resume-bar" hidden>
@@ -223,10 +227,6 @@ body.work .settings{background:#0a0e13;}
     <div class="sec">
       <h3>AirPods</h3>
       <label class="sw" id="podRow"><span>Щелчки по ножке</span><input type="checkbox" id="podChk"><span class="tg"></span></label>
-      <div class="seg" id="segPod" hidden>
-        <button data-p="take">Клик = ВЗЯЛ</button>
-        <button data-p="mic">Клик = 🎙</button>
-      </div>
       <p class="hint" id="podNote" hidden style="margin-top:8px">В режиме «∞ Всегда» щелчки недоступны: микрофон активен постоянно, и iOS перехватывает нажатия ножки. Управляй голосом — «взял», «меньше», «пауза».</p>
     </div>
 
@@ -246,7 +246,7 @@ body.work .settings{background:#0a0e13;}
 
     <div class="hint">
       🎙 Команды: <b>«взял» «меньше» «назад» «повтори» «артикул» «товар» «пауза» «продолжи» «сводка» «конец»</b><br>
-      Щелчки AirPods: 1 = ВЗЯЛ (или 🎙) · 2 = Назад · 3 = Пауза/Продолжить<br>
+      Щелчки AirPods: 1 = ВЗЯЛ · 2 = Назад · 3 = Пауза/Продолжить<br>
       Режим «Всегда»: тап по 🎙 = выключить/включить микрофон<br>
       Тап по большому числу × — исправить Qty
     </div>
@@ -286,8 +286,7 @@ body.work .settings{background:#0a0e13;}
     </ul>
 
     <h4>Правда про AirPods + iOS</h4>
-    <p>Щелчок ножки работает, пока микрофон <b>не активен</b>. В режиме «🎙 Кнопка» мик открывается на 5–6 секунд после щелчка и сам закрывается; после каждой голосовой сессии приложение перезапускает аудио-канал — секунда-полторы, и ножка снова твоя. Пока горит 🔴, iOS перехватывает щелчки — договори команду.<br>
-    Если «Клик = 🎙» на твоей сборке iOS всё равно капризничает — это предел Safari: переключись на «Клик = ВЗЯЛ», а голос используй в режиме «∞ Всегда».<br>
+    <p>Щелчок ножки = ВЗЯЛ, двойной = Назад, тройной = Пауза/Продолжить. Микрофон и щелчки конфликтуют на уровне iOS, поэтому после любой голосовой сессии (экранная кнопка 🎙 или выход из «∞ Всегда») приложение пересоздаёт аудио-канал: ~2 секунды тишины — и ножка снова твоя. Если появится плашка «Тапни по экрану» — один тап вернёт щелчки, перезаходить в Safari не нужно.<br>
     В режиме «∞ Всегда» щелчки не работают вовсе — мик активен постоянно, поэтому раздел AirPods скрыт: там всё делается голосом.<br>
     При активном микрофоне AirPods переходят в «телефонный» звук (более плоский) — норма для Bluetooth, после команды вернётся обычное качество.<br>
     Голос работает только в Safari, <b>не</b> из иконки на домашнем экране.</p>
@@ -321,6 +320,8 @@ body.work .settings{background:#0a0e13;}
     <button class="btn btn-go" id="btnCloseSummary" style="margin-top:16px">▶ Продолжить работу</button>
   </div>
 </div>
+
+<div id="tapBanner" hidden>👆 Тапни по экрану — вернём щелчки AirPods</div>
 
 <!-- ================= ЭКО-ЭКРАН ================= -->
 <div id="eco" hidden>
@@ -617,7 +618,7 @@ function micStop(){
   clearTimeout(micResumeT);clearTimeout(pushTimeoutT);
   const hadPush=pushSession;
   pushSession=false;micActive=false;micUI();updateAudio();reportMicState();
-  if(hadPush)podReboot();
+  if(hadPush)podSoftDeepReboot();
 }
 function micStopForTTS(){
   // мягкая остановка на время озвучки; рестарт сделает micResumeAfterTTS
@@ -629,9 +630,9 @@ function micResumeAfterTTS(){
   if(shouldAutoListen())micSchedule(250);
 }
 function pushEndCleanup(){
-  // финал любой push-сессии: сессия записи → playback, канал щелчков перезапускается
+  // финал любой push-сессии: сессия записи → playback, канал щелчков пересоздаётся
   updateAudio();
-  podReboot();
+  podSoftDeepReboot();
 }
 function pushToTalk(){
   if(micActive){micStop();beep(330,60);return;}
@@ -920,36 +921,50 @@ function registerPodHandlers(){
     navigator.mediaSession.setActionHandler('previoustrack',function(){stemAction('third');});
   }catch(e){}
 }
-/* После любого эпизода микрофона iOS оставляет вкладку в «звонковом» состоянии
-   и перехватывает щелчки. Перезапуск тихого канала заставляет систему заново
-   классифицировать нас как плеер — щелчки возвращаются. */
-function podReboot(){
-  if(!settings.pod||settings.voiceMode==='always'||!pod)return;
+/* После любого эпизода микрофона iOS держит вкладку в «звонковом» состоянии
+   и перехватывает щелчки. Лечение = имитация перезахода в Safari:
+   1) мгновенно глушим мик, 2) ~0.9с ПОЛНОЙ тишины — iOS сворачивает сессию,
+   3) пересоздаём аудио-канал С НУЛЯ (старый элемент прикипает к «звонку»).
+   Если iOS заблокирует автозапуск — плашка «тапни экран», один тап и готово. */
+let podNeedsTap=false;
+function showTapBanner(b){const el=$('tapBanner');if(el)el.hidden=!b;}
+function podDeepReboot(){
+  // для смены режима: глушим всё немедленно
+  micStop();
+  try{if(window.speechSynthesis)speechSynthesis.cancel();}catch(e){}
+  curUtter=null;ttsSpeaking=false;
+  podRebuildAfterSilence(900);
+}
+function podSoftDeepReboot(){
+  // после push-сессии: даём договорить озвучке, потом тишина и пересоздание
+  const wait=function(){
+    if(ttsSpeaking){setTimeout(wait,250);return;}
+    podRebuildAfterSilence(900);
+  };
+  wait();
+}
+function podRebuildAfterSilence(ms){
+  if(!settings.pod||settings.voiceMode==='always')return;
+  podIgnorePause=Date.now()+ms+2000;
+  try{if(pod)pod.pause();}catch(e){}
   clearTimeout(podRebootT);
   podRebootT=setTimeout(function(){
-    if(!settings.pod||settings.voiceMode==='always'||!pod)return;
-    podIgnorePause=Date.now()+1500;
-    try{pod.pause();}catch(e){}
-    setTimeout(function(){
-      try{
-        if(!desiredRec()&&'audioSession'in navigator)navigator.audioSession.type='playback';
-      }catch(e){}
-      try{pod.currentTime=0;}catch(e){}
-      pod.play().catch(function(){});
-      registerPodHandlers();
-    },260);
-  },380);
+    if(!settings.pod||settings.voiceMode==='always')return;
+    try{if('audioSession'in navigator)navigator.audioSession.type='playback';}catch(e){}
+    try{if(pod)pod.src='';}catch(e){}
+    pod=null;                 // старый элемент в мусор
+    podToggle(true,true);     // свежий канал; quiet=true → без alert
+  },ms);
 }
 function stemAction(kind){
   if(!inWork)return;
   const now=Date.now();if(now<podGuard)return;podGuard=now+300;
   if(kind==='third'){if(paused)resumeWork();else pauseWork();return;}  // 3 клика
   if(paused)return;
-  if(kind==='take'){
-    if(settings.podAction==='mic')micToggleByUser();else take();
-  }else if(kind==='back')back();
+  if(kind==='take')take();
+  else if(kind==='back')back();
 }
-async function podToggle(on){
+async function podToggle(on,quiet){
   settings.pod=!!on;saveSettings();
   updateModeUI();
   applyAudioSession();
@@ -959,16 +974,27 @@ async function podToggle(on){
         if(Date.now()<podIgnorePause)return;          // мы сами поставили на паузу
         if(settings.pod&&settings.voiceMode!=='always'&&inWork)pod.play().catch(function(){});
       });}
-    try{await pod.play();}catch(e){alert('Не удалось включить аудио-канал.');$('podChk').checked=false;settings.pod=false;saveSettings();updateModeUI();return;}
+    try{
+      await pod.play();
+      podNeedsTap=false;showTapBanner(false);
+    }catch(e){
+      if(quiet){podNeedsTap=true;showTapBanner(true);return;}
+      alert('Не удалось включить аудио-канал.');
+      $('podChk').checked=false;settings.pod=false;saveSettings();updateModeUI();return;
+    }
     registerPodHandlers();
-  }else if(pod){pod.pause();}
+  }else if(pod){podIgnorePause=Date.now()+1200;pod.pause();podNeedsTap=false;showTapBanner(false);}
 }
 
 /* ================= ЭКО-ЭКРАН (с щитом от мисс-кликов) ================= */
 let lastTouch=Date.now(),ecoShown=false;
 document.addEventListener('pointerdown',function(){
   lastTouch=Date.now();
-  if(inWork&&settings.pod&&settings.voiceMode!=='always'&&pod&&pod.paused)pod.play().catch(function(){});
+  if(settings.pod&&settings.voiceMode!=='always'&&pod&&pod.paused){
+    pod.play().then(function(){
+      podNeedsTap=false;showTapBanner(false);registerPodHandlers();
+    }).catch(function(){});
+  }
 });
 setInterval(function(){
   if(inWork&&!paused&&settings.eco&&!ecoShown&&Date.now()-lastTouch>20000)showEco();
@@ -1149,7 +1175,7 @@ window.addEventListener('popstate',function(){
 
 /* ================= UI НАСТРОЕК ================= */
 function updateModeUI(){
-  segVoiceUI();segPodUI();
+  segVoiceUI();
   const off=settings.voiceMode==='off';
   const always=settings.voiceMode==='always';
   // 🎙 кнопка не нужна, если голос выключен
@@ -1157,10 +1183,6 @@ function updateModeUI(){
   // В «Всегда» щелчки бесполезны (iOS перехватывает) — раздел скрыт
   $('podRow').hidden=always;
   $('podNote').hidden=!always;
-  // Выбор действия клика: только если щелчки включены и есть смысл выбирать
-  $('segPod').hidden=always||!settings.pod||off;
-  // Голос выключен → клик может быть только ВЗЯЛ
-  if(off&&settings.podAction==='mic'){settings.podAction='take';saveSettings();segPodUI();}
   // Тихий аудио-канал щелчков: глушим в «Всегда», возвращаем при выходе
   if(pod){
     if(always){podIgnorePause=Date.now()+1200;pod.pause();}
@@ -1173,11 +1195,6 @@ function segVoiceUI(){
     b.classList.toggle('on',b.getAttribute('data-v')===settings.voiceMode);
   });
   micUI();
-}
-function segPodUI(){
-  document.querySelectorAll('#segPod button').forEach(function(b){
-    b.classList.toggle('on',b.getAttribute('data-p')===settings.podAction);
-  });
 }
 function applySettingsToUI(){
   $('rate').value=settings.rate;$('rateVal').textContent=settings.rate.toFixed(2).replace(/0$/,'')+'×';
@@ -1260,14 +1277,8 @@ document.querySelectorAll('#segVoice button').forEach(function(b){
     if(settings.voiceMode==='off')micStop();
     else if(settings.voiceMode==='always'){micMuted=false;if(inWork&&!paused&&!ttsSpeaking)micSchedule(200);}
     updateModeUI();
-    // ушли из «Всегда» → iOS держит «звонок», перезапускаем канал щелчков
-    if(prev==='always'&&settings.voiceMode!=='always')podReboot();
-  });
-});
-document.querySelectorAll('#segPod button').forEach(function(b){
-  b.addEventListener('click',function(){
-    settings.podAction=b.getAttribute('data-p');saveSettings();
-    applyAudioSession();segPodUI();
+    // ушли из «Всегда» → мик глохнет сразу, канал щелчков пересоздаётся с нуля
+    if(prev==='always'&&settings.voiceMode!=='always')podDeepReboot();
   });
 });
 
