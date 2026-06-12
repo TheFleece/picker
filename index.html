@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v1.4 — pick-by-voice для склада (личный инструмент)
+  PICKER v1.5 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -23,7 +23,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0f14">
-<title>Picker v1.4</title>
+<title>Picker v1.5</title>
 <style>
 :root{
   --bg:#0b0f14;--card:#141a22;--line:#243040;
@@ -143,7 +143,7 @@ body.work .settings{background:#0a0e13;}
 
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
-  <h1>Picker v1.4</h1>
+  <h1>Picker v1.5</h1>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div id="resumeBar" class="resume-bar" hidden>
@@ -286,7 +286,8 @@ body.work .settings{background:#0a0e13;}
     </ul>
 
     <h4>Правда про AirPods + iOS</h4>
-    <p>Щелчок ножки работает, пока микрофон <b>не активен</b>. В режиме «🎙 Кнопка» это почти всегда: мик открывается на 5–6 секунд только после щелчка и сам закрывается. Пока горит 🔴, iOS перехватывает щелчки («Cannot Control Mic») — это ограничение Apple, просто договори команду.<br>
+    <p>Щелчок ножки работает, пока микрофон <b>не активен</b>. В режиме «🎙 Кнопка» мик открывается на 5–6 секунд после щелчка и сам закрывается; после каждой голосовой сессии приложение перезапускает аудио-канал — секунда-полторы, и ножка снова твоя. Пока горит 🔴, iOS перехватывает щелчки — договори команду.<br>
+    Если «Клик = 🎙» на твоей сборке iOS всё равно капризничает — это предел Safari: переключись на «Клик = ВЗЯЛ», а голос используй в режиме «∞ Всегда».<br>
     В режиме «∞ Всегда» щелчки не работают вовсе — мик активен постоянно, поэтому раздел AirPods скрыт: там всё делается голосом.<br>
     При активном микрофоне AirPods переходят в «телефонный» звук (более плоский) — норма для Bluetooth, после команды вернётся обычное качество.<br>
     Голос работает только в Safari, <b>не</b> из иконки на домашнем экране.</p>
@@ -585,7 +586,9 @@ function micStart(){
   };
   r.onerror=function(ev){
     if(gen!==recGen)return;
+    const hadP=pushSession;
     pushSession=false;clearTimeout(pushTimeoutT);
+    if(hadP)pushEndCleanup();
     if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){
       settings.voiceMode='off';saveSettings();segVoiceUI();
       alert('Нет доступа к микрофону. Разреши в настройках Safari.');
@@ -598,6 +601,7 @@ function micStart(){
     const wasPush=pushSession;pushSession=false;
     clearTimeout(pushTimeoutT);
     updateAudio();
+    if(wasPush)pushEndCleanup();
     if(shouldAutoListen()){
       micSchedule(cmdFired?650:450);
     }else if(wasPush&&!cmdFired){
@@ -611,7 +615,9 @@ function micStop(){
   recGen++;            // все колбэки старого распознавателя — в мусор
   if(recObj){try{recObj.abort?recObj.abort():recObj.stop();}catch(e){}recObj=null;}
   clearTimeout(micResumeT);clearTimeout(pushTimeoutT);
+  const hadPush=pushSession;
   pushSession=false;micActive=false;micUI();updateAudio();reportMicState();
+  if(hadPush)podReboot();
 }
 function micStopForTTS(){
   // мягкая остановка на время озвучки; рестарт сделает micResumeAfterTTS
@@ -622,26 +628,35 @@ function micStopForTTS(){
 function micResumeAfterTTS(){
   if(shouldAutoListen())micSchedule(250);
 }
+function pushEndCleanup(){
+  // финал любой push-сессии: сессия записи → playback, канал щелчков перезапускается
+  updateAudio();
+  podReboot();
+}
 function pushToTalk(){
   if(micActive){micStop();beep(330,60);return;}
   // юзер хочет говорить — обрываем озвучку
   if(window.speechSynthesis)speechSynthesis.cancel();
   curUtter=null;ttsSpeaking=false;
   pushSession=true;
-  micStart();
+  updateAudio();                       // сессия записи (звук остаётся в AirPods)
+  setTimeout(function(){               // даём Bluetooth перейти на новый маршрут,
+    if(pushSession&&!micActive)micStart();  // иначе скачок убивает распознавание
+  },320);
   clearTimeout(pushTimeoutT);
   pushTimeoutT=setTimeout(function(){
-    // страховка: что бы ни случилось, через 6с push-сессия закрыта
-    if(pushSession){pushSession=false;if(micActive)micStop();updateAudio();}
-  },6000);
+    // страховка: что бы ни случилось, через 6.5с push-сессия закрыта
+    if(pushSession){pushSession=false;if(micActive)micStop();else pushEndCleanup();}
+  },6500);
 }
 
 /* ===== Аудио-сессия: режим записи ТОЛЬКО пока реально слушаем =====
    Иначе iOS уводит звук в динамик и перехватывает щелчки AirPods. */
 let audioMode='';
 function desiredRec(){
-  // только режим «Всегда» держит сессию записи; push-сессии её не трогают
-  return inWork&&!paused&&settings.voiceMode==='always'&&!micMuted;
+  // «Всегда» и активная push-сессия держат сессию записи (звук остаётся в AirPods).
+  // pushSession очищается в 4 местах (onend/onerror/таймаут/micStop) — зависнуть не может.
+  return (inWork&&!paused&&settings.voiceMode==='always'&&!micMuted)||pushSession;
 }
 function updateAudio(){
   const want=desiredRec()?'play-and-record':'playback';
@@ -864,7 +879,7 @@ document.addEventListener('visibilitychange',function(){
   if(document.visibilityState==='visible'&&inWork){
     keepAwake();lastTouch=Date.now();
     updateAudio();
-    if(settings.pod&&settings.voiceMode!=='always'&&pod&&pod.paused)pod.play().catch(function(){});
+    if(settings.pod&&settings.voiceMode!=='always'&&pod&&pod.paused){pod.play().catch(function(){});registerPodHandlers();}
     if(shouldAutoListen()&&!micActive&&!ttsSpeaking)micSchedule(500);
   }
 });
@@ -894,7 +909,37 @@ function silentWavURL(){
   ws(36,'data');v.setUint32(40,len*2,true);
   return URL.createObjectURL(new Blob([buf],{type:'audio/wav'}));
 }
-let pod=null,podGuard=0,podIgnorePause=0;
+let pod=null,podGuard=0,podIgnorePause=0,podRebootT=null;
+function registerPodHandlers(){
+  if(!('mediaSession'in navigator)||!pod)return;
+  try{
+    navigator.mediaSession.metadata=new MediaMetadata({title:'Picker'});
+    navigator.mediaSession.setActionHandler('pause',function(){stemAction('take');pod.play();});
+    navigator.mediaSession.setActionHandler('play',function(){stemAction('take');pod.play();});
+    navigator.mediaSession.setActionHandler('nexttrack',function(){stemAction('back');});
+    navigator.mediaSession.setActionHandler('previoustrack',function(){stemAction('third');});
+  }catch(e){}
+}
+/* После любого эпизода микрофона iOS оставляет вкладку в «звонковом» состоянии
+   и перехватывает щелчки. Перезапуск тихого канала заставляет систему заново
+   классифицировать нас как плеер — щелчки возвращаются. */
+function podReboot(){
+  if(!settings.pod||settings.voiceMode==='always'||!pod)return;
+  clearTimeout(podRebootT);
+  podRebootT=setTimeout(function(){
+    if(!settings.pod||settings.voiceMode==='always'||!pod)return;
+    podIgnorePause=Date.now()+1500;
+    try{pod.pause();}catch(e){}
+    setTimeout(function(){
+      try{
+        if(!desiredRec()&&'audioSession'in navigator)navigator.audioSession.type='playback';
+      }catch(e){}
+      try{pod.currentTime=0;}catch(e){}
+      pod.play().catch(function(){});
+      registerPodHandlers();
+    },260);
+  },380);
+}
 function stemAction(kind){
   if(!inWork)return;
   const now=Date.now();if(now<podGuard)return;podGuard=now+300;
@@ -915,13 +960,7 @@ async function podToggle(on){
         if(settings.pod&&settings.voiceMode!=='always'&&inWork)pod.play().catch(function(){});
       });}
     try{await pod.play();}catch(e){alert('Не удалось включить аудио-канал.');$('podChk').checked=false;settings.pod=false;saveSettings();updateModeUI();return;}
-    if('mediaSession'in navigator){try{
-      navigator.mediaSession.metadata=new MediaMetadata({title:'Picker'});
-      navigator.mediaSession.setActionHandler('pause',function(){stemAction('take');pod.play();});
-      navigator.mediaSession.setActionHandler('play',function(){stemAction('take');pod.play();});
-      navigator.mediaSession.setActionHandler('nexttrack',function(){stemAction('back');});
-      navigator.mediaSession.setActionHandler('previoustrack',function(){stemAction('third');});
-    }catch(e){}}
+    registerPodHandlers();
   }else if(pod){pod.pause();}
 }
 
@@ -1215,11 +1254,14 @@ $('ecoChk').addEventListener('change',function(){settings.eco=this.checked;saveS
 $('podChk').addEventListener('change',function(e){podToggle(e.target.checked);});
 document.querySelectorAll('#segVoice button').forEach(function(b){
   b.addEventListener('click',function(){
+    const prev=settings.voiceMode;
     settings.voiceMode=b.getAttribute('data-v');saveSettings();
     applyAudioSession();
     if(settings.voiceMode==='off')micStop();
     else if(settings.voiceMode==='always'){micMuted=false;if(inWork&&!paused&&!ttsSpeaking)micSchedule(200);}
     updateModeUI();
+    // ушли из «Всегда» → iOS держит «звонок», перезапускаем канал щелчков
+    if(prev==='always'&&settings.voiceMode!=='always')podReboot();
   });
 });
 document.querySelectorAll('#segPod button').forEach(function(b){
