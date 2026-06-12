@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v1.8 — pick-by-voice для склада (личный инструмент)
+  PICKER v1.9 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -23,7 +23,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0f14">
-<title>Picker v1.8</title>
+<title>Picker v1.9</title>
 <style>
 :root{
   --bg:#0b0f14;--card:#141a22;--line:#243040;
@@ -134,7 +134,7 @@ body.work .settings{background:#0a0e13;}
 #pauseOverlay .btn-dim{background:#06140b;border:1px solid #1c5031;color:#2f9e5e;
   font-size:21px;padding:18px;margin-top:30px;max-width:300px;width:100%;border-radius:14px;font-weight:700;}
 /* Промежуточный итог */
-#summaryModal{position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:44;overflow-y:auto;padding:16px 12px 40px;}
+#summaryModal{position:fixed;inset:0;background:#000;z-index:44;overflow-y:auto;padding:16px 12px 40px;}
 #summaryModal h2{margin:4px 0 14px;font-size:20px;}
 .sum-ok td{color:var(--go);}
 .sum-partial td{color:var(--warn);}
@@ -146,7 +146,7 @@ body.work .settings{background:#0a0e13;}
 
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
-  <h1>Picker v1.8</h1>
+  <h1>Picker v1.9</h1>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div id="resumeBar" class="resume-bar" hidden>
@@ -246,7 +246,7 @@ body.work .settings{background:#0a0e13;}
       🎙 Команды: <b>«взял» «меньше» «назад» «повтори» «артикул» «товар» «пауза» «продолжи» «сводка» «конец»</b><br>
       Щелчки AirPods: 1 = ВЗЯЛ · 2 = Назад · 3 = Пауза/Продолжить<br>
       Режим «Всегда»: тап по 🎙 = mute (низкий бип) / unmute (высокий бип)<br>
-      Говорить можно прямо поверх озвучки — не жди конца фразы<br>
+      Говорить можно поверх озвучки; команды идут очередью без пауз<br>
       Щелчки умерли после «∞ Всегда»? Сверни Safari (свайп домой) и вернись — iOS сбросит блокировку, прогресс не теряется<br>
       Тап по большому числу × — исправить Qty
     </div>
@@ -360,6 +360,7 @@ let idx=0;
 let inWork=false, paused=false;
 let repeatTimer=null;
 let manualQty={};
+let summaryHold=false;   // открыт «Итог»: озвучка/мик/эко на паузе
 let pendingFiles=[];
 let uiShield=0;   // щит от мисс-кликов после эко-экрана
 
@@ -525,10 +526,10 @@ let recObj=null;         // живой распознаватель — чтоб
 let micActive=false;     // прямо сейчас слушает
 let micMuted=false;      // ручной mute в режиме «Всегда»
 let micResumeT=null;
-let cmdFired=false;
+let lastCmdAt=0;         // защита от двойного срабатывания одной фразы
 
 function shouldAutoListen(){
-  return inWork&&!paused&&settings.voiceMode==='always'&&!micMuted;
+  return inWork&&!paused&&!summaryHold&&settings.voiceMode==='always'&&!micMuted;
 }
 function micUI(){
   const b=$('btnVoice');if(!b)return;
@@ -568,18 +569,29 @@ function micStart(){
   if(!SR)return;
   const gen=++recGen;
   const r=new SR();
-  r.lang='ru-RU';r.continuous=false;r.interimResults=true;r.maxAlternatives=1;
-  cmdFired=false;recObj=r;
+  // continuous: сессия живёт через несколько команд подряд — без пауз между ними.
+  // Если конкретная iOS не поддержит — сессия закроется сама, сторож перезапустит.
+  r.lang='ru-RU';r.continuous=true;r.interimResults=true;r.maxAlternatives=1;
+  recObj=r;
+  let ready=true,armT=null;   // ready=false: команда выстрелила, ждём конца фразы
   r.onstart=function(){if(gen!==recGen)return;micActive=true;micUI();reportMicState();};
   r.onresult=function(e){
-    if(gen!==recGen||cmdFired)return;
+    if(gen!==recGen)return;
     let t='';
     for(let i=e.resultIndex;i<e.results.length;i++)t+=e.results[i][0].transcript;
+    const lastFinal=e.results.length&&e.results[e.results.length-1].isFinal;
+    if(!ready){
+      // фраза с уже выполненной командой закрылась → взводимся на следующую
+      if(lastFinal){ready=true;clearTimeout(armT);}
+      return;
+    }
     const a=matchVCmd(t);
-    if(a){
-      cmdFired=true;
-      try{r.stop();}catch(_){}
-      setTimeout(function(){executeVCmd(a);},60);
+    if(a&&Date.now()-lastCmdAt>600){
+      lastCmdAt=Date.now();
+      ready=false;
+      clearTimeout(armT);
+      armT=setTimeout(function(){ready=true;},2500); // страховка, если iOS зажала финал
+      executeVCmd(a);   // мик НЕ останавливаем — слушаем дальше без перерыва
     }
   };
   r.onerror=function(ev){
@@ -594,7 +606,7 @@ function micStart(){
     if(gen!==recGen)return;
     micActive=false;micUI();reportMicState();
     updateAudio();
-    if(shouldAutoListen())micSchedule(cmdFired?650:450);
+    if(shouldAutoListen())micSchedule(250);
   };
   try{r.start();}catch(e){recObj=null;micActive=false;micUI();if(shouldAutoListen())micSchedule(800);}
 }
@@ -610,7 +622,7 @@ function micStop(){
 let audioMode='';
 function desiredRec(){
   // Сессию записи держит только режим «Всегда».
-  return inWork&&!paused&&settings.voiceMode==='always'&&!micMuted;
+  return inWork&&!paused&&!summaryHold&&settings.voiceMode==='always'&&!micMuted;
 }
 function updateAudio(){
   const want=desiredRec()?'play-and-record':'playback';
@@ -723,7 +735,7 @@ function finish(force){
     if(!confirm('Не все позиции взяты ('+items.filter(i=>!i.taken).length+' осталось). Точно закончить?'))return;
   }
   inWork=false;paused=false;clearTimeout(repeatTimer);
-  micStop();hideEco();hidePause();$('summaryModal').hidden=true;
+  micStop();hideEco();hidePause();$('summaryModal').hidden=true;summaryHold=false;
   clearSession();updateAudio();
   $('scrWork').hidden=true;$('scrDone').hidden=false;
   const taken=items.filter(i=>i.taken);
@@ -761,6 +773,12 @@ function sayAll(){
 /* ================= ПРОМЕЖУТОЧНЫЙ ИТОГ ================= */
 function showInterimSummary(){
   if(!items.length)return;
+  // сверка с бумагой: озвучка и мик молчат, автоповтор стоит
+  summaryHold=true;
+  clearTimeout(repeatTimer);
+  try{if(window.speechSynthesis)speechSynthesis.cancel();}catch(e){}
+  curUtter=null;ttsSpeaking=false;
+  micStop();hideEco();
   const takenN=items.filter(i=>i.taken).length;
   const takenQ=items.filter(i=>i.taken).reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
   const partial=items.filter(i=>i.taken&&i.actualQty!=null).length;
@@ -786,6 +804,7 @@ function pauseWork(){
   if(window.speechSynthesis)speechSynthesis.cancel();
   curUtter=null;ttsSpeaking=false;
   micStop();hideEco();updateAudio();
+  $('summaryModal').hidden=true;summaryHold=false;
   $('pauseInfo').textContent='позиция '+(idx+1)+' / '+items.length+' · '+items[idx].loc;
   $('pauseOverlay').hidden=false;
 }
@@ -913,7 +932,7 @@ document.addEventListener('pointerdown',function(){
   if(settings.pod&&settings.voiceMode!=='always'&&pod&&pod.paused)pod.play().catch(function(){});
 });
 setInterval(function(){
-  if(inWork&&!paused&&settings.eco&&!ecoShown&&Date.now()-lastTouch>20000)showEco();
+  if(inWork&&!paused&&!summaryHold&&settings.eco&&!ecoShown&&Date.now()-lastTouch>20000)showEco();
 },3000);
 function showEco(){
   if(!items.length)return;
@@ -1152,14 +1171,20 @@ $('btnVoice').addEventListener('click',function(){
 });
 $('btnSum').addEventListener('click',function(){if(Date.now()>=uiShield)midSummary();});
 $('btnViewSummary').addEventListener('click',function(){if(Date.now()>=uiShield)showInterimSummary();});
-$('btnCloseSummary').addEventListener('click',function(){$('summaryModal').hidden=true;});
+$('btnCloseSummary').addEventListener('click',function(){
+  $('summaryModal').hidden=true;summaryHold=false;
+  if(inWork&&!paused){
+    sayItem();                              // переориентируемся: где я и сколько брать
+    if(shouldAutoListen())micSchedule(200); // мик возвращается
+  }
+});
 $('btnFinish').addEventListener('click',finish);
 $('btnEdit').addEventListener('click',function(){
   if(inWork&&items.some(function(i){return i.taken;})){
     if(!confirm('Прогресс сбросится. Выйти к списку?'))return;
   }
   inWork=false;paused=false;clearTimeout(repeatTimer);
-  micStop();hideEco();hidePause();$('summaryModal').hidden=true;
+  micStop();hideEco();hidePause();$('summaryModal').hidden=true;summaryHold=false;
   clearSession();
   document.body.classList.remove('work');$('scrWork').hidden=true;$('scrSetup').hidden=false;
 });
