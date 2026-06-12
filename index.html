@@ -23,7 +23,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0f14">
-<title>Picker v2.0</title>
+<title>Picker v2.1</title>
 <style>
 :root{
   --bg:#0b0f14;--card:#141a22;--line:#243040;
@@ -181,18 +181,18 @@ body.work #moreBar{background:#0a0e13;}
     </div>
   </div>
 
-  <div class="row">
-    <button class="btn" id="btnPhoto">📷 Добавить фото</button>
-    <button class="btn" id="btnHelp" style="flex:0 0 18%">❓</button>
-    <button class="btn" id="btnKey" style="flex:0 0 18%">🔑</button>
-    <button class="btn" id="btnClear" style="flex:0 0 26%">Очистить</button>
+  <div class="settings" style="margin-top:0">
+    <div class="sec" style="margin-top:4px">
+      <h3>Сканирование листа</h3>
+      <button class="btn" id="btnPhoto">Добавить фото</button>
+      <p class="tip">1-е фото — весь лист целиком; мелкий шрифт — 2-е фото крупно нижней половины. Перекрытие строк не страшно.</p>
+      <div id="photoQueue" class="pq" hidden></div>
+      <button class="btn btn-go" id="btnScanAI" style="font-size:19px;padding:16px" hidden>Сканировать</button>
+      <div id="ocrStatus" class="warn-line" hidden></div>
+      <div class="hint" id="aiState" style="margin-top:10px"></div>
+    </div>
   </div>
-  <div class="hint" id="aiState"></div>
-  <p class="tip">Совет: 1-е фото — весь лист целиком; если шрифт мелкий — 2-е фото крупно нижней половины. Перекрытие строк не страшно.</p>
   <input type="file" id="photoInput" accept="image/*" multiple hidden>
-  <div id="photoQueue" class="pq" hidden></div>
-  <button class="btn btn-go" id="btnScanAI" style="font-size:19px;padding:16px" hidden>🤖 Сканировать</button>
-  <div id="ocrStatus" class="warn-line" hidden></div>
 
   <textarea id="raw" placeholder="Сюда попадает текст с фото. Можно также нажать сюда и использовать «Сканировать текст» с клавиатуры iPhone. Повторные сканы не дублируются — они заполняют пропуски."></textarea>
 
@@ -204,6 +204,11 @@ body.work #moreBar{background:#0a0e13;}
   </label>
 
   <div id="parseOut"></div>
+  <div class="row">
+    <button class="btn btn-small" id="btnHelp">Помощь</button>
+    <button class="btn btn-small" id="btnKey">AI-ключ</button>
+    <button class="btn btn-small" id="btnClear">Очистить</button>
+  </div>
   <div class="grow"></div>
   <button class="btn btn-go" id="btnStart" hidden>СТАРТ</button>
 </div>
@@ -226,13 +231,13 @@ body.work #moreBar{background:#0a0e13;}
   <button class="btn btn-go" id="btnTake" style="padding:26px">ВЗЯЛ</button>
 
   <div class="row" style="margin-top:10px">
-    <button class="btn" id="btnPause">⏸ Пауза</button>
+    <button class="btn" id="btnPause">Пауза</button>
     <button class="btn btn-warn" id="btnPartial">⚠ Меньше</button>
     <button class="btn" id="btnBack">Назад</button>
   </div>
   <div class="row">
     <button class="btn" id="btnArt">Артикул</button>
-    <button class="btn" id="btnViewSummary">📋 Итог</button>
+    <button class="btn" id="btnViewSummary">Итог</button>
     <button class="btn btn-mic" id="btnVoice">🎙</button>
   </div>
 
@@ -264,10 +269,12 @@ body.work #moreBar{background:#0a0e13;}
 
     <div class="sec">
       <h3>Экран</h3>
-      <label class="sw"><span>Эко-экран (гаснет через 20 с)</span><input type="checkbox" id="ecoChk" checked><span class="tg"></span></label>
+      <label class="sw"><span>Эко-экран</span><input type="checkbox" id="ecoChk" checked><span class="tg"></span></label>
+      <div class="inline-num"><span>Гаснет через, сек (мин. 10)</span>
+        <input type="number" id="ecoSec" value="20" min="10" max="300"></div>
     </div>
 
-    <button class="btn" id="btnSum">🔊 Сводка голосом</button>
+    <button class="btn" id="btnSum">Сводка голосом</button>
     <button class="btn btn-small" id="btnFinish">Закончить и показать итог</button>
     <button class="btn btn-small" id="btnEdit">✎ Назад к списку</button>
 
@@ -289,7 +296,8 @@ body.work #moreBar{background:#0a0e13;}
   <h1 style="text-align:center">Лист готов</h1>
   <p class="sub" style="text-align:center" id="doneSub"></p>
   <div id="doneTable"></div>
-  <button class="btn" id="btnSayAll">🔊 Озвучить итог</button>
+  <button class="btn" id="btnBackToWork">← Вернуться к листу</button>
+  <button class="btn" id="btnSayAll">Озвучить итог</button>
   <button class="btn" id="btnNew">Новый лист</button>
 </div>
 
@@ -299,7 +307,7 @@ body.work #moreBar{background:#0a0e13;}
     <h2>❓ Как пользоваться</h2>
 
     <h4>Смена за 30 секунд</h4>
-    <p>1. Взял лист → <b>📷 Добавить фото</b> (можно несколько). Фото копятся в очереди — проверь, всё ли добавил, и жми <b>🤖 Сканировать</b>.<br>
+    <p>1. Взял лист → <b>Добавить фото</b> (можно несколько). Фото копятся в очереди — проверь, всё ли добавил, и жми <b>Сканировать</b>.<br>
     2. Проверь зелёную строку «Сумма Qty = Total coli ✓». Красные ? — тапни и исправь.<br>
     3. <b>СТАРТ</b> → надевай AirPods и поехали по конусам.</p>
 
@@ -316,7 +324,7 @@ body.work #moreBar{background:#0a0e13;}
       <li>Товара меньше или нет → <b>«меньше»</b>, введи факт. На бумаге перечеркни.</li>
       <li>Конуса нет → название на экране и на эко-экране; команда <b>«товар»</b> продиктует название.</li>
       <li><b>«пауза»</b> / 3 щелчка — перерыв. <b>«продолжи»</b> / 3 щелчка — дальше.</li>
-      <li><b>📋 Итог</b> — тихая сверка с бумагой: озвучка и мик молчат, пока открыто.</li>
+      <li><b>Итог</b> — тихая сверка с бумагой: озвучка и мик молчат, пока открыто.</li>
       <li>Ушёл на ланч / Safari закрылся → открой сайт → <b>▶ Продолжить</b> (прогресс хранится 12 часов).</li>
     </ul>
 
@@ -336,7 +344,7 @@ body.work #moreBar{background:#0a0e13;}
 
     <h4>Если что-то пошло не так</h4>
     <ul>
-      <li>503/429 от Google → подожди и снова <b>🤖 Сканировать</b> — фото остались в очереди.</li>
+      <li>503/429 от Google → подожди и снова <b>Сканировать</b> — фото остались в очереди.</li>
       <li>Мик «не слышит» → команда чётко одним словом; проверь, не включён ли 🔇 mute.</li>
       <li>Страница перезагрузилась → <b>▶ Продолжить</b> на главном экране.</li>
       <li>Совсем зависло → перезагрузи страницу, прогресс цел.</li>
@@ -377,7 +385,7 @@ body.work #moreBar{background:#0a0e13;}
 
 /* ================= НАСТРОЙКИ (persist) ================= */
 const SET_KEY='picker_set', SES_KEY='picker_ses';
-const DEFAULTS={rate:1.1,repOn:true,repSec:8,voiceMode:'off',pod:false,eco:true};
+const DEFAULTS={rate:1.1,repOn:true,repSec:8,voiceMode:'off',pod:false,eco:true,ecoSec:20};
 let settings=loadSettings();
 // v1.7: режим «Кнопка» удалён — старое значение мигрируем в «Выкл»
 if(settings.voiceMode!=='always'&&settings.voiceMode!=='off')settings.voiceMode='off';
@@ -766,12 +774,13 @@ function setPartialQty(){
   speak(n===0?'Ноль, товара нет.':'Записал '+qtyToSpeech(n)+' '+shtuk(n)+'.');
 }
 function finish(force){
-  if(!force&&inWork&&items.some(function(i){return !i.taken;})){
+  if(force!==true&&inWork&&items.some(function(i){return !i.taken;})){
     if(!confirm('Не все позиции взяты ('+items.filter(i=>!i.taken).length+' осталось). Точно закончить?'))return;
   }
+  if(inWork)saveSession();   // к листу можно вернуться после итога
   inWork=false;paused=false;clearTimeout(repeatTimer);
   micStop();hideEco();hidePause();$('summaryModal').hidden=true;summaryHold=false;
-  clearSession();updateAudio();
+  updateAudio();
   $('scrWork').hidden=true;$('scrDone').hidden=false;
   const taken=items.filter(i=>i.taken);
   const partial=items.filter(i=>i.taken&&i.actualQty!=null);
@@ -901,7 +910,7 @@ function ensureAudio(){
   }catch(e){}
 }
 function clickTick(){beep(1500,16,0.045);}     // мягкий «тик» интерфейса
-document.addEventListener('pointerdown',function(e){
+document.addEventListener('click',function(e){
   const t=e.target.closest&&e.target.closest('.btn,.btn-dim,.seg button,.sw,#moreBar');
   if(t)clickTick();
 },{passive:true});
@@ -973,7 +982,7 @@ document.addEventListener('pointerdown',function(){
   if(settings.pod&&settings.voiceMode!=='always'&&pod&&pod.paused)pod.play().catch(function(){});
 });
 setInterval(function(){
-  if(inWork&&!paused&&!summaryHold&&settings.eco&&!ecoShown&&Date.now()-lastTouch>20000)showEco();
+  if(inWork&&!paused&&!summaryHold&&settings.eco&&!ecoShown&&Date.now()-lastTouch>Math.max(10,settings.ecoSec||20)*1000)showEco();
 },3000);
 function showEco(){
   if(!items.length)return;
@@ -1071,7 +1080,7 @@ function renderQueue(){
   });
   const b=$('btnScanAI');
   b.hidden=!photoQ.length;
-  b.textContent='🤖 Сканировать ('+photoQ.length+' фото)';
+  b.textContent='Сканировать ('+photoQ.length+' фото)';
 }
 function clearQueue(){
   photoQ.forEach(function(ph){try{URL.revokeObjectURL(ph.url);}catch(e){}});
@@ -1203,7 +1212,7 @@ function segVoiceUI(){
 function applySettingsToUI(){
   $('rate').value=settings.rate;$('rateVal').textContent=settings.rate.toFixed(2).replace(/0$/,'')+'×';
   $('repChk').checked=settings.repOn;$('repSec').value=settings.repSec;
-  $('ecoChk').checked=settings.eco;
+  $('ecoChk').checked=settings.eco;$('ecoSec').value=settings.ecoSec||20;
   $('podChk').checked=settings.pod;
   updateModeUI();
 }
@@ -1253,13 +1262,10 @@ $('btnCloseSummary').addEventListener('click',function(){
 });
 $('btnFinish').addEventListener('click',finish);
 $('btnEdit').addEventListener('click',function(){
-  if(inWork&&items.some(function(i){return i.taken;})){
-    if(!confirm('Прогресс сбросится. Выйти к списку?'))return;
-  }
   inWork=false;paused=false;clearTimeout(repeatTimer);
   micStop();hideEco();hidePause();$('summaryModal').hidden=true;summaryHold=false;
-  clearSession();
   document.body.classList.remove('work');$('scrWork').hidden=true;$('scrSetup').hidden=false;
+  checkSavedSession();   // лист можно продолжить
 });
 $('qtyBig').addEventListener('click',function(){
   if(!items[idx]||Date.now()<uiShield)return;
@@ -1270,6 +1276,7 @@ $('qtyBig').addEventListener('click',function(){
 });
 $('btnHelp').addEventListener('click',function(){$('helpModal').hidden=false;});
 $('btnCloseHelp').addEventListener('click',function(){$('helpModal').hidden=true;});
+$('btnBackToWork').addEventListener('click',function(){$('scrDone').hidden=true;startWork(true);});
 $('btnSayAll').addEventListener('click',sayAll);
 $('btnNew').addEventListener('click',function(){clearSession();location.reload();});
 
@@ -1282,6 +1289,7 @@ $('rate').addEventListener('input',function(){
 $('repChk').addEventListener('change',function(){settings.repOn=this.checked;saveSettings();scheduleRepeat();});
 $('repSec').addEventListener('change',function(){settings.repSec=parseInt(this.value,10)||8;saveSettings();scheduleRepeat();});
 $('ecoChk').addEventListener('change',function(){settings.eco=this.checked;saveSettings();if(!this.checked)hideEco();});
+$('ecoSec').addEventListener('change',function(){settings.ecoSec=Math.max(10,parseInt(this.value,10)||20);this.value=settings.ecoSec;saveSettings();});
 $('podChk').addEventListener('change',function(e){podToggle(e.target.checked);});
 document.querySelectorAll('#segVoice button').forEach(function(b){
   b.addEventListener('click',function(){
