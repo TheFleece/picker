@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v2.0 — pick-by-voice (финальная) для склада (личный инструмент)
+  PICKER v2.2 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -22,8 +22,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Picker">
 <meta name="theme-color" content="#0b0f14">
-<title>Picker v2.1</title>
+<title>Picker</title>
 <style>
 :root{
   --bg:#0b0f14;--card:#141a22;--line:#243040;
@@ -40,7 +41,7 @@ body{margin:0;background:var(--bg);color:var(--txt);
 body.work{background:#000;}
 h1{font-size:20px;margin:4px 0 2px;}
 .sub{color:var(--dim);font-size:13px;margin:0 0 14px;}
-textarea{width:100%;min-height:110px;background:var(--card);color:var(--txt);
+textarea{margin-top:12px;width:100%;min-height:110px;background:var(--card);color:var(--txt);
   border:1px solid var(--line);border-radius:12px;padding:12px;font-size:15px;}
 .btn{display:block;width:100%;border:1px solid var(--line);border-radius:14px;
   padding:16px;font-size:17px;font-weight:600;color:var(--txt);
@@ -69,6 +70,9 @@ th{color:var(--dim);font-weight:500;font-size:12px;}
 .totline{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:15px;color:var(--dim);}
 .totline input{width:74px;font-size:16px;background:var(--card);color:var(--txt);
   border:1px solid var(--line);border-radius:8px;padding:7px;}
+#parseOut{margin-top:6px;}
+#summaryTap{color:var(--dim);font-size:14px;padding:2px 10px;border-radius:8px;user-select:none;-webkit-user-select:none;}
+#summaryTap:active{color:var(--txt);background:rgba(255,255,255,.07);}
 .progress{display:flex;justify-content:space-between;color:var(--dim);font-size:15px;margin:4px 0 8px;}
 .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px 12px;
   text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0;}
@@ -181,11 +185,11 @@ body.work #moreBar{background:#0a0e13;}
     </div>
   </div>
 
-  <div class="settings" style="margin-top:0">
+  <div class="settings">
     <div class="sec" style="margin-top:4px">
       <h3>Сканирование листа</h3>
       <button class="btn" id="btnPhoto">Добавить фото</button>
-      <p class="tip">1-е фото — весь лист целиком; мелкий шрифт — 2-е фото крупно нижней половины. Перекрытие строк не страшно.</p>
+      <p class="tip">Весь лист + нижняя часть при мелком шрифте</p>
       <div id="photoQueue" class="pq" hidden></div>
       <button class="btn btn-go" id="btnScanAI" style="font-size:19px;padding:16px" hidden>Сканировать</button>
       <div id="ocrStatus" class="warn-line" hidden></div>
@@ -194,7 +198,7 @@ body.work #moreBar{background:#0a0e13;}
   </div>
   <input type="file" id="photoInput" accept="image/*" multiple hidden>
 
-  <textarea id="raw" placeholder="Сюда попадает текст с фото. Можно также нажать сюда и использовать «Сканировать текст» с клавиатуры iPhone. Повторные сканы не дублируются — они заполняют пропуски."></textarea>
+  <textarea id="raw" placeholder="Текст с фото — или вставь вручную"></textarea>
 
   <button class="btn" id="btnParse">Распознать лист</button>
 
@@ -217,6 +221,7 @@ body.work #moreBar{background:#0a0e13;}
 <div id="scrWork" hidden>
   <div class="progress">
     <span id="posTxt">1 / 1</span>
+    <span id="summaryTap">сводка</span>
     <span id="takenTxt">взято 0 шт</span>
   </div>
 
@@ -273,8 +278,6 @@ body.work #moreBar{background:#0a0e13;}
       <div class="inline-num"><span>Гаснет через, сек (мин. 10)</span>
         <input type="number" id="ecoSec" value="20" min="10" max="300"></div>
     </div>
-
-    <button class="btn" id="btnSum">Сводка голосом</button>
     <button class="btn btn-small" id="btnFinish">Закончить и показать итог</button>
     <button class="btn btn-small" id="btnEdit">✎ Назад к списку</button>
 
@@ -1246,7 +1249,7 @@ $('btnVoice').addEventListener('click',function(){
   if(Date.now()<uiShield)return;
   micToggleByUser();
 });
-$('btnSum').addEventListener('click',function(){if(Date.now()>=uiShield)midSummary();});
+$('summaryTap').addEventListener('click',function(){if(Date.now()>=uiShield)midSummary();});
 $('moreBar').addEventListener('click',function(){
   const open=!$('morePanel').classList.contains('open');
   $('morePanel').classList.toggle('open',open);
@@ -1309,6 +1312,26 @@ document.querySelectorAll('#segVoice button').forEach(function(b){
 applySettingsToUI();
 updateAiState();
 checkSavedSession();
+
+// PWA иконка — canvas, добавляется при загрузке → iOS берёт при Add to Home Screen
+(function(){
+  try{
+    const cv=document.createElement('canvas');
+    cv.width=cv.height=180;const cx=cv.getContext('2d');
+    const gr=cx.createLinearGradient(0,0,180,180);
+    gr.addColorStop(0,'#35e078');gr.addColorStop(1,'#1aa856');
+    cx.fillStyle=gr;cx.fillRect(0,0,180,180);
+    cx.fillStyle='rgba(0,0,0,.12)';
+    cx.beginPath();cx.arc(148,38,78,0,Math.PI*2);cx.fill();
+    cx.fillStyle='#fff';
+    cx.font='bold 108px -apple-system,BlinkMacSystemFont,sans-serif';
+    cx.textAlign='center';cx.textBaseline='middle';
+    cx.fillText('P',90,96);
+    const lk=document.createElement('link');
+    lk.rel='apple-touch-icon';lk.href=cv.toDataURL('image/png');
+    document.head.appendChild(lk);
+  }catch(e){}
+})();
 </script>
 </body>
 </html>
