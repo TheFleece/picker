@@ -2,26 +2,34 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v0.5
-  Новое:
-  • ВСЕ фото → ОДИН запрос Gemini (фикс 429 «too many requests»)
-  • Частичное кол-во: «Взял меньше» → зачёркнутый план, красный факт
-  • Пауза / Продолжить (перерыв, помогаю коллеге и т.д.)
-  • Голосовые команды (🎙): «взял» «назад» «повтори» «артикул» «пауза»
-    «продолжи» «сводка» «взял меньше» «конец»
+  PICKER v1.0 — pick-by-voice для склада (личный инструмент)
+  ============================================================
+  v1.0:
+  • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
+    → нет лагов, нет самопрослушки. Режимы: Выкл / Кнопка / Всегда
+  • navigator.audioSession = play-and-record → звук остаётся в AirPods
+  • Команда «меньше» (вместо «взял меньше»), все команды по границам слов
+    («локация» больше НЕ триггерит «ок» — убрал команду «ок»)
+  • Сессия сохраняется: перезагрузка/вылет → кнопка «Продолжить с 4/10»
+  • Свайп «назад» в браузере = Пауза (не выкидывает из листа)
+  • Эко-экран: первый тап ТОЛЬКО будит экран (щит от мисс-кликов 350мс)
+  • «→ далее: 004-006» — видно куда ехать следующим (для погрузчика)
+  • Новый интерфейс: iOS-переключатели, секции, без мелких галочек
+  ============================================================
+  Править: озвучка → itemPhrase() · команды → VCMDS · промпт AI → buildPrompt()
 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0f14">
-<title>Picker v0.6</title>
+<title>Picker v1.0</title>
 <style>
 :root{
   --bg:#0b0f14;--card:#141a22;--line:#243040;
   --txt:#e8eef5;--dim:#8fa1b3;
   --go:#2dd46f;--go-press:#24b35d;
-  --warn:#ffb020;--bad:#ff5d5d;
+  --warn:#ffb020;--bad:#ff5d5d;--blue:#4aa3ff;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{margin:0;background:var(--bg);color:var(--txt);
@@ -33,7 +41,7 @@ h1{font-size:20px;margin:4px 0 2px;}
 textarea{width:100%;min-height:110px;background:var(--card);color:var(--txt);
   border:1px solid var(--line);border-radius:12px;padding:12px;font-size:15px;}
 .btn{display:block;width:100%;border:1px solid var(--line);border-radius:14px;
-  padding:16px;font-size:18px;font-weight:600;color:var(--txt);
+  padding:16px;font-size:17px;font-weight:600;color:var(--txt);
   background:var(--card);margin-top:10px;}
 .btn:active{transform:scale(.98);}
 .btn:disabled{opacity:.35;}
@@ -42,10 +50,10 @@ textarea{width:100%;min-height:110px;background:var(--card);color:var(--txt);
 .btn-small{padding:11px;font-size:15px;font-weight:500;color:var(--dim);}
 .btn-retry{background:#1a2535;border-color:var(--warn);color:var(--warn);margin-top:8px;font-size:17px;padding:14px;}
 .btn-warn{background:#251809;border-color:var(--warn);color:var(--warn);}
-.btn-stt{background:#0f1e33;border-color:#3a6bbd;color:#7ab3ff;}
-.btn-stt.listening{background:#250f0f;border-color:var(--bad);color:var(--bad);}
+.btn-mic{background:#0f1e33;border-color:#3a6bbd;color:#7ab3ff;}
+.btn-mic.live{background:#250f0f;border-color:var(--bad);color:var(--bad);animation:pulse 1s infinite;}
+.btn-mic.muted{opacity:.5;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
-.btn-stt.listening{animation:pulse 1s infinite;}
 .row{display:flex;gap:10px;}
 .row .btn{flex:1;}
 table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px;}
@@ -56,7 +64,6 @@ th{color:var(--dim);font-weight:500;font-size:12px;}
 .bad-cell{color:var(--bad);font-weight:700;}
 .ok-line{color:var(--go);font-size:15px;margin-top:10px;}
 .warn-line{color:var(--warn);font-size:14px;margin-top:8px;}
-.partial-badge{color:var(--warn);}
 .totline{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:15px;color:var(--dim);}
 .totline input{width:74px;font-size:16px;background:var(--card);color:var(--txt);
   border:1px solid var(--line);border-radius:8px;padding:7px;}
@@ -73,46 +80,69 @@ body.work .card{background:#0a0e13;}
 #qtyBig .q-act{color:var(--bad);display:block;font-size:1.15em;}
 #descTxt{color:var(--dim);font-size:15px;margin-top:10px;min-height:20px;word-break:break-word;}
 #artTxt{color:var(--dim);font-size:14px;margin-top:4px;font-variant-numeric:tabular-nums;}
+#nextTxt{color:#56687c;font-size:15px;margin-top:10px;font-variant-numeric:tabular-nums;}
+/* ===== Настройки: секции, переключатели, сегменты ===== */
 .settings{margin-top:14px;background:var(--card);border:1px solid var(--line);
-  border-radius:14px;padding:12px;font-size:15px;}
+  border-radius:16px;padding:4px 14px 14px;}
 body.work .settings{background:#0a0e13;}
-.settings label{display:flex;align-items:center;gap:8px;margin:9px 0;}
-.settings input[type=number]{width:64px;font-size:16px;background:var(--bg);
-  color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px;}
-.settings input[type=range]{flex:1;}
-.hint{color:var(--dim);font-size:12.5px;line-height:1.5;margin-top:6px;}
+.sec{margin-top:12px;}
+.sec h3{font-size:11.5px;color:#5a6b7d;text-transform:uppercase;letter-spacing:.8px;margin:0 0 2px;font-weight:600;}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;font-size:16px;}
+.sw+.sw{border-top:1px solid #1b2430;}
+.sw input{display:none;}
+.sw .tg{width:51px;height:31px;border-radius:16px;background:#39424e;position:relative;transition:background .2s;flex:0 0 auto;}
+.sw .tg::after{content:'';position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;transition:left .2s;}
+.sw input:checked+.tg{background:var(--go);}
+.sw input:checked+.tg::after{left:22px;}
+.seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:6px;}
+.seg button{flex:1;padding:13px 4px;background:none;border:none;color:var(--dim);font-size:14.5px;font-weight:600;}
+.seg button.on{background:#1d2a3a;color:var(--txt);}
+.inline-num{display:flex;align-items:center;gap:8px;padding:11px 0;font-size:16px;justify-content:space-between;}
+.inline-num input{width:64px;font-size:17px;background:var(--bg);color:var(--txt);
+  border:1px solid var(--line);border-radius:8px;padding:8px;text-align:center;}
+.rate-row{padding:11px 0;font-size:16px;}
+.rate-row input[type=range]{width:100%;margin-top:8px;}
+.hint{color:#56687c;font-size:12.5px;line-height:1.5;margin-top:10px;}
 .done-icon{font-size:48px;text-align:center;margin:16px 0 4px;}
+/* Резюме незаконченной сессии */
+.resume-bar{background:#102016;border:1px solid var(--go);border-radius:14px;padding:14px;margin-top:12px;}
+.resume-bar p{margin:0 0 10px;font-size:15px;}
 /* Эко-экран */
 #eco{position:fixed;inset:0;background:#000;z-index:50;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;}
 #eco .e1{color:#39434f;font-size:60px;font-weight:800;font-variant-numeric:tabular-nums;}
 #eco .e2{color:#2c473a;font-size:42px;font-weight:800;}
 #eco .e3{color:#23292f;font-size:13px;margin-top:20px;}
-/* Экран паузы */
-#pauseOverlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:45;
+/* Пауза */
+#pauseOverlay{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:45;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   text-align:center;padding:24px;gap:4px;}
 #pauseOverlay .pi{font-size:72px;line-height:1;}
 #pauseOverlay .pl{font-size:30px;font-weight:800;color:var(--warn);margin-top:6px;}
 #pauseOverlay .pp{color:var(--dim);font-size:16px;margin-top:8px;}
-/* Модалка промежуточного итога */
-#summaryModal{position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:44;
-  overflow-y:auto;padding:16px 12px 40px;}
+/* Промежуточный итог */
+#summaryModal{position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:44;overflow-y:auto;padding:16px 12px 40px;}
 #summaryModal h2{margin:4px 0 14px;font-size:20px;}
 .sum-ok td{color:var(--go);}
 .sum-partial td{color:var(--warn);}
 .sum-todo td{color:var(--dim);}
-/* Голосовая кнопка в активном (постоянном) режиме */
-.btn-stt.on{border-color:var(--go);color:var(--go);background:#0b1f0e;}
 [hidden]{display:none !important;}
 </style>
 </head>
 <body>
 
-<!-- ===== ЭКРАН 1: ЗАГРУЗКА ===== -->
+<!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
-  <h1>Picker v0.6</h1>
+  <h1>Picker v1.0</h1>
   <p class="sub">Pick-by-voice · личный прототип</p>
+
+  <div id="resumeBar" class="resume-bar" hidden>
+    <p>⏳ Есть незаконченный лист: <b id="resumeInfo"></b></p>
+    <div class="row">
+      <button class="btn btn-go" id="btnResumeSession" style="font-size:18px;padding:14px">▶ Продолжить</button>
+      <button class="btn" id="btnDropSession" style="flex:0 0 38%">Удалить</button>
+    </div>
+  </div>
 
   <div class="row">
     <button class="btn" id="btnPhoto">📷 Фото листа</button>
@@ -124,20 +154,20 @@ body.work .settings{background:#0a0e13;}
   <div id="ocrStatus" class="warn-line" hidden></div>
   <button class="btn btn-retry" id="btnRetry" hidden>🔄 Повторить (те же фото)</button>
 
-  <textarea id="raw" placeholder="Сюда попадает текст с фото. Можно также нажать сюда и использовать «Сканировать текст» с клавиатуры iPhone. Повторные сканы НЕ дублируются — они заполняют пропуски."></textarea>
+  <textarea id="raw" placeholder="Сюда попадает текст с фото. Можно также нажать сюда и использовать «Сканировать текст» с клавиатуры iPhone. Повторные сканы не дублируются — они заполняют пропуски."></textarea>
 
   <button class="btn" id="btnParse">Распознать лист</button>
 
   <label class="totline">Total coli с листа:
     <input type="number" id="expTotal" inputmode="numeric">
-    <span class="hint">(заполнится само, если попало в скан)</span>
+    <span class="hint" style="margin-top:0">(заполнится само, если попало в скан)</span>
   </label>
 
   <div id="parseOut"></div>
   <button class="btn btn-go" id="btnStart" hidden>СТАРТ</button>
 </div>
 
-<!-- ===== ЭКРАН 2: РАБОТА ===== -->
+<!-- ================= ЭКРАН 2: РАБОТА ================= -->
 <div id="scrWork" hidden>
   <div class="progress">
     <span id="posTxt">1 / 1</span>
@@ -149,6 +179,7 @@ body.work .settings{background:#0a0e13;}
     <div id="qtyBig" class="normal">× 0</div>
     <div id="descTxt"></div>
     <div id="artTxt"></div>
+    <div id="nextTxt"></div>
   </div>
 
   <button class="btn btn-go" id="btnTake">ВЗЯЛ</button>
@@ -159,28 +190,53 @@ body.work .settings{background:#0a0e13;}
     <button class="btn" id="btnBack">Назад</button>
   </div>
   <div class="row">
+    <button class="btn btn-warn" id="btnPartial">⚠ Меньше</button>
     <button class="btn" id="btnArt">Артикул</button>
-    <button class="btn btn-warn" id="btnPartial">⚠ Взял меньше</button>
-    <button class="btn btn-stt" id="btnVoice">🎙</button>
+    <button class="btn btn-mic" id="btnVoice">🎙</button>
   </div>
   <div class="row">
-    <button class="btn" id="btnSum">Сводка</button>
+    <button class="btn" id="btnSum">🔊 Сводка</button>
     <button class="btn" id="btnViewSummary">📋 Итог</button>
   </div>
 
   <div class="settings">
-    <label><input type="checkbox" id="repChk" checked>
-      Автоповтор каждые <input type="number" id="repSec" value="8" min="3" max="60"> сек</label>
-    <label>Скорость речи <input type="range" id="rate" min="0.7" max="1.4" step="0.05" value="1.1"></label>
-    <label><input type="checkbox" id="contVoiceChk">🔁 Постоянный микрофон (всегда слушает)</label>
-    <label><input type="checkbox" id="podChk">Щелчки AirPods</label>
-    <label><input type="checkbox" id="podVoiceChk">AirPods клик = 🎙 микрофон (вместо ВЗЯЛ)</label>
-    <label><input type="checkbox" id="ecoChk" checked>Эко-экран (гаснет через 20 с)</label>
+    <div class="sec">
+      <h3>Голосовое управление</h3>
+      <div class="seg" id="segVoice">
+        <button data-v="off">Выкл</button>
+        <button data-v="push">🎙 Кнопка</button>
+        <button data-v="always">∞ Всегда</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>AirPods</h3>
+      <label class="sw"><span>Щелчки по ножке</span><input type="checkbox" id="podChk"><span class="tg"></span></label>
+      <div class="seg" id="segPod" hidden>
+        <button data-p="take">Клик = ВЗЯЛ</button>
+        <button data-p="mic">Клик = 🎙</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>Озвучка</h3>
+      <div class="rate-row">Скорость речи <b id="rateVal">1.1×</b>
+        <input type="range" id="rate" min="0.7" max="1.5" step="0.05" value="1.1"></div>
+      <label class="sw"><span>Автоповтор позиции</span><input type="checkbox" id="repChk" checked><span class="tg"></span></label>
+      <div class="inline-num" id="repSecRow"><span>Интервал повтора, сек</span>
+        <input type="number" id="repSec" value="8" min="3" max="60"></div>
+    </div>
+
+    <div class="sec">
+      <h3>Экран</h3>
+      <label class="sw"><span>Эко-экран (гаснет через 20 с)</span><input type="checkbox" id="ecoChk" checked><span class="tg"></span></label>
+    </div>
+
     <div class="hint">
-      Щелчки (обычный режим): 1 = ВЗЯЛ · 2 = Повтор · 3 = Назад<br>
-      Щелчки (режим 🎙): 1 клик = включить/выключить микрофон<br>
-      🎙 Голос: «взял» «назад» «повтори» «артикул» «пауза» «продолжи» «итог» «взял меньше» «конец»<br>
-      Тап по × — исправить Qty вручную
+      🎙 Команды: <b>«взял» «меньше» «назад» «повтори» «артикул» «пауза» «продолжи» «сводка» «конец»</b><br>
+      Щелчки AirPods: 1 = действие (ВЗЯЛ или 🎙) · 2 = Повтор · 3 = Назад<br>
+      Режим «Всегда»: тап по 🎙 = выключить/включить звук микрофона<br>
+      Тап по большому числу × — исправить Qty
     </div>
   </div>
 
@@ -188,7 +244,7 @@ body.work .settings{background:#0a0e13;}
   <button class="btn btn-small" id="btnEdit">✎ Назад к списку</button>
 </div>
 
-<!-- ===== ЭКРАН 3: ИТОГ ===== -->
+<!-- ================= ЭКРАН 3: ИТОГ ================= -->
 <div id="scrDone" hidden>
   <div class="done-icon">✅</div>
   <h1 style="text-align:center">Лист готов</h1>
@@ -198,14 +254,7 @@ body.work .settings{background:#0a0e13;}
   <button class="btn" id="btnNew">Новый лист</button>
 </div>
 
-<!-- ===== ЭКО-ЭКРАН ===== -->
-<div id="eco" hidden>
-  <div class="e1" id="ecoLoc">000-000</div>
-  <div class="e2" id="ecoQty">× 0</div>
-  <div class="e3">коснись экрана, чтобы вернуть</div>
-</div>
-
-<!-- ===== МОДАЛКА ПРОМЕЖУТОЧНОГО ИТОГА ===== -->
+<!-- ================= МОДАЛКА ИТОГА ================= -->
 <div id="summaryModal" hidden>
   <div style="max-width:600px;margin:0 auto">
     <h2>📋 Текущий прогресс</h2>
@@ -214,7 +263,14 @@ body.work .settings{background:#0a0e13;}
   </div>
 </div>
 
-<!-- ===== ПАУЗА-ЭКРАН ===== -->
+<!-- ================= ЭКО-ЭКРАН ================= -->
+<div id="eco" hidden>
+  <div class="e1" id="ecoLoc">000-000</div>
+  <div class="e2" id="ecoQty">× 0</div>
+  <div class="e3">коснись экрана, чтобы вернуть</div>
+</div>
+
+<!-- ================= ПАУЗА ================= -->
 <div id="pauseOverlay" hidden>
   <div class="pi">⏸</div>
   <div class="pl">ПАУЗА</div>
@@ -225,18 +281,28 @@ body.work .settings{background:#0a0e13;}
 <script>
 'use strict';
 
-/* ===== СОСТОЯНИЕ ===== */
-let items = [];   // {loc, qty, actualQty, article, desc, taken, conflict}
-let idx   = 0;
-let inWork  = false;
-let paused  = false;
-let repeatTimer = null;
-let manualQty   = {};
-let pendingFiles = [];
+/* ================= НАСТРОЙКИ (persist) ================= */
+const SET_KEY='picker_set', SES_KEY='picker_ses';
+const DEFAULTS={rate:1.1,repOn:true,repSec:8,voiceMode:'push',pod:false,podAction:'take',eco:true};
+let settings=loadSettings();
+function loadSettings(){
+  try{return Object.assign({},DEFAULTS,JSON.parse(localStorage.getItem(SET_KEY)||'{}'));}
+  catch(e){return Object.assign({},DEFAULTS);}
+}
+function saveSettings(){try{localStorage.setItem(SET_KEY,JSON.stringify(settings));}catch(e){}}
 
-const $ = id => document.getElementById(id);
+/* ================= СОСТОЯНИЕ ================= */
+let items=[];     // {loc, qty, actualQty, article, desc, taken, conflict}
+let idx=0;
+let inWork=false, paused=false;
+let repeatTimer=null;
+let manualQty={};
+let pendingFiles=[];
+let uiShield=0;   // щит от мисс-кликов после эко-экрана
 
-/* ===== ПАРСЕР + СЛИЯНИЕ ===== */
+const $=id=>document.getElementById(id);
+
+/* ================= ПАРСЕР + СЛИЯНИЕ ================= */
 function normalizeScan(t){
   return String(t)
     .replace(/\u00A0/g,' ').replace(/\|/g,' ')
@@ -246,9 +312,9 @@ function normalizeScan(t){
     .replace(/\b(0\d\d)(0\d\d)\b/g,'$1-$2');
 }
 function parseList(raw){
-  const text = normalizeScan(raw);
-  const found = Array.from(text.matchAll(/\b\d{3}-\d{3}\b/g));
-  const out = [];
+  const text=normalizeScan(raw);
+  const found=Array.from(text.matchAll(/\b\d{3}-\d{3}\b/g));
+  const out=[];
   for(let i=0;i<found.length;i++){
     const m=found[i];
     const seg=text.slice(m.index+m[0].length,(i+1<found.length)?found[i+1].index:text.length);
@@ -287,7 +353,7 @@ function detectTotal(raw){
   return m?parseInt(m[1],10):null;
 }
 
-/* ===== ЧИСЛА → СЛОВА ===== */
+/* ================= ЧИСЛА → СЛОВА ================= */
 const DIGITS=['ноль','один','два','три','четыре','пять','шесть','семь','восемь','девять'];
 const QTY_W={1:'одну',2:'две',3:'три',4:'четыре',5:'пять',6:'шесть',7:'семь',
   8:'восемь',9:'девять',10:'десять',11:'одиннадцать',12:'двенадцать',
@@ -313,42 +379,192 @@ function itemPhrase(it){
   return 'Локация '+locToSpeech(it.loc)+'. '+q;
 }
 
-/* ===== TTS ===== */
-let ruVoice=null;
+/* ================= TTS (полудуплекс с микрофоном) ================= */
+let ruVoice=null, ttsSpeaking=false, curUtter=null;
 function pickVoice(){
   const vs=window.speechSynthesis?speechSynthesis.getVoices():[];
   ruVoice=vs.find(v=>/^ru/i.test(v.lang)&&/milena/i.test(v.name))||vs.find(v=>/^ru/i.test(v.lang))||null;
 }
 if(window.speechSynthesis){speechSynthesis.onvoiceschanged=pickVoice;pickVoice();}
+
 function speak(text){
   if(!window.speechSynthesis)return;
+  // мик глохнет на время озвучки — нет самопрослушки, нет лага
+  micStopForTTS();
   speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(text);
+  curUtter=u;
   u.lang='ru-RU';if(ruVoice)u.voice=ruVoice;
-  u.rate=parseFloat($('rate').value)||1;
-  setTimeout(()=>speechSynthesis.speak(u),60);
+  u.rate=parseFloat($('rate').value)||1.1;
+  ttsSpeaking=true;
+  const done=function(){
+    if(curUtter!==u)return;       // отменили — это уже не наша озвучка
+    ttsSpeaking=false;
+    micResumeAfterTTS();
+  };
+  u.onend=done;u.onerror=done;
+  // страховка: iOS иногда глотает onend
+  const est=Math.min(15000,1200+text.length*70);
+  setTimeout(function(){if(curUtter===u&&ttsSpeaking){ttsSpeaking=false;micResumeAfterTTS();}},est);
+  setTimeout(function(){speechSynthesis.speak(u);},60);
   scheduleRepeat();
 }
 function speakSeq(arr){
   if(!window.speechSynthesis)return;
-  speechSynthesis.cancel();
-  setTimeout(()=>arr.forEach(t=>{
-    const u=new SpeechSynthesisUtterance(t);
-    u.lang='ru-RU';if(ruVoice)u.voice=ruVoice;
-    u.rate=parseFloat($('rate').value)||1;
-    speechSynthesis.speak(u);
-  }),60);
+  speechSynthesis.cancel();curUtter=null;ttsSpeaking=false;
+  setTimeout(function(){
+    arr.forEach(function(t){
+      const u=new SpeechSynthesisUtterance(t);
+      u.lang='ru-RU';if(ruVoice)u.voice=ruVoice;
+      u.rate=parseFloat($('rate').value)||1.1;
+      speechSynthesis.speak(u);
+    });
+  },60);
 }
 
-/* ===== АВТОПОВТОР ===== */
+/* ================= АВТОПОВТОР ================= */
 function scheduleRepeat(){
   clearTimeout(repeatTimer);
   if(!inWork||paused||!$('repChk').checked)return;
   const s=Math.max(3,parseInt($('repSec').value,10)||8);
-  repeatTimer=setTimeout(()=>sayItem(),s*1000);
+  repeatTimer=setTimeout(function(){sayItem();},s*1000);
 }
 
-/* ===== РАБОТА ===== */
+/* ================= ГОЛОСОВЫЕ КОМАНДЫ ================= */
+// Матчинг по границам слов: «локация» НЕ триггерит ничего.
+const VCMDS=[
+  {w:['меньше','частично','нехватка','не хватает'],a:'partial'},
+  {w:['взял','готово','следующий','дальше'],       a:'take'},
+  {w:['назад','предыдущий','вернись'],             a:'back'},
+  {w:['повтори','повторить','снова','ещё раз','еще раз'],a:'repeat'},
+  {w:['артикул','номер'],                          a:'article'},
+  {w:['сколько','количество'],                     a:'qty'},
+  {w:['пауза','стоп','перерыв'],                   a:'pause'},
+  {w:['продолжи','продолжить','продолжай','поехали'],a:'resume'},
+  {w:['сводка','итог'],                            a:'summary'},
+  {w:['конец','финиш','закончил'],                 a:'finish'},
+];
+VCMDS.forEach(function(c){
+  c.rx=c.w.map(function(w){
+    return new RegExp('(^|[^а-яё])'+w.replace(/ /g,'\\s+')+'($|[^а-яё])');
+  });
+});
+function matchVCmd(t){
+  const lo=' '+String(t).toLowerCase()+' ';
+  for(const c of VCMDS)if(c.rx.some(r=>r.test(lo)))return c.a;
+  return null;
+}
+
+/* ===== Микрофон: один живой распознаватель, epoch-guard ===== */
+let recGen=0;            // эпоха: всё со старой эпохой игнорируется
+let micActive=false;     // прямо сейчас слушает
+let micMuted=false;      // ручной mute в режиме «Всегда»
+let micResumeT=null, pushTimeoutT=null;
+let pushSession=false;   // одноразовая сессия (кнопка/клик AirPods)
+let cmdFired=false;
+
+function shouldAutoListen(){
+  return inWork&&!paused&&settings.voiceMode==='always'&&!micMuted;
+}
+function micUI(){
+  const b=$('btnVoice');if(!b)return;
+  b.classList.remove('live','muted');
+  if(micActive){b.textContent='🔴';b.classList.add('live');}
+  else if(settings.voiceMode==='always'){
+    if(micMuted){b.textContent='🔇';b.classList.add('muted');}
+    else b.textContent='🎙∞';
+  } else b.textContent='🎙';
+}
+function micStart(){
+  if(micActive||ttsSpeaking)return;
+  if(!inWork||paused)return;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR)return;
+  const gen=++recGen;
+  const r=new SR();
+  r.lang='ru-RU';r.continuous=false;r.interimResults=true;r.maxAlternatives=1;
+  cmdFired=false;
+  r.onstart=function(){if(gen!==recGen)return;micActive=true;micUI();};
+  r.onresult=function(e){
+    if(gen!==recGen||ttsSpeaking||cmdFired)return;
+    let t='';
+    for(let i=e.resultIndex;i<e.results.length;i++)t+=e.results[i][0].transcript;
+    const a=matchVCmd(t);
+    if(a){
+      cmdFired=true;
+      try{r.stop();}catch(_){}
+      setTimeout(function(){executeVCmd(a);},60);
+    }
+  };
+  r.onerror=function(ev){
+    if(gen!==recGen)return;
+    if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){
+      settings.voiceMode='off';saveSettings();segVoiceUI();
+      alert('Нет доступа к микрофону. Разреши в настройках Safari.');
+    }
+    // рестарт планируем ТОЛЬКО в onend — никаких двойных петель
+  };
+  r.onend=function(){
+    if(gen!==recGen)return;
+    micActive=false;micUI();
+    const wasPush=pushSession;pushSession=false;
+    clearTimeout(pushTimeoutT);
+    if(shouldAutoListen()){
+      micSchedule(cmdFired?650:300);
+    }else if(wasPush&&!cmdFired){
+      beep(330,80);   // кнопочная сессия кончилась без команды
+    }
+  };
+  try{r.start();}catch(e){micActive=false;micUI();}
+}
+function micSchedule(d){clearTimeout(micResumeT);micResumeT=setTimeout(micStart,d);}
+function micStop(){
+  recGen++;            // все колбэки старого распознавателя — в мусор
+  clearTimeout(micResumeT);clearTimeout(pushTimeoutT);
+  pushSession=false;micActive=false;micUI();
+}
+function micStopForTTS(){
+  // мягкая остановка на время озвучки; рестарт сделает micResumeAfterTTS
+  recGen++;clearTimeout(micResumeT);
+  micActive=false;micUI();
+}
+function micResumeAfterTTS(){
+  if(shouldAutoListen())micSchedule(250);
+}
+function pushToTalk(){
+  if(micActive){micStop();beep(330,60);return;}
+  applyAudioSession();
+  pushSession=true;
+  micStart();
+  clearTimeout(pushTimeoutT);
+  pushTimeoutT=setTimeout(function(){if(micActive&&pushSession)micStop();},6000);
+}
+
+/* ===== Аудио-сессия: держим звук в AirPods при активном микрофоне ===== */
+function applyAudioSession(){
+  try{
+    if('audioSession' in navigator){
+      const needMic=(settings.voiceMode!=='off')||(settings.pod&&settings.podAction==='mic');
+      navigator.audioSession.type=needMic?'play-and-record':'playback';
+    }
+  }catch(e){}
+}
+
+function executeVCmd(a){
+  beep(660,50);
+  if(a==='take')take();
+  else if(a==='back')back();
+  else if(a==='repeat')sayItem();
+  else if(a==='article')speak(articleToSpeech(items[idx]&&items[idx].article));
+  else if(a==='qty'){const it=items[idx];if(!it)return;const q=it.actualQty!=null?it.actualQty:it.qty;speak(q!=null?qtyToSpeech(q)+' '+shtuk(q):'не распознано');}
+  else if(a==='pause')pauseWork();
+  else if(a==='resume')resumeWork();
+  else if(a==='summary')midSummary();
+  else if(a==='partial')setPartialQty();
+  else if(a==='finish')finish();
+}
+
+/* ================= ЛОГИКА СБОРКИ ================= */
 function render(){
   if(!items.length)return;
   const it=items[idx];
@@ -356,23 +572,16 @@ function render(){
   const sum=items.filter(i=>i.taken).reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
   $('takenTxt').textContent='взято '+sum+' шт';
   $('locBig').textContent=it.loc;
-
-  // Отображение количества
-  const qb=$('qtyBig');
-  qb.className='';
+  const qb=$('qtyBig');qb.className='';
   if(it.actualQty!=null){
-    // Зачёркнутый план + красный факт
     qb.classList.add('partial');
     qb.innerHTML='<span class="q-orig">× '+it.qty+'</span><span class="q-act">× '+it.actualQty+'</span>';
-  }else if(it.qty!=null){
-    qb.classList.add('normal');
-    qb.textContent='× '+it.qty;
-  }else{
-    qb.classList.add('unknown');
-    qb.textContent='× ?';
-  }
+  }else if(it.qty!=null){qb.classList.add('normal');qb.textContent='× '+it.qty;}
+  else{qb.classList.add('unknown');qb.textContent='× ?';}
   $('descTxt').textContent=it.desc||'';
   $('artTxt').textContent=it.article?('Артикул: '+it.article):'Артикул не распознан';
+  const nx=items[idx+1];
+  $('nextTxt').textContent=nx?('→ далее: '+nx.loc):'последняя позиция';
   if(ecoShown){
     $('ecoLoc').textContent=it.loc;
     const eff=it.actualQty!=null?it.actualQty:it.qty;
@@ -383,14 +592,17 @@ function sayItem(){if(!paused){render();speak(itemPhrase(items[idx]));}}
 
 function take(){
   if(paused||!inWork)return;
+  if(Date.now()<uiShield)return;
   items[idx].taken=true;
-  beep(880,90);
-  if(idx+1<items.length){idx++;sayItem();}else{finish();}
+  beep(880,90);saveSession();
+  if(idx+1<items.length){idx++;sayItem();saveSession();}
+  else{finish();}
 }
 function back(){
-  if(paused)return;
+  if(paused||!inWork)return;
+  if(Date.now()<uiShield)return;
   if(idx>0){idx--;items[idx].taken=false;items[idx].actualQty=null;}
-  beep(440,90);sayItem();
+  beep(440,90);sayItem();saveSession();
 }
 function midSummary(){
   const done=items.filter(i=>i.taken);
@@ -407,19 +619,20 @@ function setPartialQty(){
   const n=parseInt(v,10);
   if(isNaN(n)||n<0){alert('Введи число от 0 до '+(plan!=null?plan:'?')+'.');return;}
   if(plan!=null&&n>plan){
-    alert('Нельзя взять больше плана ('+plan+').\nЕсли ошибка в листе — исправь Qty через тап на ×.');
+    alert('Нельзя взять больше плана ('+plan+').\nЕсли ошибка в листе — исправь Qty тапом на ×.');
     return;
   }
-  // Если ввёл то же что план → снимаем переопределение, возвращаем зелёный
   if(plan!=null&&n===plan){
-    it.actualQty=null;render();
+    it.actualQty=null;render();saveSession();
     speak('Восстановлено: '+qtyToSpeech(plan)+' '+shtuk(plan)+'.');return;
   }
-  it.actualQty=n;render();
+  it.actualQty=n;render();saveSession();
   speak(n===0?'Ноль, товара нет.':'Записал '+qtyToSpeech(n)+' '+shtuk(n)+'.');
 }
 function finish(){
-  inWork=false;paused=false;clearTimeout(repeatTimer);hideEco();hidePause();
+  inWork=false;paused=false;clearTimeout(repeatTimer);
+  micStop();hideEco();hidePause();$('summaryModal').hidden=true;
+  clearSession();
   $('scrWork').hidden=true;$('scrDone').hidden=false;
   const taken=items.filter(i=>i.taken);
   const partial=items.filter(i=>i.taken&&i.actualQty!=null);
@@ -429,60 +642,105 @@ function finish(){
   if(!isNaN(exp))check=(sum===exp)?' = Total coli ✓':' (план: '+exp+', разница '+(exp-sum)+')';
   $('doneSub').textContent=taken.length+' позиций · '+sum+' штук'+check
     +(partial.length?' · '+partial.length+' неполных':'');
-
-  // Таблица итога
   let html='<table><tr><th>Локация</th><th>Взяли</th><th>По плану</th><th>✓</th></tr>';
-  items.forEach(it=>{
+  items.forEach(function(it){
     const eff=it.actualQty!=null?it.actualQty:(it.qty!=null?it.qty:'-');
-    const isPartial=it.taken&&it.actualQty!=null;
-    const rowClass=isPartial?' class="partial-badge"':'';
-    html+=`<tr><td class="num">${it.loc}</td><td class="num${rowClass}">${eff}</td>`
-      +`<td class="num">${it.qty!=null?it.qty:'?'}</td>`
-      +`<td>${it.taken?(isPartial?'⚠️':'✅'):'—'}</td></tr>`;
+    const isP=it.taken&&it.actualQty!=null;
+    html+='<tr><td class="num">'+it.loc+'</td><td class="num'+(isP?' partial-badge" style="color:var(--warn)':'')+'">'+(it.taken?eff:'—')+'</td>'
+      +'<td class="num">'+(it.qty!=null?it.qty:'?')+'</td>'
+      +'<td>'+(it.taken?(isP?'⚠️':'✅'):'—')+'</td></tr>';
   });
   html+='</table>';
-  if(partial.length)html+=`<p class="warn-line">⚠️ ${partial.length} позиций — не полное кол-во. Подчеркни на бумаге.</p>`;
+  if(partial.length)html+='<p class="warn-line">⚠️ '+partial.length+' позиций — неполное кол-во. Перечеркни на бумаге.</p>';
   $('doneTable').innerHTML=html;
-
-  beep(880,80);setTimeout(()=>beep(1320,120),140);
+  beep(880,80);setTimeout(function(){beep(1320,120);},140);
   speak('Лист готов. '+taken.length+' позиций, '+sum+' штук.'
     +(partial.length?' Неполных: '+partial.length+'.':'')+' Сверь с бумагой.');
 }
 function sayAll(){
   const ph=['Итог.'];
-  items.filter(i=>i.taken).forEach(it=>{
+  items.filter(i=>i.taken).forEach(function(it){
     const eff=it.actualQty!=null?it.actualQty:it.qty;
     ph.push(locToSpeech(it.loc)+' — '+(eff!=null?eff:'?')+(it.actualQty!=null?', сокращено':'')+'.');
   });
   speakSeq(ph);
 }
 
-/* ===== ПАУЗА / ПРОДОЛЖИТЬ ===== */
+/* ================= ПРОМЕЖУТОЧНЫЙ ИТОГ ================= */
+function showInterimSummary(){
+  if(!items.length)return;
+  const takenN=items.filter(i=>i.taken).length;
+  const takenQ=items.filter(i=>i.taken).reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
+  const partial=items.filter(i=>i.taken&&i.actualQty!=null).length;
+  let html='<p style="color:var(--dim);margin:0 0 12px">Взято: <b style="color:var(--txt)">'+
+    takenN+' / '+items.length+'</b> позиций · <b style="color:var(--txt)">'+takenQ+'</b> штук'+
+    (partial?' · <span style="color:var(--warn)">'+partial+' неполных</span>':'')+
+    '</p><table><tr><th>Локация</th><th>Взяли</th><th>План</th><th></th></tr>';
+  items.forEach(function(it){
+    let cls='sum-todo',status='○';
+    const eff=it.taken?(it.actualQty!=null?it.actualQty:(it.qty!=null?it.qty:'-')):'—';
+    if(it.taken){cls=it.actualQty!=null?'sum-partial':'sum-ok';status=it.actualQty!=null?'⚠️':'✅';}
+    html+='<tr class="'+cls+'"><td class="num">'+it.loc+'</td><td class="num">'+eff+'</td>'+
+      '<td class="num">'+(it.qty!=null?it.qty:'?')+'</td><td>'+status+'</td></tr>';
+  });
+  html+='</table>';
+  $('summaryContent').innerHTML=html;$('summaryModal').hidden=false;
+}
+
+/* ================= ПАУЗА ================= */
 function pauseWork(){
   if(!inWork)return;
   paused=true;clearTimeout(repeatTimer);
-  speechSynthesis&&speechSynthesis.cancel();
-  stopVoice();   // микрофон off на паузе
-  hideEco();
+  if(window.speechSynthesis)speechSynthesis.cancel();
+  curUtter=null;ttsSpeaking=false;
+  micStop();hideEco();
   $('pauseInfo').textContent='позиция '+(idx+1)+' / '+items.length+' · '+items[idx].loc;
   $('pauseOverlay').hidden=false;
 }
 function resumeWork(){
   if(!inWork)return;
   paused=false;hidePause();
-  if($('contVoiceChk').checked)startVoice(false); // рестарт микрофона если постоянный режим
-  sayItem();
+  sayItem();   // speak сам перезапустит микрофон после озвучки
 }
 function hidePause(){$('pauseOverlay').hidden=true;}
 
-/* ===== WAKE LOCK ===== */
+/* ================= СОХРАНЕНИЕ СЕССИИ ================= */
+function saveSession(){
+  if(!inWork)return;
+  try{
+    localStorage.setItem(SES_KEY,JSON.stringify({
+      v:1,items:items,idx:idx,exp:$('expTotal').value,ts:Date.now()
+    }));
+  }catch(e){}
+}
+function clearSession(){try{localStorage.removeItem(SES_KEY);}catch(e){}}
+function checkSavedSession(){
+  let s=null;
+  try{s=JSON.parse(localStorage.getItem(SES_KEY)||'null');}catch(e){}
+  if(!s||!s.items||!s.items.length)return;
+  if(Date.now()-s.ts>12*3600*1000){clearSession();return;}   // старше 12ч — мусор
+  const done=s.items.filter(i=>i.taken).length;
+  $('resumeInfo').textContent=done+' / '+s.items.length+' позиций · след. '+ (s.items[s.idx]?s.items[s.idx].loc:'—');
+  $('resumeBar').hidden=false;
+  $('btnResumeSession').onclick=function(){
+    items=s.items;idx=Math.min(s.idx,items.length-1);
+    if(s.exp)$('expTotal').value=s.exp;
+    $('resumeBar').hidden=true;
+    startWork(true);   // true = не сбрасывать прогресс
+  };
+  $('btnDropSession').onclick=function(){clearSession();$('resumeBar').hidden=true;};
+}
+
+/* ================= WAKE LOCK ================= */
 let wakeLock=null;
 async function keepAwake(){
   try{if('wakeLock'in navigator)wakeLock=await navigator.wakeLock.request('screen');}catch(e){}
 }
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&inWork)keepAwake();});
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible'&&inWork)keepAwake();
+});
 
-/* ===== БИП ===== */
+/* ================= БИП ================= */
 let actx=null;
 function ensureAudio(){
   try{actx=actx||new(window.AudioContext||window.webkitAudioContext)();
@@ -496,7 +754,7 @@ function beep(freq,ms){
     o.start();o.stop(actx.currentTime+ms/1000);}catch(e){}
 }
 
-/* ===== AIRPODS ===== */
+/* ================= AIRPODS ================= */
 function silentWavURL(){
   const rate=8000,len=rate*2,buf=new ArrayBuffer(44+len*2),v=new DataView(buf);
   const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
@@ -511,41 +769,53 @@ let pod=null,podGuard=0;
 function stemAction(kind){
   if(!inWork||paused)return;
   const now=Date.now();if(now<podGuard)return;podGuard=now+300;
-  // Режим: AirPods клик = микрофон
-  if($('podVoiceChk')&&$('podVoiceChk').checked&&kind==='take'){
-    if(voiceActive)stopVoice();else startVoice(true); // fromPod=true → беленький сигнал + таймаут 5с
-    return;
-  }
+  if(settings.podAction==='mic'&&kind==='take'){pushToTalk();return;}
   if(kind==='take')take();else if(kind==='repeat')sayItem();else back();
 }
 async function podToggle(on){
+  settings.pod=!!on;saveSettings();
+  $('segPod').hidden=!on;
+  applyAudioSession();
   if(on){
     if(!pod){pod=new Audio(silentWavURL());pod.loop=true;pod.volume=0.01;
-      pod.addEventListener('pause',()=>{if($('podChk').checked){stemAction('take');pod.play();}});}
-    try{await pod.play();}catch(e){alert('Не удалось включить аудио-канал.');$('podChk').checked=false;return;}
+      pod.addEventListener('pause',function(){if(settings.pod){stemAction('take');pod.play();}});}
+    try{await pod.play();}catch(e){alert('Не удалось включить аудио-канал.');$('podChk').checked=false;settings.pod=false;saveSettings();$('segPod').hidden=true;return;}
     if('mediaSession'in navigator){try{
-      navigator.mediaSession.metadata=new MediaMetadata({title:'Picker · клик = взял или 🎙'});
-      navigator.mediaSession.setActionHandler('pause',()=>{stemAction('take');pod.play();});
-      navigator.mediaSession.setActionHandler('play',()=>{stemAction('take');pod.play();});
-      navigator.mediaSession.setActionHandler('nexttrack',()=>stemAction('repeat'));
-      navigator.mediaSession.setActionHandler('previoustrack',()=>stemAction('back'));
+      navigator.mediaSession.metadata=new MediaMetadata({title:'Picker'});
+      navigator.mediaSession.setActionHandler('pause',function(){stemAction('take');pod.play();});
+      navigator.mediaSession.setActionHandler('play',function(){stemAction('take');pod.play();});
+      navigator.mediaSession.setActionHandler('nexttrack',function(){stemAction('repeat');});
+      navigator.mediaSession.setActionHandler('previoustrack',function(){stemAction('back');});
     }catch(e){}}
   }else if(pod){pod.pause();}
 }
 
-/* ===== ЭКО-ЭКРАН ===== */
+/* ================= ЭКО-ЭКРАН (с щитом от мисс-кликов) ================= */
 let lastTouch=Date.now(),ecoShown=false;
-document.addEventListener('pointerdown',()=>{lastTouch=Date.now();if(ecoShown)hideEco();});
-setInterval(()=>{if(inWork&&!paused&&$('ecoChk').checked&&!ecoShown&&Date.now()-lastTouch>20000)showEco();},3000);
-function showEco(){if(!items.length)return;ecoShown=true;
+document.addEventListener('pointerdown',function(){lastTouch=Date.now();});
+setInterval(function(){
+  if(inWork&&!paused&&settings.eco&&!ecoShown&&Date.now()-lastTouch>20000)showEco();
+},3000);
+function showEco(){
+  if(!items.length)return;
+  ecoShown=true;
   $('ecoLoc').textContent=items[idx].loc;
   const eff=items[idx].actualQty!=null?items[idx].actualQty:items[idx].qty;
-  $('ecoQty').textContent='× '+(eff!=null?eff:'?');$('eco').hidden=false;}
+  $('ecoQty').textContent='× '+(eff!=null?eff:'?');
+  $('eco').hidden=false;
+}
 function hideEco(){ecoShown=false;$('eco').hidden=true;}
+// Первый тап ТОЛЬКО будит экран. Кнопки заблокированы ещё 350 мс.
+$('eco').addEventListener('click',function(e){
+  e.preventDefault();e.stopPropagation();
+  hideEco();
+  uiShield=Date.now()+350;
+  lastTouch=Date.now();
+});
 
-/* ===== CANVAS LOADER ===== */
+/* ================= CANVAS ================= */
 function loadToCanvas(file,maxSide){
-  return new Promise((res,rej)=>{
+  return new Promise(function(res,rej){
     const img=new Image();
     img.onload=function(){
       const k=Math.min(1,maxSide/Math.max(img.width,img.height));
@@ -558,12 +828,9 @@ function loadToCanvas(file,maxSide){
   });
 }
 
-/* ===== AI-РАСПОЗНАВАНИЕ — ОДИН ЗАПРОС НА ВСЕ ФОТО ===== */
-// Ключ хранится ТОЛЬКО в localStorage. НЕ вставляй его в код файла.
-// Если репозиторий публичный — ключ украдут боты за минуты.
+/* ================= AI (Gemini) — все фото одним запросом ================= */
+// Ключ только в localStorage этого телефона. В код/GitHub НЕ вставлять.
 const AI_MODELS=['gemini-2.5-flash','gemini-2.0-flash','gemini-2.0-flash-lite','gemini-1.5-flash-latest'];
-
-// Промпт вынесен отдельно, чтобы было легко редактировать
 function buildPrompt(n){
   const multi=n>1?'These are '+n+' photos of the SAME picking list. Extract ALL unique rows (same Location = one row).\n':'';
   return multi+
@@ -571,40 +838,31 @@ function buildPrompt(n){
     'Output each data row on one line: LOCATION QTY ARTICLE DESCRIPTION\n'+
     'LOCATION=3digits-3digits  QTY=integer  ARTICLE=8digits  unreadable=?\n'+
     'If "Total coli" visible anywhere: add last line: Total coli: N\n'+
-    'Output NOTHING else — no headers, no markdown, no explanations.';
+    'Output NOTHING else - no headers, no markdown, no explanations.';
 }
-
 function aiKey(){try{return localStorage.getItem('aikey')||'';}catch(e){return'';}}
 function updateAiState(){
   $('aiState').innerHTML=aiKey()
     ?'AI-распознавание: <b style="color:var(--go)">подключено ✓</b> — фото читает Gemini'
-    :'AI не настроен. Нажми 🔑 и вставь бесплатный ключ с <b>aistudio.google.com</b>.<br>'+
-     'Без ключа: нажми на поле выше и используй «Сканировать текст» на клавиатуре.';
+    :'AI не настроен. Нажми 🔑 и вставь бесплатный ключ с <b>aistudio.google.com</b>.';
 }
-
 async function aiRecognizeAll(canvases,key){
-  // Все картинки в ОДНОМ запросе — фикс 429
   const parts=[{text:buildPrompt(canvases.length)}];
   for(const c of canvases)
     parts.push({inline_data:{mime_type:'image/jpeg',data:c.toDataURL('image/jpeg',0.80).split(',')[1]}});
-
   let lastErr='все модели вернули ошибку';
   for(const model of AI_MODELS){
-    const url='https://generativelanguage.googleapis.com/v1beta/models/'
-      +model+':generateContent?key='+encodeURIComponent(key);
+    const url='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key);
     let resp;
-    try{resp=await fetch(url,{method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{parts}],generationConfig:{temperature:0}})
-    });}catch(e){throw new Error('no_network');}
-
+    try{resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0}})});}
+    catch(e){throw new Error('no_network');}
     if(resp.status===503||resp.status===502){lastErr='503_unavailable';continue;}
     if(resp.status===429)throw new Error('429_ratelimit');
     if(resp.status===400)throw new Error('400_badkey');
     if(resp.status===403)throw new Error('403_forbidden');
     if(resp.status===404){lastErr='404_'+model;continue;}
     if(!resp.ok)throw new Error('http_'+resp.status);
-
     const data=await resp.json();
     const rp=(((data.candidates||[])[0]||{}).content||{}).parts||[];
     const txt=rp.map(p=>p.text||'').join('\n').replace(/```[a-z]*\n?/gi,'').trim();
@@ -613,11 +871,8 @@ async function aiRecognizeAll(canvases,key){
   }
   throw new Error(lastErr);
 }
-
-/* ===== OCR ОБРАБОТЧИК ===== */
 let ocrBusy=false;
 function showOcrErr(msg){$('ocrStatus').hidden=false;$('ocrStatus').textContent=msg;$('btnRetry').hidden=false;}
-
 async function ocrPhotos(files){
   if(!files.length)return;
   pendingFiles=Array.prototype.slice.call(files);
@@ -631,34 +886,33 @@ async function runAI(){
   const st=$('ocrStatus');st.hidden=false;
   try{
     st.textContent='Подготовка '+pendingFiles.length+' фото…';
-    // Параллельная подготовка холстов
     const canvases=await Promise.all(pendingFiles.map(f=>loadToCanvas(f,1200)));
-    st.textContent='AI читает лист (один запрос, '+canvases.length+' фото)…';
+    st.textContent='AI читает лист ('+canvases.length+' фото, один запрос)…';
     const txt=await aiRecognizeAll(canvases,key);
     $('raw').value=txt;st.hidden=true;
     pendingFiles=[];doParse();
   }catch(err){
     const c=err.message||'';
     let msg;
-    if(c==='no_network')        msg='Нет связи с Google. Проверь интернет и нажми 🔄';
+    if(c==='no_network')msg='Нет связи с Google. Проверь интернет и нажми 🔄';
     else if(c==='503_unavailable')msg='Google временно недоступен (503). Подожди ~30 сек и нажми 🔄';
-    else if(c==='429_ratelimit') msg='Слишком много запросов (429). Подожди 1 минуту и нажми 🔄';
-    else if(c==='400_badkey')    msg='Ключ не принят (400). Проверь ключ через 🔑 и нажми 🔄';
-    else if(c==='403_forbidden') msg='Доступ запрещён (403). Проверь ключ через 🔑 и нажми 🔄';
-    else                         msg='Ошибка: '+c+'. Нажми 🔄 чтобы попробовать снова.';
+    else if(c==='429_ratelimit')msg='Слишком много запросов (429). Подожди минуту и нажми 🔄';
+    else if(c==='400_badkey')msg='Ключ не принят (400). Проверь через 🔑 и нажми 🔄';
+    else if(c==='403_forbidden')msg='Доступ запрещён (403). Проверь через 🔑 и нажми 🔄';
+    else msg='Ошибка: '+c+'. Нажми 🔄 чтобы попробовать снова.';
     showOcrErr(msg);
   }
   ocrBusy=false;$('btnPhoto').disabled=false;
 }
 
-/* ===== ЭКРАН 1: ПАРСЕР ===== */
+/* ================= ЭКРАН 1: ПАРСЕР ================= */
 function doParse(){
   const raw=$('raw').value;
   const det=detectTotal(raw);
   if(det!=null&&!$('expTotal').value)$('expTotal').value=det;
   items=foldItems(parseList(raw));
-  items.forEach(it=>{if(manualQty[it.loc]!=null){it.qty=manualQty[it.loc];it.conflict=false;}});
-  items.sort((a,b)=>a.loc<b.loc?-1:a.loc>b.loc?1:0);
+  items.forEach(function(it){if(manualQty[it.loc]!=null){it.qty=manualQty[it.loc];it.conflict=false;}});
+  items.sort(function(a,b){return a.loc<b.loc?-1:a.loc>b.loc?1:0;});
   renderParse();
 }
 function renderParse(){
@@ -668,22 +922,24 @@ function renderParse(){
   const miss=items.filter(i=>i.qty==null).length;
   const conf=items.filter(i=>i.conflict).length;
   let html='<table><tr><th>Локация</th><th>Qty ✎</th><th>Артикул</th><th>Описание</th></tr>';
-  items.forEach((it,i)=>{
+  items.forEach(function(it,i){
     const bad=(it.qty==null||it.conflict)?' bad-cell':'';
-    html+=`<tr><td class="num">${it.loc}</td>`
-      +`<td class="num qcell${bad}" data-i="${i}">${it.qty!=null?it.qty:'?'}${it.conflict?' ⚠':''}</td>`
-      +`<td class="num${!it.article?' bad-cell':''}">${it.article||'?'}</td>`
-      +`<td>${it.desc||''}</td></tr>`;
+    html+='<tr><td class="num">'+it.loc+'</td>'
+      +'<td class="num qcell'+bad+'" data-i="'+i+'">'+(it.qty!=null?it.qty:'?')+(it.conflict?' ⚠':'')+'</td>'
+      +'<td class="num'+(!it.article?' bad-cell':'')+'">'+(it.article||'?')+'</td>'
+      +'<td>'+(it.desc||'')+'</td></tr>';
   });
   html+='</table>';
   const exp=parseInt($('expTotal').value,10);
   let line='Позиций: '+items.length+' · Сумма Qty: '+sum,cls='ok-line';
   if(!isNaN(exp)){if(sum===exp)line+=' = Total coli ✓';else{line+=' ≠ Total coli ('+exp+'), разница '+(exp-sum);cls='warn-line';}}
   else line+=' — сверь с «Total coli» на листе';
-  html+=`<p class="${cls}">${line}</p>`;
-  if(miss||conf)html+=`<p class="warn-line">⚠️ ${miss?miss+' позиций без Qty. ':''}${conf?conf+' с расхождением. ':''}Нажми на число в Qty, чтобы исправить.</p>`;
+  html+='<p class="'+cls+'">'+line+'</p>';
+  if(miss||conf)html+='<p class="warn-line">⚠️ '+(miss?miss+' позиций без Qty. ':'')+(conf?conf+' с расхождением. ':'')+'Нажми на число в Qty, чтобы исправить.</p>';
   out.innerHTML=html;
-  out.querySelectorAll('.qcell').forEach(el=>el.addEventListener('click',()=>editQty(+el.dataset.i)));
+  out.querySelectorAll('.qcell').forEach(function(el){
+    el.addEventListener('click',function(){editQty(parseInt(el.getAttribute('data-i'),10));});
+  });
   $('btnStart').hidden=false;
 }
 function editQty(i){
@@ -692,177 +948,132 @@ function editQty(i){
   if(v===null)return;const n=parseInt(v,10);
   if(!isNaN(n)&&n>=0){manualQty[it.loc]=n;it.qty=n;it.conflict=false;renderParse();}
 }
-function startWork(){
+
+/* ================= СТАРТ / БРАУЗЕРНЫЙ «НАЗАД» ================= */
+function startWork(resume){
   if(!items.length)return;
-  idx=0;paused=false;
-  items.forEach(i=>{i.taken=false;i.actualQty=null;});
-  inWork=true;lastTouch=Date.now();
+  if(!resume){
+    idx=0;
+    items.forEach(function(i){i.taken=false;i.actualQty=null;});
+  }
+  paused=false;inWork=true;lastTouch=Date.now();
   document.body.classList.add('work');
   $('scrSetup').hidden=true;$('scrDone').hidden=true;$('scrWork').hidden=false;
-  ensureAudio();pickVoice();keepAwake();
-  if($('contVoiceChk').checked)startVoice(false); // постоянный микрофон
-  sayItem();
+  ensureAudio();pickVoice();keepAwake();applyAudioSession();armBackGuard();
+  saveSession();
+  sayItem();   // после озвучки speak() сам включит мик (режим «Всегда»)
 }
+function armBackGuard(){try{history.pushState({pk:1},'');}catch(e){}}
+window.addEventListener('popstate',function(){
+  if(inWork){armBackGuard();if(!paused)pauseWork();}   // свайп назад = Пауза
+});
 
-/* ===== ГОЛОСОВЫЕ КОМАНДЫ (STT) ===== */
-// interimResults:true → реагируем на частичные результаты → ~1-2 сек вместо 5-10
-const VCMDS=[
-  {w:['взял меньше','меньше','частично','не хватает'],a:'partial'},
-  {w:['взял','готово','следующий','дальше','ок'],      a:'take'},
-  {w:['назад','предыдущий','вернуть','вернись'],        a:'back'},
-  {w:['повтори','повторить','ещё раз','снова'],         a:'repeat'},
-  {w:['артикул','номер'],                               a:'article'},
-  {w:['количество','сколько'],                          a:'qty'},
-  {w:['пауза','стоп','остановить','перерыв'],           a:'pause'},
-  {w:['продолжи','продолжить','продолжай','поехали'],   a:'resume'},
-  {w:['итог','сводка'],                                 a:'summary'},
-  {w:['конец','финиш','закончил','всё'],                a:'finish'},
-];
-function matchVCmd(t){const lo=t.toLowerCase().trim();for(const c of VCMDS)if(c.w.some(w=>lo.includes(w)))return c.a;return null;}
-
-let voiceActive=false,voiceRecog=null,voiceCmdFired=false,voiceTimeout=null;
-
-function updateVoiceBtn(){
-  const btn=$('btnVoice');if(!btn)return;
-  if(voiceActive){btn.textContent='🔴';btn.classList.add('listening');btn.classList.remove('on');}
-  else if($('contVoiceChk')&&$('contVoiceChk').checked){btn.textContent='🎙✓';btn.classList.remove('listening');btn.classList.add('on');}
-  else{btn.textContent='🎙';btn.classList.remove('listening','on');}
-}
-function stopVoice(){
-  clearTimeout(voiceTimeout);
-  if(voiceRecog){try{voiceRecog.stop();}catch(e){}voiceRecog=null;}
-  voiceActive=false;updateVoiceBtn();
-}
-function executeVCmd(action){
-  beep(660,50);
-  if(action==='take')take();
-  else if(action==='back')back();
-  else if(action==='repeat')sayItem();
-  else if(action==='article')speak(articleToSpeech(items[idx]&&items[idx].article));
-  else if(action==='qty'){const it=items[idx];if(!it)return;const q=it.actualQty!=null?it.actualQty:it.qty;speak(q!=null?qtyToSpeech(q)+' '+shtuk(q):'не распознано');}
-  else if(action==='pause')pauseWork();
-  else if(action==='resume')resumeWork();
-  else if(action==='summary')showInterimSummary();
-  else if(action==='partial')setPartialQty();
-  else if(action==='finish')finish();
-}
-function startVoice(fromPod){
-  fromPod=!!fromPod;
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){speak('Голосовые команды недоступны.');return;}
-  stopVoice();
-  const r=new SR();
-  r.lang='ru-RU';r.continuous=false;r.interimResults=true;r.maxAlternatives=1;
-  voiceCmdFired=false;voiceRecog=r;
-  r.onstart=function(){voiceActive=true;updateVoiceBtn();if(fromPod)beep(880,50);};
-  r.onresult=function(e){
-    if(voiceCmdFired)return;
-    let transcript='';
-    for(let i=e.resultIndex;i<e.results.length;i++)transcript+=e.results[i][0].transcript;
-    const action=matchVCmd(transcript);
-    if(action){
-      voiceCmdFired=true;clearTimeout(voiceTimeout);
-      r.stop();
-      setTimeout(function(){executeVCmd(action);},80);
-      return;
-    }
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      if(e.results[i].isFinal&&!voiceCmdFired&&!$('contVoiceChk').checked)speak('Не понял.');
-    }
-  };
-  r.onerror=function(ev){
-    voiceActive=false;clearTimeout(voiceTimeout);updateVoiceBtn();
-    if(ev.error==='no-speech'&&fromPod)beep(330,80);
-    if($('contVoiceChk').checked&&inWork&&!paused)setTimeout(function(){startVoice(false);},400);
-  };
-  r.onend=function(){
-    voiceRecog=null;voiceActive=false;clearTimeout(voiceTimeout);updateVoiceBtn();
-    if($('contVoiceChk').checked&&inWork&&!paused){
-      setTimeout(function(){startVoice(false);},voiceCmdFired?700:200);
-    }else if(fromPod&&!voiceCmdFired){beep(330,80);}
-  };
-  if(fromPod)voiceTimeout=setTimeout(function(){if(voiceActive){stopVoice();beep(330,80);}},5000);
-  try{r.start();}catch(e){voiceActive=false;updateVoiceBtn();voiceRecog=null;}
-}
-
-/* ===== ПРОМЕЖУТОЧНЫЙ ИТОГ ===== */
-function showInterimSummary(){
-  if(!items.length)return;
-  const takenN=items.filter(i=>i.taken).length;
-  const takenQ=items.filter(i=>i.taken).reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
-  const partial=items.filter(i=>i.taken&&i.actualQty!=null).length;
-  let html='<p style="color:var(--dim);margin:0 0 12px">Взято: <b style="color:var(--txt)">'+
-    takenN+' / '+items.length+'</b> позиций · <b style="color:var(--txt)">'+takenQ+'</b> штук'+
-    (partial?' · <span style="color:var(--warn)">'+partial+' неполных</span>':'')+
-    '</p><table><tr><th>Локация</th><th>Взяли</th><th>План</th><th></th></tr>';
-  items.forEach(function(it){
-    let cls='sum-todo',status='○';
-    const eff=it.taken?(it.actualQty!=null?it.actualQty:(it.qty!=null?it.qty:'-')):'—';
-    if(it.taken){cls=it.actualQty!=null?'sum-partial':'sum-ok';status=it.actualQty!=null?'⚠️':'✅';}
-    html+=`<tr class="${cls}"><td class="num">${it.loc}</td><td class="num">${eff}</td>`+
-      `<td class="num">${it.qty!=null?it.qty:'?'}</td><td>${status}</td></tr>`;
+/* ================= UI НАСТРОЕК ================= */
+function segVoiceUI(){
+  document.querySelectorAll('#segVoice button').forEach(function(b){
+    b.classList.toggle('on',b.getAttribute('data-v')===settings.voiceMode);
   });
-  html+='</table>';
-  $('summaryContent').innerHTML=html;$('summaryModal').hidden=false;
+  micUI();
+}
+function segPodUI(){
+  document.querySelectorAll('#segPod button').forEach(function(b){
+    b.classList.toggle('on',b.getAttribute('data-p')===settings.podAction);
+  });
+}
+function applySettingsToUI(){
+  $('rate').value=settings.rate;$('rateVal').textContent=settings.rate.toFixed(2).replace(/0$/,'')+'×';
+  $('repChk').checked=settings.repOn;$('repSec').value=settings.repSec;
+  $('ecoChk').checked=settings.eco;
+  $('podChk').checked=settings.pod;$('segPod').hidden=!settings.pod;
+  segVoiceUI();segPodUI();
 }
 
-
-/* ===== ПРИВЯЗКА КНОПОК ===== */
-$('btnPhoto').addEventListener('click',()=>$('photoInput').click());
-$('photoInput').addEventListener('change',e=>{ocrPhotos(Array.prototype.slice.call(e.target.files));e.target.value='';});
-$('btnRetry').addEventListener('click',()=>{if(pendingFiles.length)runAI();});
-$('btnKey').addEventListener('click',()=>{
+/* ================= ПРИВЯЗКА ================= */
+$('btnPhoto').addEventListener('click',function(){$('photoInput').click();});
+$('photoInput').addEventListener('change',function(e){ocrPhotos(Array.prototype.slice.call(e.target.files));e.target.value='';});
+$('btnRetry').addEventListener('click',function(){if(pendingFiles.length)runAI();});
+$('btnKey').addEventListener('click',function(){
   const v=prompt('API-ключ Google AI Studio (вида AIza… или AQ…).\nПусто = удалить.',aiKey());
   if(v===null)return;
   try{v.trim()?localStorage.setItem('aikey',v.trim()):localStorage.removeItem('aikey');}catch(e){}
   updateAiState();
 });
-$('btnClear').addEventListener('click',()=>{
+$('btnClear').addEventListener('click',function(){
   $('raw').value='';$('parseOut').innerHTML='';$('expTotal').value='';
   $('btnStart').hidden=true;$('ocrStatus').hidden=true;$('btnRetry').hidden=true;
   items=[];manualQty={};pendingFiles=[];
 });
 $('btnParse').addEventListener('click',doParse);
-$('expTotal').addEventListener('input',()=>{if(items.length)renderParse();});
-$('btnStart').addEventListener('click',startWork);
+$('expTotal').addEventListener('input',function(){if(items.length)renderParse();});
+$('btnStart').addEventListener('click',function(){startWork(false);});
+
 $('btnTake').addEventListener('click',take);
 $('btnPause').addEventListener('click',pauseWork);
 $('btnResume').addEventListener('click',resumeWork);
-$('btnRepeat').addEventListener('click',sayItem);
+$('btnRepeat').addEventListener('click',function(){if(Date.now()>=uiShield)sayItem();});
 $('btnBack').addEventListener('click',back);
-$('btnArt').addEventListener('click',()=>speak(articleToSpeech(items[idx]&&items[idx].article)));
-$('btnPartial').addEventListener('click',setPartialQty);
+$('btnArt').addEventListener('click',function(){if(Date.now()>=uiShield)speak(articleToSpeech(items[idx]&&items[idx].article));});
+$('btnPartial').addEventListener('click',function(){if(Date.now()>=uiShield)setPartialQty();});
 $('btnVoice').addEventListener('click',function(){
-  if(voiceActive)stopVoice();else startVoice(false);
+  if(Date.now()<uiShield)return;
+  if(settings.voiceMode==='always'){
+    micMuted=!micMuted;
+    if(micMuted)micStop();else micSchedule(100);
+    micUI();
+  }else{
+    pushToTalk();
+  }
 });
-$('btnSum').addEventListener('click',midSummary);
-$('btnViewSummary').addEventListener('click',showInterimSummary);
+$('btnSum').addEventListener('click',function(){if(Date.now()>=uiShield)midSummary();});
+$('btnViewSummary').addEventListener('click',function(){if(Date.now()>=uiShield)showInterimSummary();});
 $('btnCloseSummary').addEventListener('click',function(){$('summaryModal').hidden=true;});
 $('btnFinish').addEventListener('click',finish);
-$('btnEdit').addEventListener('click',()=>{
+$('btnEdit').addEventListener('click',function(){
   inWork=false;paused=false;clearTimeout(repeatTimer);
-  stopVoice();hideEco();hidePause();$('summaryModal').hidden=true;
+  micStop();hideEco();hidePause();$('summaryModal').hidden=true;
+  clearSession();
   document.body.classList.remove('work');$('scrWork').hidden=true;$('scrSetup').hidden=false;
 });
-$('qtyBig').addEventListener('click',()=>{
-  if(!items[idx])return;
+$('qtyBig').addEventListener('click',function(){
+  if(!items[idx]||Date.now()<uiShield)return;
   const it=items[idx];
   const v=prompt('Qty для '+it.loc+':',it.qty!=null?it.qty:'');
   if(v===null)return;const n=parseInt(v,10);
-  if(!isNaN(n)&&n>=0){manualQty[it.loc]=n;it.qty=n;it.conflict=false;render();}
+  if(!isNaN(n)&&n>=0){manualQty[it.loc]=n;it.qty=n;it.conflict=false;render();saveSession();}
 });
 $('btnSayAll').addEventListener('click',sayAll);
-$('btnNew').addEventListener('click',()=>location.reload());
-$('podChk').addEventListener('change',e=>podToggle(e.target.checked));
-$('contVoiceChk').addEventListener('change',function(e){
-  if(e.target.checked&&inWork&&!paused)startVoice(false);
-  else if(!e.target.checked)stopVoice();
-  updateVoiceBtn();
-});
-$('repChk').addEventListener('change',scheduleRepeat);
-$('repSec').addEventListener('change',scheduleRepeat);
+$('btnNew').addEventListener('click',function(){clearSession();location.reload();});
 
+/* настройки */
+$('rate').addEventListener('input',function(){
+  settings.rate=parseFloat(this.value)||1.1;
+  $('rateVal').textContent=settings.rate.toFixed(2).replace(/0$/,'')+'×';
+  saveSettings();
+});
+$('repChk').addEventListener('change',function(){settings.repOn=this.checked;saveSettings();scheduleRepeat();});
+$('repSec').addEventListener('change',function(){settings.repSec=parseInt(this.value,10)||8;saveSettings();scheduleRepeat();});
+$('ecoChk').addEventListener('change',function(){settings.eco=this.checked;saveSettings();if(!this.checked)hideEco();});
+$('podChk').addEventListener('change',function(e){podToggle(e.target.checked);});
+document.querySelectorAll('#segVoice button').forEach(function(b){
+  b.addEventListener('click',function(){
+    settings.voiceMode=b.getAttribute('data-v');saveSettings();
+    applyAudioSession();
+    if(settings.voiceMode==='off')micStop();
+    else if(settings.voiceMode==='always'){micMuted=false;if(inWork&&!paused&&!ttsSpeaking)micSchedule(200);}
+    segVoiceUI();
+  });
+});
+document.querySelectorAll('#segPod button').forEach(function(b){
+  b.addEventListener('click',function(){
+    settings.podAction=b.getAttribute('data-p');saveSettings();
+    applyAudioSession();segPodUI();
+  });
+});
+
+/* ================= СТАРТ СТРАНИЦЫ ================= */
+applySettingsToUI();
 updateAiState();
+checkSavedSession();
 </script>
 </body>
 </html>
