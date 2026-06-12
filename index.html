@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v1.2 — pick-by-voice для склада (личный инструмент)
+  PICKER v1.3 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -23,7 +23,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0f14">
-<title>Picker v1.2</title>
+<title>Picker v1.3</title>
 <style>
 :root{
   --bg:#0b0f14;--card:#141a22;--line:#243040;
@@ -143,7 +143,7 @@ body.work .settings{background:#0a0e13;}
 
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
-  <h1>Picker v1.2</h1>
+  <h1>Picker v1.3</h1>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div id="resumeBar" class="resume-bar" hidden>
@@ -222,11 +222,12 @@ body.work .settings{background:#0a0e13;}
 
     <div class="sec">
       <h3>AirPods</h3>
-      <label class="sw"><span>Щелчки по ножке</span><input type="checkbox" id="podChk"><span class="tg"></span></label>
+      <label class="sw" id="podRow"><span>Щелчки по ножке</span><input type="checkbox" id="podChk"><span class="tg"></span></label>
       <div class="seg" id="segPod" hidden>
         <button data-p="take">Клик = ВЗЯЛ</button>
         <button data-p="mic">Клик = 🎙</button>
       </div>
+      <p class="hint" id="podNote" hidden style="margin-top:8px">В режиме «∞ Всегда» щелчки недоступны: микрофон активен постоянно, и iOS перехватывает нажатия ножки. Управляй голосом — «взял», «меньше», «пауза».</p>
     </div>
 
     <div class="sec">
@@ -285,7 +286,8 @@ body.work .settings{background:#0a0e13;}
     </ul>
 
     <h4>Правда про AirPods + iOS</h4>
-    <p>Приложение регистрируется в iOS как «конференция», поэтому щелчок ножки работает <b>и при активном микрофоне</b> (🔴). Если на конкретной версии iOS щелчок при 🔴 всё-таки не доходит — дублируй голосом, команды работают всегда.<br>
+    <p>Щелчок ножки работает, пока микрофон <b>не активен</b>. В режиме «🎙 Кнопка» это почти всегда: мик открывается на 5–6 секунд только после щелчка и сам закрывается. Пока горит 🔴, iOS перехватывает щелчки («Cannot Control Mic») — это ограничение Apple, просто договори команду.<br>
+    В режиме «∞ Всегда» щелчки не работают вовсе — мик активен постоянно, поэтому раздел AirPods скрыт: там всё делается голосом.<br>
     При активном микрофоне AirPods переходят в «телефонный» звук (более плоский) — норма для Bluetooth, после команды вернётся обычное качество.<br>
     Голос работает только в Safari, <b>не</b> из иконки на домашнем экране.</p>
 
@@ -539,10 +541,8 @@ function micUI(){
   if(em)em.textContent=micActive?'🔴':(settings.voiceMode==='always'?(micMuted?'🔇':'🎙'):'');
 }
 function reportMicState(){
-  try{
-    if('mediaSession'in navigator&&navigator.mediaSession.setMicrophoneActive)
-      navigator.mediaSession.setMicrophoneActive(micActive);
-  }catch(e){}
+  /* v1.3: setMicrophoneActive/togglemicrophone переводили медиа-сессию
+     в режим звонка → iOS перехватывала ВСЕ щелчки. Убрано намеренно. */
 }
 function micToggleByUser(){
   if(settings.voiceMode==='always'){
@@ -897,22 +897,19 @@ function stemAction(kind){
 }
 async function podToggle(on){
   settings.pod=!!on;saveSettings();
-  $('segPod').hidden=!on;
+  updateModeUI();
   applyAudioSession();
   if(on){
     if(!pod){pod=new Audio(silentWavURL());pod.loop=true;pod.volume=0.01;
       pod.addEventListener('pause',function(){if(settings.pod){stemAction('take');pod.play();}});}
-    try{await pod.play();}catch(e){alert('Не удалось включить аудио-канал.');$('podChk').checked=false;settings.pod=false;saveSettings();$('segPod').hidden=true;return;}
+    try{await pod.play();}catch(e){alert('Не удалось включить аудио-канал.');$('podChk').checked=false;settings.pod=false;saveSettings();updateModeUI();return;}
     if('mediaSession'in navigator){try{
       navigator.mediaSession.metadata=new MediaMetadata({title:'Picker'});
       navigator.mediaSession.setActionHandler('pause',function(){stemAction('take');pod.play();});
       navigator.mediaSession.setActionHandler('play',function(){stemAction('take');pod.play();});
       navigator.mediaSession.setActionHandler('nexttrack',function(){stemAction('repeat');});
       navigator.mediaSession.setActionHandler('previoustrack',function(){stemAction('back');});
-    }catch(e){}
-    try{navigator.mediaSession.setActionHandler('togglemicrophone',function(){
-      stemAction('take');reportMicState();
-    });}catch(e){}}
+    }catch(e){}}
   }else if(pod){pod.pause();}
 }
 
@@ -1087,11 +1084,6 @@ function startWork(resume){
   document.body.classList.add('work');
   $('scrSetup').hidden=true;$('scrDone').hidden=true;$('scrWork').hidden=false;
   ensureAudio();pickVoice();keepAwake();updateAudio();armBackGuard();
-  if('mediaSession'in navigator){
-    try{navigator.mediaSession.setActionHandler('togglemicrophone',function(){
-      stemAction('take');reportMicState();
-    });}catch(e){}
-  }
   saveSession();
   sayItem();   // после озвучки speak() сам включит мик (режим «Всегда»)
 }
@@ -1101,6 +1093,26 @@ window.addEventListener('popstate',function(){
 });
 
 /* ================= UI НАСТРОЕК ================= */
+function updateModeUI(){
+  segVoiceUI();segPodUI();
+  const off=settings.voiceMode==='off';
+  const always=settings.voiceMode==='always';
+  // 🎙 кнопка не нужна, если голос выключен
+  $('btnVoice').style.display=off?'none':'';
+  // В «Всегда» щелчки бесполезны (iOS перехватывает) — раздел скрыт
+  $('podRow').hidden=always;
+  $('podNote').hidden=!always;
+  // Выбор действия клика: только если щелчки включены и есть смысл выбирать
+  $('segPod').hidden=always||!settings.pod||off;
+  // Голос выключен → клик может быть только ВЗЯЛ
+  if(off&&settings.podAction==='mic'){settings.podAction='take';saveSettings();segPodUI();}
+  // Тихий аудио-канал щелчков: глушим в «Всегда», возвращаем при выходе
+  if(pod){
+    if(always)pod.pause();
+    else if(settings.pod)pod.play().catch(function(){});
+  }
+  micUI();
+}
 function segVoiceUI(){
   document.querySelectorAll('#segVoice button').forEach(function(b){
     b.classList.toggle('on',b.getAttribute('data-v')===settings.voiceMode);
@@ -1116,8 +1128,8 @@ function applySettingsToUI(){
   $('rate').value=settings.rate;$('rateVal').textContent=settings.rate.toFixed(2).replace(/0$/,'')+'×';
   $('repChk').checked=settings.repOn;$('repSec').value=settings.repSec;
   $('ecoChk').checked=settings.eco;
-  $('podChk').checked=settings.pod;$('segPod').hidden=!settings.pod;
-  segVoiceUI();segPodUI();
+  $('podChk').checked=settings.pod;
+  updateModeUI();
 }
 
 /* ================= ПРИВЯЗКА ================= */
@@ -1191,7 +1203,7 @@ document.querySelectorAll('#segVoice button').forEach(function(b){
     applyAudioSession();
     if(settings.voiceMode==='off')micStop();
     else if(settings.voiceMode==='always'){micMuted=false;if(inWork&&!paused&&!ttsSpeaking)micSchedule(200);}
-    segVoiceUI();
+    updateModeUI();
   });
 });
 document.querySelectorAll('#segPod button').forEach(function(b){
