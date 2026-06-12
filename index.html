@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v2.4 — pick-by-voice для склада (личный инструмент)
+  PICKER v2.5 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -176,7 +176,7 @@ body.work #moreBar{background:#0a0e13;}
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
   <h1>Picker</h1>
-  <p class="sub" style="margin-bottom:0">v2.4</p>
+  <p class="sub" style="margin-bottom:0">v2.5</p>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div id="resumeBar" class="resume-bar" hidden>
@@ -277,8 +277,8 @@ body.work #moreBar{background:#0a0e13;}
     <div class="sec">
       <h3>Экран</h3>
       <label class="sw"><span>Эко-экран</span><input type="checkbox" id="ecoChk" checked><span class="tg"></span></label>
-      <div class="inline-num"><span>Гаснет через, сек (мин. 10)</span>
-        <input type="number" id="ecoSec" value="20" min="10" max="300"></div>
+      <div class="inline-num"><span>Гаснет через, сек (мин. 5)</span>
+        <input type="number" id="ecoSec" value="20" min="5" max="300"></div>
     </div>
     <button class="btn btn-small" id="btnFinish">Закончить и показать итог</button>
     <button class="btn btn-small" id="btnEdit">✎ Назад к списку</button>
@@ -988,7 +988,7 @@ document.addEventListener('pointerdown',function(){
   if(settings.pod&&settings.voiceMode!=='always'&&pod&&pod.paused)pod.play().catch(function(){});
 });
 setInterval(function(){
-  if(inWork&&!paused&&!summaryHold&&settings.eco&&!ecoShown&&Date.now()-lastTouch>Math.max(10,settings.ecoSec||20)*1000)showEco();
+  if(inWork&&!paused&&!summaryHold&&settings.eco&&!ecoShown&&Date.now()-lastTouch>Math.max(5,settings.ecoSec||20)*1000)showEco();
 },3000);
 function showEco(){
   if(!items.length)return;
@@ -1252,7 +1252,7 @@ $('btnVoice').addEventListener('click',function(){
   if(Date.now()<uiShield)return;
   micToggleByUser();
 });
-$('summaryTap').addEventListener('click',function(){if(Date.now()>=uiShield)midSummary();});
+$('summaryTap').addEventListener('click',function(){if(Date.now()>=uiShield){beep(660,50);midSummary();}});
 $('moreBar').addEventListener('click',function(){
   const open=!$('morePanel').classList.contains('open');
   $('morePanel').classList.toggle('open',open);
@@ -1297,7 +1297,7 @@ $('rate').addEventListener('input',function(){
 $('repChk').addEventListener('change',function(){settings.repOn=this.checked;saveSettings();scheduleRepeat();});
 $('repSec').addEventListener('change',function(){settings.repSec=parseInt(this.value,10)||8;saveSettings();scheduleRepeat();});
 $('ecoChk').addEventListener('change',function(){settings.eco=this.checked;saveSettings();if(!this.checked)hideEco();});
-$('ecoSec').addEventListener('change',function(){settings.ecoSec=Math.max(10,parseInt(this.value,10)||20);this.value=settings.ecoSec;saveSettings();});
+$('ecoSec').addEventListener('change',function(){settings.ecoSec=Math.max(5,parseInt(this.value,10)||20);this.value=settings.ecoSec;saveSettings();});
 $('podChk').addEventListener('change',function(e){podToggle(e.target.checked);});
 document.querySelectorAll('#segVoice button').forEach(function(b){
   b.addEventListener('click',function(){
