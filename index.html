@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v1.9 — pick-by-voice для склада (личный инструмент)
+  PICKER v2.0 — pick-by-voice (финальная) для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -23,7 +23,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0f14">
-<title>Picker v1.9</title>
+<title>Picker v2.0</title>
 <style>
 :root{
   --bg:#0b0f14;--card:#141a22;--line:#243040;
@@ -34,7 +34,9 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{margin:0;background:var(--bg);color:var(--txt);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-  padding:12px;padding-bottom:44px;}
+  padding:12px;padding-bottom:calc(14px + env(safe-area-inset-bottom));}
+#scrSetup,#scrWork{min-height:calc(100svh - 30px);display:flex;flex-direction:column;}
+.grow{flex:1;}
 body.work{background:#000;}
 h1{font-size:20px;margin:4px 0 2px;}
 .sub{color:var(--dim);font-size:13px;margin:0 0 14px;}
@@ -42,8 +44,8 @@ textarea{width:100%;min-height:110px;background:var(--card);color:var(--txt);
   border:1px solid var(--line);border-radius:12px;padding:12px;font-size:15px;}
 .btn{display:block;width:100%;border:1px solid var(--line);border-radius:14px;
   padding:16px;font-size:17px;font-weight:600;color:var(--txt);
-  background:var(--card);margin-top:10px;}
-.btn:active{transform:scale(.98);}
+  background:var(--card);margin-top:10px;transition:transform .08s ease,background .15s;}
+.btn:active{transform:scale(.97);}
 .btn:disabled{opacity:.35;}
 .btn-go{background:var(--go);color:#06250f;font-size:26px;padding:24px;border:none;}
 .btn-go:active{background:var(--go-press);}
@@ -68,10 +70,15 @@ th{color:var(--dim);font-weight:500;font-size:12px;}
 .totline input{width:74px;font-size:16px;background:var(--card);color:var(--txt);
   border:1px solid var(--line);border-radius:8px;padding:7px;}
 .progress{display:flex;justify-content:space-between;color:var(--dim);font-size:15px;margin:4px 0 8px;}
-.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 12px;text-align:center;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px 12px;
+  text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0;}
 body.work .card{background:#0a0e13;}
-#locBig{font-size:clamp(54px,19vw,100px);font-weight:800;letter-spacing:1px;
-  font-variant-numeric:tabular-nums;line-height:1.05;}
+.card.anim{animation:cardin .26s ease;}
+@keyframes cardin{from{opacity:.2;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
+#locBig{display:flex;flex-direction:column;align-items:center;font-weight:800;
+  font-variant-numeric:tabular-nums;line-height:.92;}
+#locBig .lg{font-size:clamp(62px,23vw,118px);letter-spacing:2px;}
+#locBig .sep{width:58px;height:6px;border-radius:3px;background:#2e3946;margin:10px 0;}
 #qtyBig{font-weight:800;color:var(--go);margin-top:4px;line-height:1.15;}
 #qtyBig.normal{font-size:clamp(40px,14vw,72px);}
 #qtyBig.unknown{font-size:clamp(40px,14vw,72px);color:var(--bad);text-decoration:underline dotted;}
@@ -107,10 +114,27 @@ body.work .settings{background:#0a0e13;}
 /* Резюме незаконченной сессии */
 .resume-bar{background:#102016;border:1px solid var(--go);border-radius:14px;padding:14px;margin-top:12px;}
 .resume-bar p{margin:0 0 10px;font-size:15px;}
+/* Кнопка-коллапс «Ещё» и панель */
+#moreBar{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  border:1px solid var(--line);border-radius:14px;background:var(--card);
+  color:var(--dim);font-size:15.5px;font-weight:600;padding:13px;margin-top:10px;}
+body.work #moreBar{background:#0a0e13;}
+#moreBar .chev{transition:transform .25s;font-size:13px;}
+#moreBar.open .chev{transform:rotate(180deg);}
+#morePanel{overflow:hidden;max-height:0;transition:max-height .35s ease;}
+#morePanel.open{max-height:1600px;}
+/* Очередь фото */
+.pq{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.pq .chip{position:relative;width:64px;height:64px;border-radius:12px;overflow:hidden;
+  border:1px solid var(--line);background:var(--card);}
+.pq .chip img{width:100%;height:100%;object-fit:cover;display:block;}
+.pq .chip .x{position:absolute;top:0;right:0;width:22px;height:22px;line-height:22px;
+  text-align:center;background:rgba(0,0,0,.65);color:#fff;font-size:13px;border-bottom-left-radius:10px;}
+.tip{color:#56687c;font-size:12.5px;margin-top:8px;line-height:1.45;}
 /* Эко-экран */
 #eco{position:fixed;inset:0;background:#000;z-index:50;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;}
-#eco .e1{color:#39434f;font-size:60px;font-weight:800;font-variant-numeric:tabular-nums;}
+#eco .e1{color:#39434f;font-size:54px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;}
 #eco .e2{color:#2c473a;font-size:42px;font-weight:800;}
 #eco .e3{color:#23292f;font-size:13px;margin-top:20px;}
 #eco .em{position:absolute;top:18px;right:20px;font-size:22px;opacity:.55;}
@@ -146,7 +170,7 @@ body.work .settings{background:#0a0e13;}
 
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
-  <h1>Picker v1.9</h1>
+  <h1>Picker</h1>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div id="resumeBar" class="resume-bar" hidden>
@@ -158,15 +182,17 @@ body.work .settings{background:#0a0e13;}
   </div>
 
   <div class="row">
-    <button class="btn" id="btnPhoto">📷 Фото листа</button>
+    <button class="btn" id="btnPhoto">📷 Добавить фото</button>
     <button class="btn" id="btnHelp" style="flex:0 0 18%">❓</button>
     <button class="btn" id="btnKey" style="flex:0 0 18%">🔑</button>
     <button class="btn" id="btnClear" style="flex:0 0 26%">Очистить</button>
   </div>
   <div class="hint" id="aiState"></div>
+  <p class="tip">Совет: 1-е фото — весь лист целиком; если шрифт мелкий — 2-е фото крупно нижней половины. Перекрытие строк не страшно.</p>
   <input type="file" id="photoInput" accept="image/*" multiple hidden>
+  <div id="photoQueue" class="pq" hidden></div>
+  <button class="btn btn-go" id="btnScanAI" style="font-size:19px;padding:16px" hidden>🤖 Сканировать</button>
   <div id="ocrStatus" class="warn-line" hidden></div>
-  <button class="btn btn-retry" id="btnRetry" hidden>🔄 Повторить (те же фото)</button>
 
   <textarea id="raw" placeholder="Сюда попадает текст с фото. Можно также нажать сюда и использовать «Сканировать текст» с клавиатуры iPhone. Повторные сканы не дублируются — они заполняют пропуски."></textarea>
 
@@ -178,6 +204,7 @@ body.work .settings{background:#0a0e13;}
   </label>
 
   <div id="parseOut"></div>
+  <div class="grow"></div>
   <button class="btn btn-go" id="btnStart" hidden>СТАРТ</button>
 </div>
 
@@ -188,31 +215,29 @@ body.work .settings{background:#0a0e13;}
     <span id="takenTxt">взято 0 шт</span>
   </div>
 
-  <div class="card">
-    <div id="locBig">000-000</div>
+  <div class="card" id="card">
+    <div id="locBig"></div>
     <div id="qtyBig" class="normal">× 0</div>
     <div id="descTxt"></div>
     <div id="artTxt"></div>
     <div id="nextTxt"></div>
   </div>
 
-  <button class="btn btn-go" id="btnTake">ВЗЯЛ</button>
+  <button class="btn btn-go" id="btnTake" style="padding:26px">ВЗЯЛ</button>
 
   <div class="row" style="margin-top:10px">
     <button class="btn" id="btnPause">⏸ Пауза</button>
-    <button class="btn" id="btnRepeat">Повтор</button>
+    <button class="btn btn-warn" id="btnPartial">⚠ Меньше</button>
     <button class="btn" id="btnBack">Назад</button>
   </div>
   <div class="row">
-    <button class="btn btn-warn" id="btnPartial">⚠ Меньше</button>
     <button class="btn" id="btnArt">Артикул</button>
+    <button class="btn" id="btnViewSummary">📋 Итог</button>
     <button class="btn btn-mic" id="btnVoice">🎙</button>
   </div>
-  <div class="row">
-    <button class="btn" id="btnSum">🔊 Сводка</button>
-    <button class="btn" id="btnViewSummary">📋 Итог</button>
-  </div>
 
+  <button id="moreBar"><span>⚙️ Ещё</span><span class="chev">▾</span></button>
+  <div id="morePanel">
   <div class="settings">
     <div class="sec">
       <h3>Голосовое управление</h3>
@@ -242,8 +267,12 @@ body.work .settings{background:#0a0e13;}
       <label class="sw"><span>Эко-экран (гаснет через 20 с)</span><input type="checkbox" id="ecoChk" checked><span class="tg"></span></label>
     </div>
 
+    <button class="btn" id="btnSum">🔊 Сводка голосом</button>
+    <button class="btn btn-small" id="btnFinish">Закончить и показать итог</button>
+    <button class="btn btn-small" id="btnEdit">✎ Назад к списку</button>
+
     <div class="hint">
-      🎙 Команды: <b>«взял» «меньше» «назад» «повтори» «артикул» «товар» «пауза» «продолжи» «сводка» «конец»</b><br>
+      🎙 Команды: <b>«взял» «меньше» «назад» «артикул» «товар» «пауза» «продолжи» «сводка» «конец»</b><br>
       Щелчки AirPods: 1 = ВЗЯЛ · 2 = Назад · 3 = Пауза/Продолжить<br>
       Режим «Всегда»: тап по 🎙 = mute (низкий бип) / unmute (высокий бип)<br>
       Говорить можно поверх озвучки; команды идут очередью без пауз<br>
@@ -251,9 +280,7 @@ body.work .settings{background:#0a0e13;}
       Тап по большому числу × — исправить Qty
     </div>
   </div>
-
-  <button class="btn btn-small" id="btnFinish">Закончить и показать итог</button>
-  <button class="btn btn-small" id="btnEdit">✎ Назад к списку</button>
+  </div>
 </div>
 
 <!-- ================= ЭКРАН 3: ИТОГ ================= -->
@@ -272,41 +299,47 @@ body.work .settings{background:#0a0e13;}
     <h2>❓ Как пользоваться</h2>
 
     <h4>Смена за 30 секунд</h4>
-    <p>1. Взял лист → <b>📷 Фото листа</b> (можно несколько фото частями).<br>
+    <p>1. Взял лист → <b>📷 Добавить фото</b> (можно несколько). Фото копятся в очереди — проверь, всё ли добавил, и жми <b>🤖 Сканировать</b>.<br>
     2. Проверь зелёную строку «Сумма Qty = Total coli ✓». Красные ? — тапни и исправь.<br>
     3. <b>СТАРТ</b> → надевай AirPods и поехали по конусам.</p>
 
-    <h4>В пути</h4>
+    <h4>Как фотографировать лист</h4>
     <ul>
-      <li>Взял товар → скажи <b>«взял»</b> (можно прямо поверх озвучки) / щёлкни ножку / зелёная кнопка.</li>
-      <li>Товара меньше или нет → <b>«меньше»</b>, введи факт. На бумаге перечеркни.</li>
-      <li>Конуса нет → название товара на экране и на тёмном эко-экране; скажи <b>«товар»</b> — продиктует название.</li>
-      <li><b>«пауза»</b> — поговорить/туалет. <b>«продолжи»</b> — дальше. Свайп «назад» тоже ставит паузу.</li>
-      <li>Ушёл на ланч / Safari закрылся → открой сайт заново → <b>▶ Продолжить</b> (прогресс хранится 12 часов).</li>
+      <li>1-е фото: <b>весь лист целиком</b>, телефон параллельно бумаге, без тени от рук.</li>
+      <li>Шрифт мелкий или строк много → 2-е фото <b>крупно нижней половины</b>. Перекрытие строк не страшно — дубли склеятся сами.</li>
+      <li>Резкость важнее количества: обычно двух фото достаточно. Фото сжимаются автоматически.</li>
     </ul>
 
-    <h4>Правда про AirPods + iOS</h4>
-    <p>Щелчок ножки = ВЗЯЛ, двойной = Назад, тройной = Пауза/Продолжить.<br>
-    Два режима — две стихии: <b>«Выкл» + щелчки</b> (руки заняты, команд мало) или <b>«∞ Всегда» + голос</b> (полный hands-free). Микрофон и щелчки конфликтуют на уровне iOS: после использования «∞ Всегда» система блокирует щелчки до сворачивания Safari (свайп домой → открыть снова, прогресс цел). Это ограничение Apple, из браузера не обходится — поэтому выбирай режим в начале смены и не переключайся без нужды.<br>
-    В режиме «∞ Всегда» щелчки не работают вовсе — мик активен постоянно, поэтому раздел AirPods скрыт: там всё делается голосом.<br>
-    При активном микрофоне AirPods переходят в «телефонный» звук (более плоский) — норма для Bluetooth, после команды вернётся обычное качество.<br>
+    <h4>В пути</h4>
+    <ul>
+      <li>Взял товар → скажи <b>«взял»</b> (можно поверх озвучки) / щёлкни ножку / зелёная кнопка.</li>
+      <li>Товара меньше или нет → <b>«меньше»</b>, введи факт. На бумаге перечеркни.</li>
+      <li>Конуса нет → название на экране и на эко-экране; команда <b>«товар»</b> продиктует название.</li>
+      <li><b>«пауза»</b> / 3 щелчка — перерыв. <b>«продолжи»</b> / 3 щелчка — дальше.</li>
+      <li><b>📋 Итог</b> — тихая сверка с бумагой: озвучка и мик молчат, пока открыто.</li>
+      <li>Ушёл на ланч / Safari закрылся → открой сайт → <b>▶ Продолжить</b> (прогресс хранится 12 часов).</li>
+    </ul>
+
+    <h4>Голос или щелчки?</h4>
+    <p><b>Щелчки</b> (голос «Выкл») — базовый режим на длинную смену: почти не ест батарею, звук остаётся в высоком качестве. 1 = ВЗЯЛ · 2 = Назад · 3 = Пауза.<br>
+    <b>«∞ Всегда»</b> — полный hands-free, говори команды очередью прямо поверх озвучки; ест заметно больше батареи, звук переходит в «телефонное» качество.<br>
+    Микрофон и щелчки конфликтуют на уровне iOS: в «∞ Всегда» щелчки перехватывает система, а после выхода из этого режима блокировка может остаться — сверни Safari (свайп домой) и открой снова, прогресс цел. Это ограничение Apple. Поэтому выбирай режим в начале смены.<br>
     Голос работает только в Safari, <b>не</b> из иконки на домашнем экране.</p>
 
     <h4>Батарея (iPhone 12, 78%)</h4>
     <ul>
-      <li>Эко-экран включён — на OLED чёрный почти не ест заряд.</li>
+      <li>Эко-экран и эко-пауза включены — на OLED чёрный почти не ест заряд.</li>
       <li>Настройки → Универсальный доступ → Дисплей и размер текста → <b>Понижение точки белого</b> (~80%).</li>
-      <li>Там же: Универсальный доступ → <b>Быстрая команда</b> → выбери «Понижение точки белого». Теперь <b>тройное нажатие боковой кнопки</b> включает/выключает его одним движением.</li>
-      <li>Яркость на минимум, на котором читается эко-экран. Режим «∞ Всегда» ест больше, чем «🎙 Кнопка».</li>
-      <li>Села батарея → повербанк, телефон в карман, работаем по голосу и щелчкам.</li>
+      <li>Там же: <b>Быстрая команда</b> → «Понижение точки белого» → теперь <b>тройное нажатие боковой кнопки</b> включает затемнение одним движением.</li>
+      <li>Яркость на минимум; режим щелчков экономнее голоса; повербанк на готове.</li>
     </ul>
 
     <h4>Если что-то пошло не так</h4>
     <ul>
-      <li>Фото не распозналось (503/429) → подожди и <b>🔄 Повторить</b> — фото не потерялись.</li>
-      <li>Мик «не слышит» → проверь режим в настройках ниже, скажи команду чётко одним словом.</li>
+      <li>503/429 от Google → подожди и снова <b>🤖 Сканировать</b> — фото остались в очереди.</li>
+      <li>Мик «не слышит» → команда чётко одним словом; проверь, не включён ли 🔇 mute.</li>
       <li>Страница перезагрузилась → <b>▶ Продолжить</b> на главном экране.</li>
-      <li>Совсем всё зависло → перезагрузи страницу, прогресс цел.</li>
+      <li>Совсем зависло → перезагрузи страницу, прогресс цел.</li>
     </ul>
 
     <button class="btn btn-go" id="btnCloseHelp" style="margin-top:16px">Понятно</button>
@@ -361,7 +394,8 @@ let inWork=false, paused=false;
 let repeatTimer=null;
 let manualQty={};
 let summaryHold=false;   // открыт «Итог»: озвучка/мик/эко на паузе
-let pendingFiles=[];
+let renderedIdx=-1;      // для анимации смены позиции
+let photoQ=[];           // очередь фото: {file,url}
 let uiShield=0;   // щит от мисс-кликов после эко-экрана
 
 const $=id=>document.getElementById(id);
@@ -500,7 +534,6 @@ const VCMDS=[
   {w:['меньше','частично','нехватка','не хватает'],a:'partial'},
   {w:['взял','готово','следующий','дальше'],       a:'take'},
   {w:['назад','предыдущий','вернись'],             a:'back'},
-  {w:['повтори','повторить','снова','ещё раз','еще раз'],a:'repeat'},
   {w:['артикул','номер'],                          a:'article'},
   {w:['товар','название','описание'],              a:'name'},
   {w:['сколько','количество'],                     a:'qty'},
@@ -540,10 +573,6 @@ function micUI(){
   const em=$('ecoMic');
   if(em)em.textContent=micActive?'🔴':(settings.voiceMode==='always'?(micMuted?'🔇':'🎙'):'');
 }
-function reportMicState(){
-  /* v1.3: setMicrophoneActive/togglemicrophone переводили медиа-сессию
-     в режим звонка → iOS перехватывала ВСЕ щелчки. Убрано намеренно. */
-}
 function micToggleByUser(){
   // 🎙 существует только в режиме «Всегда» = mute/unmute
   if(settings.voiceMode!=='always')return;
@@ -574,7 +603,7 @@ function micStart(){
   r.lang='ru-RU';r.continuous=true;r.interimResults=true;r.maxAlternatives=1;
   recObj=r;
   let ready=true,armT=null;   // ready=false: команда выстрелила, ждём конца фразы
-  r.onstart=function(){if(gen!==recGen)return;micActive=true;micUI();reportMicState();};
+  r.onstart=function(){if(gen!==recGen)return;micActive=true;micUI();};
   r.onresult=function(e){
     if(gen!==recGen)return;
     let t='';
@@ -604,7 +633,7 @@ function micStart(){
   };
   r.onend=function(){
     if(gen!==recGen)return;
-    micActive=false;micUI();reportMicState();
+    micActive=false;micUI();
     updateAudio();
     if(shouldAutoListen())micSchedule(250);
   };
@@ -615,7 +644,7 @@ function micStop(){
   recGen++;            // все колбэки старого распознавателя — в мусор
   if(recObj){try{recObj.abort?recObj.abort():recObj.stop();}catch(e){}recObj=null;}
   clearTimeout(micResumeT);
-  micActive=false;micUI();updateAudio();reportMicState();
+  micActive=false;micUI();updateAudio();
 }
 /* ===== Аудио-сессия: режим записи ТОЛЬКО пока реально слушаем =====
    Иначе iOS уводит звук в динамик и перехватывает щелчки AirPods. */
@@ -653,7 +682,6 @@ function executeVCmd(a){
   beep(660,50);
   if(a==='take')take();
   else if(a==='back')back();
-  else if(a==='repeat')sayItem();
   else if(a==='article')speak(articleToSpeech(items[idx]&&items[idx].article));
   else if(a==='name')speakDesc();
   else if(a==='qty'){const it=items[idx];if(!it)return;const q=it.actualQty!=null?it.actualQty:it.qty;speak(q!=null?qtyToSpeech(q)+' '+shtuk(q):'не распознано');}
@@ -671,7 +699,12 @@ function render(){
   $('posTxt').textContent=(idx+1)+' / '+items.length;
   const sum=items.filter(i=>i.taken).reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
   $('takenTxt').textContent='взято '+sum+' шт';
-  $('locBig').textContent=it.loc;
+  const lp=String(it.loc).split('-');
+  $('locBig').innerHTML='<span class="lg">'+(lp[0]||'')+'</span><span class="sep"></span><span class="lg">'+(lp[1]||'')+'</span>';
+  if(renderedIdx!==idx){
+    renderedIdx=idx;
+    const c=$('card');c.classList.remove('anim');void c.offsetWidth;c.classList.add('anim');
+  }
   const qb=$('qtyBig');qb.className='';
   if(it.actualQty!=null){
     qb.classList.add('partial');
@@ -695,7 +728,8 @@ function take(){
   if(paused||!inWork)return;
   if(Date.now()<uiShield)return;
   items[idx].taken=true;
-  beep(880,90);saveSession();
+  beep(660,55);setTimeout(function(){beep(990,80);},70);   // мажорный «готово»
+  saveSession();
   if(idx+1<items.length){idx++;sayItem();saveSession();}
   else{finish(true);}
 }
@@ -703,7 +737,8 @@ function back(){
   if(paused||!inWork)return;
   if(Date.now()<uiShield)return;
   if(idx>0){idx--;items[idx].taken=false;items[idx].actualQty=null;}
-  beep(440,90);sayItem();saveSession();
+  beep(520,55);setTimeout(function(){beep(390,80);},70);   // нисходящий «назад»
+  sayItem();saveSession();
 }
 function midSummary(){
   const done=items.filter(i=>i.taken);
@@ -865,15 +900,21 @@ function ensureAudio(){
     if(actx.state!=='running')actx.resume().catch(function(){});
   }catch(e){}
 }
-function beep(freq,ms){
+function clickTick(){beep(1500,16,0.045);}     // мягкий «тик» интерфейса
+document.addEventListener('pointerdown',function(e){
+  const t=e.target.closest&&e.target.closest('.btn,.btn-dim,.seg button,.sw,#moreBar');
+  if(t)clickTick();
+},{passive:true});
+function beep(freq,ms,vol){
   try{
     if(!actx||actx.state==='closed'){ensureAudio();if(!actx)return;}
     if(actx.state!=='running')actx.resume().catch(function(){});  // iOS усыпила при смене сессии
     const t=actx.currentTime+0.005;
     const o=actx.createOscillator(),g=actx.createGain();
     o.frequency.value=freq;o.connect(g);g.connect(actx.destination);
-    g.gain.setValueAtTime(0.12,t);
-    o.start(t);o.stop(t+ms/1000);
+    g.gain.setValueAtTime(vol||0.12,t);
+    g.gain.exponentialRampToValueAtTime(0.001,t+ms/1000);
+    o.start(t);o.stop(t+ms/1000+0.02);
   }catch(e){}
 }
 
@@ -988,7 +1029,7 @@ function updateAiState(){
 async function aiRecognizeAll(canvases,key){
   const parts=[{text:buildPrompt(canvases.length)}];
   for(const c of canvases)
-    parts.push({inline_data:{mime_type:'image/jpeg',data:c.toDataURL('image/jpeg',0.80).split(',')[1]}});
+    parts.push({inline_data:{mime_type:'image/jpeg',data:c.toDataURL('image/jpeg',0.78).split(',')[1]}});
   let lastErr='все модели вернули ошибку';
   for(const model of AI_MODELS){
     const url='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key);
@@ -1011,37 +1052,65 @@ async function aiRecognizeAll(canvases,key){
   throw new Error(lastErr);
 }
 let ocrBusy=false;
-function showOcrErr(msg){$('ocrStatus').hidden=false;$('ocrStatus').textContent=msg;$('btnRetry').hidden=false;}
-async function ocrPhotos(files){
-  if(!files.length)return;
-  pendingFiles=Array.prototype.slice.call(files);
-  await runAI();
+function showOcrErr(msg){$('ocrStatus').hidden=false;$('ocrStatus').textContent=msg;}
+function renderQueue(){
+  const q=$('photoQueue');
+  q.innerHTML='';
+  q.hidden=!photoQ.length;
+  photoQ.forEach(function(ph,i){
+    const d=document.createElement('div');d.className='chip';
+    d.innerHTML='<img src="'+ph.url+'" alt=""><span class="x" data-i="'+i+'">✕</span>';
+    q.appendChild(d);
+  });
+  q.querySelectorAll('.x').forEach(function(el){
+    el.addEventListener('click',function(){
+      const i=parseInt(el.getAttribute('data-i'),10);
+      try{URL.revokeObjectURL(photoQ[i].url);}catch(e){}
+      photoQ.splice(i,1);renderQueue();
+    });
+  });
+  const b=$('btnScanAI');
+  b.hidden=!photoQ.length;
+  b.textContent='🤖 Сканировать ('+photoQ.length+' фото)';
+}
+function clearQueue(){
+  photoQ.forEach(function(ph){try{URL.revokeObjectURL(ph.url);}catch(e){}});
+  photoQ=[];renderQueue();
+}
+function addPhotos(files){
+  Array.prototype.forEach.call(files,function(f){
+    photoQ.push({file:f,url:URL.createObjectURL(f)});
+  });
+  $('ocrStatus').hidden=true;
+  renderQueue();
 }
 async function runAI(){
-  if(ocrBusy)return;
+  if(ocrBusy||!photoQ.length)return;
   const key=aiKey();
-  if(!key){showOcrErr('Нет AI-ключа. Нажми 🔑 и вставь ключ, потом снова 📷.');return;}
-  ocrBusy=true;$('btnPhoto').disabled=true;$('btnRetry').hidden=true;
+  if(!key){showOcrErr('Нет AI-ключа. Нажми 🔑 и вставь ключ, потом «Сканировать».');return;}
+  ocrBusy=true;$('btnScanAI').disabled=true;$('btnPhoto').disabled=true;
   const st=$('ocrStatus');st.hidden=false;
   try{
-    st.textContent='Подготовка '+pendingFiles.length+' фото…';
-    const canvases=await Promise.all(pendingFiles.map(f=>loadToCanvas(f,1200)));
-    st.textContent='AI читает лист ('+canvases.length+' фото, один запрос)…';
+    st.textContent='Сжимаю '+photoQ.length+' фото…';
+    const canvases=await Promise.all(photoQ.map(ph=>loadToCanvas(ph.file,1400)));
+    let bytes=0;
+    canvases.forEach(function(c){bytes+=Math.round(c.toDataURL('image/jpeg',0.78).length*0.75);});
+    st.textContent='AI читает лист ('+canvases.length+' фото, '+(bytes/1048576).toFixed(1)+' МБ, один запрос)…';
     const txt=await aiRecognizeAll(canvases,key);
     $('raw').value=txt;st.hidden=true;
-    pendingFiles=[];doParse();
+    clearQueue();doParse();
   }catch(err){
     const c=err.message||'';
     let msg;
-    if(c==='no_network')msg='Нет связи с Google. Проверь интернет и нажми 🔄';
-    else if(c==='503_unavailable')msg='Google временно недоступен (503). Подожди ~30 сек и нажми 🔄';
-    else if(c==='429_ratelimit')msg='Слишком много запросов (429). Подожди минуту и нажми 🔄';
-    else if(c==='400_badkey')msg='Ключ не принят (400). Проверь через 🔑 и нажми 🔄';
-    else if(c==='403_forbidden')msg='Доступ запрещён (403). Проверь через 🔑 и нажми 🔄';
-    else msg='Ошибка: '+c+'. Нажми 🔄 чтобы попробовать снова.';
-    showOcrErr(msg);
+    if(c==='no_network')msg='Нет связи с Google. Проверь интернет и нажми «Сканировать» ещё раз.';
+    else if(c==='503_unavailable')msg='Google временно недоступен (503). Подожди ~30 сек и нажми «Сканировать».';
+    else if(c==='429_ratelimit')msg='Слишком много запросов (429). Подожди минуту и нажми «Сканировать».';
+    else if(c==='400_badkey')msg='Ключ не принят (400). Проверь через 🔑.';
+    else if(c==='403_forbidden')msg='Доступ запрещён (403). Проверь через 🔑.';
+    else msg='Ошибка: '+c+'. Нажми «Сканировать» ещё раз.';
+    showOcrErr(msg);   // фото остаются в очереди
   }
-  ocrBusy=false;$('btnPhoto').disabled=false;
+  ocrBusy=false;$('btnScanAI').disabled=false;$('btnPhoto').disabled=false;
 }
 
 /* ================= ЭКРАН 1: ПАРСЕР ================= */
@@ -1141,8 +1210,8 @@ function applySettingsToUI(){
 
 /* ================= ПРИВЯЗКА ================= */
 $('btnPhoto').addEventListener('click',function(){$('photoInput').click();});
-$('photoInput').addEventListener('change',function(e){ocrPhotos(Array.prototype.slice.call(e.target.files));e.target.value='';});
-$('btnRetry').addEventListener('click',function(){if(pendingFiles.length)runAI();});
+$('photoInput').addEventListener('change',function(e){addPhotos(e.target.files);e.target.value='';});
+$('btnScanAI').addEventListener('click',runAI);
 $('btnKey').addEventListener('click',function(){
   const v=prompt('API-ключ Google AI Studio (вида AIza… или AQ…).\nПусто = удалить.',aiKey());
   if(v===null)return;
@@ -1151,8 +1220,8 @@ $('btnKey').addEventListener('click',function(){
 });
 $('btnClear').addEventListener('click',function(){
   $('raw').value='';$('parseOut').innerHTML='';$('expTotal').value='';
-  $('btnStart').hidden=true;$('ocrStatus').hidden=true;$('btnRetry').hidden=true;
-  items=[];manualQty={};pendingFiles=[];
+  $('btnStart').hidden=true;$('ocrStatus').hidden=true;
+  items=[];manualQty={};clearQueue();
 });
 $('btnParse').addEventListener('click',doParse);
 $('expTotal').addEventListener('input',function(){if(items.length)renderParse();});
@@ -1161,7 +1230,6 @@ $('btnStart').addEventListener('click',function(){startWork(false);});
 $('btnTake').addEventListener('click',take);
 $('btnPause').addEventListener('click',pauseWork);
 $('btnResume').addEventListener('click',resumeWork);
-$('btnRepeat').addEventListener('click',function(){if(Date.now()>=uiShield)sayItem();});
 $('btnBack').addEventListener('click',back);
 $('btnArt').addEventListener('click',function(){if(Date.now()>=uiShield)speak(articleToSpeech(items[idx]&&items[idx].article));});
 $('btnPartial').addEventListener('click',function(){if(Date.now()>=uiShield)setPartialQty();});
@@ -1170,6 +1238,11 @@ $('btnVoice').addEventListener('click',function(){
   micToggleByUser();
 });
 $('btnSum').addEventListener('click',function(){if(Date.now()>=uiShield)midSummary();});
+$('moreBar').addEventListener('click',function(){
+  const open=!$('morePanel').classList.contains('open');
+  $('morePanel').classList.toggle('open',open);
+  $('moreBar').classList.toggle('open',open);
+});
 $('btnViewSummary').addEventListener('click',function(){if(Date.now()>=uiShield)showInterimSummary();});
 $('btnCloseSummary').addEventListener('click',function(){
   $('summaryModal').hidden=true;summaryHold=false;
