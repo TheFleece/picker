@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v1.0 — pick-by-voice для склада (личный инструмент)
+  PICKER v1.1 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -23,7 +23,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0f14">
-<title>Picker v1.0</title>
+<title>Picker v1.1</title>
 <style>
 :root{
   --bg:#0b0f14;--card:#141a22;--line:#243040;
@@ -113,6 +113,15 @@ body.work .settings{background:#0a0e13;}
 #eco .e1{color:#39434f;font-size:60px;font-weight:800;font-variant-numeric:tabular-nums;}
 #eco .e2{color:#2c473a;font-size:42px;font-weight:800;}
 #eco .e3{color:#23292f;font-size:13px;margin-top:20px;}
+#eco .ed{color:#44505c;font-size:19px;font-weight:600;max-width:92%;text-align:center;
+  word-break:break-word;line-height:1.3;margin-top:6px;}
+/* Помощь */
+#helpModal{position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:46;overflow-y:auto;padding:16px 14px 40px;}
+#helpModal h2{margin:4px 0 10px;font-size:20px;}
+#helpModal h4{margin:18px 0 6px;font-size:15px;color:var(--go);}
+#helpModal p,#helpModal li{color:var(--dim);font-size:14.5px;line-height:1.55;}
+#helpModal ul{padding-left:18px;margin:4px 0;}
+#helpModal b{color:var(--txt);}
 /* Пауза */
 #pauseOverlay{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:45;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -133,7 +142,7 @@ body.work .settings{background:#0a0e13;}
 
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
-  <h1>Picker v1.0</h1>
+  <h1>Picker v1.1</h1>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div id="resumeBar" class="resume-bar" hidden>
@@ -146,6 +155,7 @@ body.work .settings{background:#0a0e13;}
 
   <div class="row">
     <button class="btn" id="btnPhoto">📷 Фото листа</button>
+    <button class="btn" id="btnHelp" style="flex:0 0 18%">❓</button>
     <button class="btn" id="btnKey" style="flex:0 0 18%">🔑</button>
     <button class="btn" id="btnClear" style="flex:0 0 26%">Очистить</button>
   </div>
@@ -233,7 +243,7 @@ body.work .settings{background:#0a0e13;}
     </div>
 
     <div class="hint">
-      🎙 Команды: <b>«взял» «меньше» «назад» «повтори» «артикул» «пауза» «продолжи» «сводка» «конец»</b><br>
+      🎙 Команды: <b>«взял» «меньше» «назад» «повтори» «артикул» «товар» «пауза» «продолжи» «сводка» «конец»</b><br>
       Щелчки AirPods: 1 = действие (ВЗЯЛ или 🎙) · 2 = Повтор · 3 = Назад<br>
       Режим «Всегда»: тап по 🎙 = выключить/включить звук микрофона<br>
       Тап по большому числу × — исправить Qty
@@ -254,6 +264,51 @@ body.work .settings{background:#0a0e13;}
   <button class="btn" id="btnNew">Новый лист</button>
 </div>
 
+<!-- ================= ПОМОЩЬ ================= -->
+<div id="helpModal" hidden>
+  <div style="max-width:620px;margin:0 auto">
+    <h2>❓ Как пользоваться</h2>
+
+    <h4>Смена за 30 секунд</h4>
+    <p>1. Взял лист → <b>📷 Фото листа</b> (можно несколько фото частями).<br>
+    2. Проверь зелёную строку «Сумма Qty = Total coli ✓». Красные ? — тапни и исправь.<br>
+    3. <b>СТАРТ</b> → надевай AirPods и поехали по конусам.</p>
+
+    <h4>В пути</h4>
+    <ul>
+      <li>Взял товар → скажи <b>«взял»</b> / щёлкни ножку / зелёная кнопка.</li>
+      <li>Товара меньше или нет → <b>«меньше»</b>, введи факт. На бумаге перечеркни.</li>
+      <li>Конуса нет → название товара на экране и на тёмном эко-экране; скажи <b>«товар»</b> — продиктует название.</li>
+      <li><b>«пауза»</b> — поговорить/туалет. <b>«продолжи»</b> — дальше. Свайп «назад» тоже ставит паузу.</li>
+      <li>Ушёл на ланч / Safari закрылся → открой сайт заново → <b>▶ Продолжить</b> (прогресс хранится 12 часов).</li>
+    </ul>
+
+    <h4>Правда про AirPods + iOS</h4>
+    <p>Пока микрофон <b>активен</b> (🔴), iOS перехватывает щелчок ножки — это ограничение Apple, Safari бессилен. Поэтому в режиме «Клик = 🎙»: щёлкнул → сказал команду → мик сам выключился. Щёлкать по красному мику не нужно.<br>
+    При активном микрофоне AirPods переходят в «телефонный» звук (более плоский) — норма для Bluetooth, после команды вернётся обычное качество.<br>
+    Голос работает только в Safari, <b>не</b> из иконки на домашнем экране.</p>
+
+    <h4>Батарея (iPhone 12, 78%)</h4>
+    <ul>
+      <li>Эко-экран включён — на OLED чёрный почти не ест заряд.</li>
+      <li>Настройки → Универсальный доступ → Дисплей и размер текста → <b>Понижение точки белого</b> (~80%).</li>
+      <li>Там же: Универсальный доступ → <b>Быстрая команда</b> → выбери «Понижение точки белого». Теперь <b>тройное нажатие боковой кнопки</b> включает/выключает его одним движением.</li>
+      <li>Яркость на минимум, на котором читается эко-экран. Режим «∞ Всегда» ест больше, чем «🎙 Кнопка».</li>
+      <li>Села батарея → повербанк, телефон в карман, работаем по голосу и щелчкам.</li>
+    </ul>
+
+    <h4>Если что-то пошло не так</h4>
+    <ul>
+      <li>Фото не распозналось (503/429) → подожди и <b>🔄 Повторить</b> — фото не потерялись.</li>
+      <li>Мик «не слышит» → проверь режим в настройках ниже, скажи команду чётко одним словом.</li>
+      <li>Страница перезагрузилась → <b>▶ Продолжить</b> на главном экране.</li>
+      <li>Совсем всё зависло → перезагрузи страницу, прогресс цел.</li>
+    </ul>
+
+    <button class="btn btn-go" id="btnCloseHelp" style="margin-top:16px">Понятно</button>
+  </div>
+</div>
+
 <!-- ================= МОДАЛКА ИТОГА ================= -->
 <div id="summaryModal" hidden>
   <div style="max-width:600px;margin:0 auto">
@@ -267,6 +322,7 @@ body.work .settings{background:#0a0e13;}
 <div id="eco" hidden>
   <div class="e1" id="ecoLoc">000-000</div>
   <div class="e2" id="ecoQty">× 0</div>
+  <div class="ed" id="ecoDesc"></div>
   <div class="e3">коснись экрана, чтобы вернуть</div>
 </div>
 
@@ -380,10 +436,11 @@ function itemPhrase(it){
 }
 
 /* ================= TTS (полудуплекс с микрофоном) ================= */
-let ruVoice=null, ttsSpeaking=false, curUtter=null;
+let ruVoice=null, daVoice=null, ttsSpeaking=false, curUtter=null;
 function pickVoice(){
   const vs=window.speechSynthesis?speechSynthesis.getVoices():[];
   ruVoice=vs.find(v=>/^ru/i.test(v.lang)&&/milena/i.test(v.name))||vs.find(v=>/^ru/i.test(v.lang))||null;
+  daVoice=vs.find(v=>/^da/i.test(v.lang))||null;
 }
 if(window.speechSynthesis){speechSynthesis.onvoiceschanged=pickVoice;pickVoice();}
 
@@ -438,6 +495,7 @@ const VCMDS=[
   {w:['назад','предыдущий','вернись'],             a:'back'},
   {w:['повтори','повторить','снова','ещё раз','еще раз'],a:'repeat'},
   {w:['артикул','номер'],                          a:'article'},
+  {w:['товар','название','описание'],              a:'name'},
   {w:['сколько','количество'],                     a:'qty'},
   {w:['пауза','стоп','перерыв'],                   a:'pause'},
   {w:['продолжи','продолжить','продолжай','поехали'],a:'resume'},
@@ -457,6 +515,7 @@ function matchVCmd(t){
 
 /* ===== Микрофон: один живой распознаватель, epoch-guard ===== */
 let recGen=0;            // эпоха: всё со старой эпохой игнорируется
+let recObj=null;         // живой распознаватель — чтобы реально останавливать
 let micActive=false;     // прямо сейчас слушает
 let micMuted=false;      // ручной mute в режиме «Всегда»
 let micResumeT=null, pushTimeoutT=null;
@@ -477,13 +536,14 @@ function micUI(){
 }
 function micStart(){
   if(micActive||ttsSpeaking)return;
+  updateAudio();
   if(!inWork||paused)return;
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR)return;
   const gen=++recGen;
   const r=new SR();
   r.lang='ru-RU';r.continuous=false;r.interimResults=true;r.maxAlternatives=1;
-  cmdFired=false;
+  cmdFired=false;recObj=r;
   r.onstart=function(){if(gen!==recGen)return;micActive=true;micUI();};
   r.onresult=function(e){
     if(gen!==recGen||ttsSpeaking||cmdFired)return;
@@ -509,6 +569,7 @@ function micStart(){
     micActive=false;micUI();
     const wasPush=pushSession;pushSession=false;
     clearTimeout(pushTimeoutT);
+    updateAudio();
     if(shouldAutoListen()){
       micSchedule(cmdFired?650:300);
     }else if(wasPush&&!cmdFired){
@@ -520,12 +581,14 @@ function micStart(){
 function micSchedule(d){clearTimeout(micResumeT);micResumeT=setTimeout(micStart,d);}
 function micStop(){
   recGen++;            // все колбэки старого распознавателя — в мусор
+  if(recObj){try{recObj.stop();}catch(e){}recObj=null;}
   clearTimeout(micResumeT);clearTimeout(pushTimeoutT);
-  pushSession=false;micActive=false;micUI();
+  pushSession=false;micActive=false;micUI();updateAudio();
 }
 function micStopForTTS(){
   // мягкая остановка на время озвучки; рестарт сделает micResumeAfterTTS
   recGen++;clearTimeout(micResumeT);
+  if(recObj){try{recObj.stop();}catch(e){}recObj=null;}
   micActive=false;micUI();
 }
 function micResumeAfterTTS(){
@@ -533,29 +596,54 @@ function micResumeAfterTTS(){
 }
 function pushToTalk(){
   if(micActive){micStop();beep(330,60);return;}
-  applyAudioSession();
-  pushSession=true;
+  // юзер хочет говорить — обрываем озвучку
+  if(window.speechSynthesis)speechSynthesis.cancel();
+  curUtter=null;ttsSpeaking=false;
+  pushSession=true;updateAudio();
   micStart();
   clearTimeout(pushTimeoutT);
   pushTimeoutT=setTimeout(function(){if(micActive&&pushSession)micStop();},6000);
 }
 
-/* ===== Аудио-сессия: держим звук в AirPods при активном микрофоне ===== */
-function applyAudioSession(){
-  try{
-    if('audioSession' in navigator){
-      const needMic=(settings.voiceMode!=='off')||(settings.pod&&settings.podAction==='mic');
-      navigator.audioSession.type=needMic?'play-and-record':'playback';
-    }
-  }catch(e){}
+/* ===== Аудио-сессия: режим записи ТОЛЬКО пока реально слушаем =====
+   Иначе iOS уводит звук в динамик и перехватывает щелчки AirPods. */
+let audioMode='';
+function desiredRec(){
+  return (inWork&&!paused&&settings.voiceMode==='always'&&!micMuted)||pushSession;
 }
+function updateAudio(){
+  const want=desiredRec()?'play-and-record':'playback';
+  if(want===audioMode)return;
+  audioMode=want;
+  try{if('audioSession' in navigator)navigator.audioSession.type=want;}catch(e){}
+}
+function applyAudioSession(){updateAudio();}
 
+function speakDesc(){
+  const it=items[idx];
+  if(!it||!it.desc){speak('Описание пустое.');return;}
+  if(!window.speechSynthesis)return;
+  micStopForTTS();
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(it.desc);
+  curUtter=u;
+  if(daVoice){u.voice=daVoice;u.lang=daVoice.lang;}else{u.lang='da-DK';}
+  u.rate=1.0;
+  ttsSpeaking=true;
+  const done=function(){if(curUtter!==u)return;ttsSpeaking=false;micResumeAfterTTS();};
+  u.onend=done;u.onerror=done;
+  setTimeout(function(){if(curUtter===u&&ttsSpeaking){ttsSpeaking=false;micResumeAfterTTS();}},
+    Math.min(12000,1500+it.desc.length*90));
+  setTimeout(function(){speechSynthesis.speak(u);},60);
+  scheduleRepeat();
+}
 function executeVCmd(a){
   beep(660,50);
   if(a==='take')take();
   else if(a==='back')back();
   else if(a==='repeat')sayItem();
   else if(a==='article')speak(articleToSpeech(items[idx]&&items[idx].article));
+  else if(a==='name')speakDesc();
   else if(a==='qty'){const it=items[idx];if(!it)return;const q=it.actualQty!=null?it.actualQty:it.qty;speak(q!=null?qtyToSpeech(q)+' '+shtuk(q):'не распознано');}
   else if(a==='pause')pauseWork();
   else if(a==='resume')resumeWork();
@@ -586,6 +674,7 @@ function render(){
     $('ecoLoc').textContent=it.loc;
     const eff=it.actualQty!=null?it.actualQty:it.qty;
     $('ecoQty').textContent='× '+(eff!=null?eff:'?');
+    $('ecoDesc').textContent=it.desc||'';
   }
 }
 function sayItem(){if(!paused){render();speak(itemPhrase(items[idx]));}}
@@ -596,7 +685,7 @@ function take(){
   items[idx].taken=true;
   beep(880,90);saveSession();
   if(idx+1<items.length){idx++;sayItem();saveSession();}
-  else{finish();}
+  else{finish(true);}
 }
 function back(){
   if(paused||!inWork)return;
@@ -629,10 +718,13 @@ function setPartialQty(){
   it.actualQty=n;render();saveSession();
   speak(n===0?'Ноль, товара нет.':'Записал '+qtyToSpeech(n)+' '+shtuk(n)+'.');
 }
-function finish(){
+function finish(force){
+  if(!force&&inWork&&items.some(function(i){return !i.taken;})){
+    if(!confirm('Не все позиции взяты ('+items.filter(i=>!i.taken).length+' осталось). Точно закончить?'))return;
+  }
   inWork=false;paused=false;clearTimeout(repeatTimer);
   micStop();hideEco();hidePause();$('summaryModal').hidden=true;
-  clearSession();
+  clearSession();updateAudio();
   $('scrWork').hidden=true;$('scrDone').hidden=false;
   const taken=items.filter(i=>i.taken);
   const partial=items.filter(i=>i.taken&&i.actualQty!=null);
@@ -693,7 +785,7 @@ function pauseWork(){
   paused=true;clearTimeout(repeatTimer);
   if(window.speechSynthesis)speechSynthesis.cancel();
   curUtter=null;ttsSpeaking=false;
-  micStop();hideEco();
+  micStop();hideEco();updateAudio();
   $('pauseInfo').textContent='позиция '+(idx+1)+' / '+items.length+' · '+items[idx].loc;
   $('pauseOverlay').hidden=false;
 }
@@ -737,7 +829,11 @@ async function keepAwake(){
   try{if('wakeLock'in navigator)wakeLock=await navigator.wakeLock.request('screen');}catch(e){}
 }
 document.addEventListener('visibilitychange',function(){
-  if(document.visibilityState==='visible'&&inWork)keepAwake();
+  if(document.visibilityState==='visible'&&inWork){
+    keepAwake();lastTouch=Date.now();
+    updateAudio();
+    if(shouldAutoListen()&&!micActive&&!ttsSpeaking)micSchedule(500);
+  }
 });
 
 /* ================= БИП ================= */
@@ -802,6 +898,7 @@ function showEco(){
   $('ecoLoc').textContent=items[idx].loc;
   const eff=items[idx].actualQty!=null?items[idx].actualQty:items[idx].qty;
   $('ecoQty').textContent='× '+(eff!=null?eff:'?');
+  $('ecoDesc').textContent=items[idx].desc||'';
   $('eco').hidden=false;
 }
 function hideEco(){ecoShown=false;$('eco').hidden=true;}
@@ -959,7 +1056,7 @@ function startWork(resume){
   paused=false;inWork=true;lastTouch=Date.now();
   document.body.classList.add('work');
   $('scrSetup').hidden=true;$('scrDone').hidden=true;$('scrWork').hidden=false;
-  ensureAudio();pickVoice();keepAwake();applyAudioSession();armBackGuard();
+  ensureAudio();pickVoice();keepAwake();updateAudio();armBackGuard();
   saveSession();
   sayItem();   // после озвучки speak() сам включит мик (режим «Всегда»)
 }
@@ -1029,6 +1126,9 @@ $('btnViewSummary').addEventListener('click',function(){if(Date.now()>=uiShield)
 $('btnCloseSummary').addEventListener('click',function(){$('summaryModal').hidden=true;});
 $('btnFinish').addEventListener('click',finish);
 $('btnEdit').addEventListener('click',function(){
+  if(inWork&&items.some(function(i){return i.taken;})){
+    if(!confirm('Прогресс сбросится. Выйти к списку?'))return;
+  }
   inWork=false;paused=false;clearTimeout(repeatTimer);
   micStop();hideEco();hidePause();$('summaryModal').hidden=true;
   clearSession();
@@ -1041,6 +1141,8 @@ $('qtyBig').addEventListener('click',function(){
   if(v===null)return;const n=parseInt(v,10);
   if(!isNaN(n)&&n>=0){manualQty[it.loc]=n;it.qty=n;it.conflict=false;render();saveSession();}
 });
+$('btnHelp').addEventListener('click',function(){$('helpModal').hidden=false;});
+$('btnCloseHelp').addEventListener('click',function(){$('helpModal').hidden=true;});
 $('btnSayAll').addEventListener('click',sayAll);
 $('btnNew').addEventListener('click',function(){clearSession();location.reload();});
 
