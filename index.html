@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v2.5 — pick-by-voice для склада (личный инструмент)
+  PICKER v2.6 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -168,6 +168,37 @@ body.work #moreBar{background:#0a0e13;}
 .sum-ok td{color:var(--go);}
 .sum-partial td{color:var(--warn);}
 .sum-todo td{color:var(--dim);}
+/* Раскладка обхода */
+#layoutModal{position:fixed;inset:0;background:#06090d;z-index:49;overflow-y:auto;
+  padding:14px 12px calc(96px + env(safe-area-inset-bottom));}
+#layoutModal h2{margin:6px 0 2px;font-size:20px;}
+#layoutModal .lsub{color:var(--dim);font-size:13px;margin:0 0 12px;}
+.seg-3 button{font-size:14px;padding:13px 2px;}
+.layout-desc{color:#8fa1b3;font-size:13px;line-height:1.45;margin:11px 2px 12px;min-height:38px;}
+#layoutLockNote{color:var(--go);font-size:12.5px;line-height:1.45;margin:0 2px 12px;
+  background:#0d1f14;border:1px solid #1c4d31;border-radius:10px;padding:9px 11px;}
+#layoutList{display:flex;flex-direction:column;gap:8px;}
+.lrow{display:flex;align-items:center;gap:9px;height:52px;padding:0 11px;
+  background:var(--card);border:1px solid var(--line);border-radius:12px;
+  font-variant-numeric:tabular-nums;overflow:hidden;transition:transform .12s ease;will-change:transform;}
+.lrow.dragging{transition:none;border-color:var(--go);background:#16271c;
+  box-shadow:0 10px 26px rgba(0,0,0,.55);position:relative;z-index:20;}
+.lrow.locked{opacity:.5;background:#0c1117;}
+.lhandle{flex:0 0 auto;color:#5a6b7d;font-size:23px;width:24px;text-align:center;
+  touch-action:none;cursor:grab;}
+.lcheck{flex:0 0 auto;color:var(--go);font-size:15px;width:16px;text-align:center;}
+.lpos{flex:0 0 auto;color:#56687c;font-size:12px;width:18px;text-align:center;}
+.lloc{flex:0 0 auto;font-weight:700;font-size:16px;width:70px;}
+.lqty{flex:0 0 auto;font-weight:700;font-size:15px;color:var(--dim);min-width:38px;}
+.lqty.big{color:var(--go);}
+.ldesc{flex:1;min-width:0;color:var(--dim);font-size:13px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ltop{flex:0 0 auto;width:34px;height:34px;border-radius:9px;border:1px solid var(--line);
+  background:var(--bg);color:var(--blue);font-size:16px;padding:0;line-height:1;}
+.ltop:active{background:#16263a;}
+#layoutApplyBar{position:fixed;left:0;right:0;bottom:0;z-index:2;
+  padding:10px 12px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(rgba(6,9,13,0),#06090d 30%);}
 [hidden]{display:none !important;}
 </style>
 </head>
@@ -176,7 +207,7 @@ body.work #moreBar{background:#0a0e13;}
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
   <h1>Picker</h1>
-  <p class="sub" style="margin-bottom:0">v2.5</p>
+  <p class="sub" style="margin-bottom:0">v2.6</p>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div id="resumeBar" class="resume-bar" hidden>
@@ -280,6 +311,7 @@ body.work #moreBar{background:#0a0e13;}
       <div class="inline-num"><span>Гаснет через, сек (мин. 5)</span>
         <input type="number" id="ecoSec" value="20" min="5" max="300"></div>
     </div>
+    <button class="btn btn-small" id="btnReorder">↕ Изменить раскладку</button>
     <button class="btn btn-small" id="btnFinish">Закончить и показать итог</button>
     <button class="btn btn-small" id="btnEdit">✎ Назад к списку</button>
 
@@ -370,6 +402,26 @@ body.work #moreBar{background:#0a0e13;}
 </div>
 
 <!-- ================= ЭКО-ЭКРАН ================= -->
+<!-- ================= РАСКЛАДКА ОБХОДА ================= -->
+<div id="layoutModal" hidden>
+  <button id="btnCloseLayoutX" style="position:fixed;top:max(12px,env(safe-area-inset-top));right:14px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:var(--txt);font-size:18px;z-index:50;line-height:38px;text-align:center;padding:0;">✕</button>
+  <div style="max-width:620px;margin:0 auto">
+    <h2>Раскладка обхода</h2>
+    <p class="lsub">В каком порядке озвучивать товары</p>
+    <div class="seg seg-3" id="segLayout">
+      <button data-l="normal">Обычная</button>
+      <button data-l="qtydesc">Крупные</button>
+      <button data-l="custom">Вручную</button>
+    </div>
+    <p class="layout-desc" id="layoutDesc"></p>
+    <div id="layoutLockNote" hidden>Взятые позиции закреплены сверху и не двигаются — переставляются только оставшиеся. Прогресс не собьётся.</div>
+    <div id="layoutList"></div>
+  </div>
+  <div id="layoutApplyBar">
+    <button class="btn btn-go" id="btnLayoutApply" style="max-width:620px;margin:0 auto;font-size:20px;padding:18px">▶ Начать</button>
+  </div>
+</div>
+
 <div id="eco" hidden>
   <div class="em" id="ecoMic"></div>
   <div class="e1" id="ecoLoc">000-000</div>
@@ -391,7 +443,7 @@ body.work #moreBar{background:#0a0e13;}
 
 /* ================= НАСТРОЙКИ (persist) ================= */
 const SET_KEY='picker_set', SES_KEY='picker_ses';
-const DEFAULTS={rate:1.1,repOn:true,repSec:8,voiceMode:'off',pod:false,eco:true,ecoSec:20};
+const DEFAULTS={rate:1.1,repOn:true,repSec:8,voiceMode:'off',pod:false,eco:true,ecoSec:20,sortMode:'normal'};
 let settings=loadSettings();
 // v1.7: режим «Кнопка» удалён — старое значение мигрируем в «Выкл»
 if(settings.voiceMode!=='always'&&settings.voiceMode!=='off')settings.voiceMode='off';
@@ -407,6 +459,7 @@ let idx=0;
 let inWork=false, paused=false;
 let repeatTimer=null;
 let manualQty={};
+let layoutHold=false;     // открыта «Раскладка»: мик/озвучка/эко на паузе
 let summaryHold=false;   // открыт «Итог»: озвучка/мик/эко на паузе
 let renderedIdx=-1;      // для анимации смены позиции
 let photoQ=[];           // очередь фото: {file,url}
@@ -576,7 +629,7 @@ let micResumeT=null;
 let lastCmdAt=0;         // защита от двойного срабатывания одной фразы
 
 function shouldAutoListen(){
-  return inWork&&!paused&&!summaryHold&&settings.voiceMode==='always'&&!micMuted;
+  return inWork&&!paused&&!summaryHold&&!layoutHold&&settings.voiceMode==='always'&&!micMuted;
 }
 function micUI(){
   const b=$('btnVoice');if(!b)return;
@@ -665,7 +718,7 @@ function micStop(){
 let audioMode='';
 function desiredRec(){
   // Сессию записи держит только режим «Всегда».
-  return inWork&&!paused&&!summaryHold&&settings.voiceMode==='always'&&!micMuted;
+  return inWork&&!paused&&!summaryHold&&!layoutHold&&settings.voiceMode==='always'&&!micMuted;
 }
 function updateAudio(){
   const want=desiredRec()?'play-and-record':'playback';
@@ -957,6 +1010,7 @@ function registerPodHandlers(){
 }
 function stemAction(kind){
   if(!inWork)return;
+  if(layoutHold||summaryHold)return;
   const now=Date.now();if(now<podGuard)return;podGuard=now+300;
   if(kind==='third'){if(paused)resumeWork();else pauseWork();return;}  // 3 клика
   if(paused)return;
@@ -988,7 +1042,7 @@ document.addEventListener('pointerdown',function(){
   if(settings.pod&&settings.voiceMode!=='always'&&pod&&pod.paused)pod.play().catch(function(){});
 });
 setInterval(function(){
-  if(inWork&&!paused&&!summaryHold&&settings.eco&&!ecoShown&&Date.now()-lastTouch>Math.max(5,settings.ecoSec||20)*1000)showEco();
+  if(inWork&&!paused&&!summaryHold&&!layoutHold&&settings.eco&&!ecoShown&&Date.now()-lastTouch>Math.max(5,settings.ecoSec||20)*1000)showEco();
 },3000);
 function showEco(){
   if(!items.length)return;
@@ -1240,7 +1294,7 @@ $('btnClear').addEventListener('click',function(){
 });
 $('btnParse').addEventListener('click',doParse);
 $('expTotal').addEventListener('input',function(){if(items.length)renderParse();});
-$('btnStart').addEventListener('click',function(){startWork(false);});
+$('btnStart').addEventListener('click',function(){openLayout('start');});
 
 $('btnTake').addEventListener('click',take);
 $('btnPause').addEventListener('click',pauseWork);
@@ -1314,6 +1368,179 @@ document.querySelectorAll('#segVoice button').forEach(function(b){
 });
 
 /* ================= СТАРТ СТРАНИЦЫ ================= */
+/* ================= РАСКЛАДКА ОБХОДА ================= */
+const BIG_QTY=10;          // порог «крупной» позиции для режима «Крупные первыми»
+let layoutCtx='start';     // 'start' (перед запуском) | 'edit' (во время работы)
+let layoutMode='normal';
+let layoutFree=[];         // рабочий порядок незакрытых позиций внутри модалки
+let layoutLocked=[];       // взятые позиции — закреплены, не переставляются
+let ldrag=null;            // состояние drag-перетаскивания
+
+function byLoc(a,b){return a.loc<b.loc?-1:a.loc>b.loc?1:0;}
+function sortByLoc(list){return list.slice().sort(byLoc);}
+function sortQtyDesc(list){
+  const big=list.filter(function(i){return i.qty!=null&&i.qty>=BIG_QTY;});
+  const rest=list.filter(function(i){return !(i.qty!=null&&i.qty>=BIG_QTY);});
+  big.sort(function(a,b){return (b.qty-a.qty)||byLoc(a,b);});
+  rest.sort(byLoc);
+  return big.concat(rest);
+}
+function buildFree(mode,list){
+  if(mode==='qtydesc')return sortQtyDesc(list);
+  if(mode==='custom')return list.slice();   // оставить текущий порядок для ручной правки
+  return sortByLoc(list);
+}
+function escHtml(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){return c==='&'?'&amp;':c==='<'?'&lt;':'&gt;';});}
+
+function openLayout(ctx){
+  if(!items.length)return;
+  layoutCtx=ctx;
+  if(ctx==='edit'){
+    // во время работы: взятые закреплены, переставляем ТОЛЬКО оставшиеся → прогресс не сбить
+    layoutHold=true;
+    clearTimeout(repeatTimer);
+    try{if(window.speechSynthesis)speechSynthesis.cancel();}catch(e){}
+    curUtter=null;ttsSpeaking=false;
+    micStop();hideEco();updateAudio();
+    layoutLocked=items.filter(function(i){return i.taken;});
+    layoutFree=items.filter(function(i){return !i.taken;});
+  }else{
+    layoutLocked=[];
+    layoutFree=items.slice();
+  }
+  layoutMode=(settings.sortMode==='qtydesc'||settings.sortMode==='custom')?settings.sortMode:'normal';
+  if(layoutMode!=='custom')layoutFree=buildFree(layoutMode,layoutFree);
+  $('btnLayoutApply').textContent=ctx==='edit'?'✓ Применить':'▶ Начать';
+  renderLayout();
+  $('layoutModal').hidden=false;
+}
+function setLayoutMode(mode){
+  if(mode!=='custom')layoutFree=buildFree(mode,layoutFree);  // custom не трогаем — правим руками
+  layoutMode=mode;
+  renderLayout();
+}
+function renderLayout(){
+  document.querySelectorAll('#segLayout button').forEach(function(b){
+    b.classList.toggle('on',b.getAttribute('data-l')===layoutMode);
+  });
+  const D={
+    normal:'По локациям, как на листе — обычный порядок обхода.',
+    qtydesc:'Сначала крупные позиции ('+BIG_QTY+'+ шт) от большего к меньшему — грузишь палеты первыми. Остальное ('+(BIG_QTY-1)+' и меньше) — по локациям.',
+    custom:'Перетащи ≡ или подними ⤒ наверх. Озвучка пойдёт сверху вниз.'
+  };
+  $('layoutDesc').textContent=D[layoutMode]||'';
+  const drag=(layoutMode==='custom');
+  let pos=0,html='';
+  layoutLocked.forEach(function(it){
+    pos++;
+    const eff=it.actualQty!=null?it.actualQty:it.qty;
+    html+='<div class="lrow locked"><span class="lpos">'+pos+'</span>'+
+      '<span class="lcheck">✓</span><span class="lloc">'+it.loc+'</span>'+
+      '<span class="lqty">×'+(eff!=null?eff:'?')+'</span>'+
+      '<span class="ldesc">'+escHtml(it.desc)+'</span></div>';
+  });
+  layoutFree.forEach(function(it,i){
+    pos++;
+    const big=(it.qty!=null&&it.qty>=BIG_QTY);
+    html+='<div class="lrow free" data-i="'+i+'">';
+    if(drag)html+='<span class="lhandle">≡</span>';
+    html+='<span class="lpos">'+pos+'</span><span class="lloc">'+it.loc+'</span>'+
+      '<span class="lqty'+(big?' big':'')+'">×'+(it.qty!=null?it.qty:'?')+'</span>'+
+      '<span class="ldesc">'+escHtml(it.desc)+'</span>';
+    if(drag)html+='<button class="ltop" data-i="'+i+'">⤒</button>';
+    html+='</div>';
+  });
+  $('layoutList').innerHTML=html;
+  $('layoutLockNote').hidden=!layoutLocked.length;
+}
+
+/* drag-перестановка (pointer/touch), строки фикс. высоты */
+function layoutPointerDown(e){
+  if(layoutMode!=='custom')return;
+  const h=e.target.closest&&e.target.closest('.lhandle');
+  if(!h)return;
+  const row=h.closest('.lrow.free');
+  if(!row)return;
+  e.preventDefault();
+  const rows=[].slice.call($('layoutList').querySelectorAll('.lrow.free'));
+  const from=rows.indexOf(row);
+  let step=row.offsetHeight;
+  if(rows.length>1){const a=rows[0].getBoundingClientRect(),b=rows[1].getBoundingClientRect();step=Math.abs(b.top-a.top)||step;}
+  ldrag={row:row,rows:rows,from:from,to:from,startY:e.clientY,step:step};
+  row.classList.add('dragging');
+  window.addEventListener('pointermove',layoutPointerMove,{passive:false});
+  window.addEventListener('pointerup',layoutPointerUp);
+  window.addEventListener('pointercancel',layoutPointerUp);
+}
+function layoutPointerMove(e){
+  if(!ldrag)return;
+  e.preventDefault();
+  const dy=e.clientY-ldrag.startY;
+  ldrag.row.style.transform='translateY('+dy+'px)';
+  let to=ldrag.from+Math.round(dy/ldrag.step);
+  if(to<0)to=0;if(to>ldrag.rows.length-1)to=ldrag.rows.length-1;
+  if(to!==ldrag.to){
+    ldrag.to=to;
+    ldrag.rows.forEach(function(r,i){
+      if(r===ldrag.row)return;
+      let sh=0;
+      if(ldrag.from<to&&i>ldrag.from&&i<=to)sh=-ldrag.step;
+      else if(ldrag.from>to&&i>=to&&i<ldrag.from)sh=ldrag.step;
+      r.style.transform=sh?('translateY('+sh+'px)'):'';
+    });
+  }
+}
+function layoutPointerUp(){
+  if(!ldrag)return;
+  window.removeEventListener('pointermove',layoutPointerMove);
+  window.removeEventListener('pointerup',layoutPointerUp);
+  window.removeEventListener('pointercancel',layoutPointerUp);
+  const from=ldrag.from,to=ldrag.to;
+  ldrag=null;
+  if(from!==to){const it=layoutFree.splice(from,1)[0];layoutFree.splice(to,0,it);}
+  renderLayout();
+  beep(700,30);
+}
+
+function applyLayout(){
+  items=layoutLocked.concat(layoutFree);
+  settings.sortMode=layoutMode;saveSettings();
+  $('layoutModal').hidden=true;
+  if(layoutCtx==='edit'){
+    layoutHold=false;
+    idx=Math.min(layoutLocked.length,items.length-1);
+    renderedIdx=-1;
+    render();saveSession();
+    if(!paused){sayItem();if(shouldAutoListen())micSchedule(250);}
+  }else{
+    startWork(false);
+  }
+}
+function closeLayout(){
+  $('layoutModal').hidden=true;
+  if(layoutCtx==='edit'){
+    layoutHold=false;
+    renderedIdx=-1;render();
+    if(!paused){sayItem();if(shouldAutoListen())micSchedule(250);}
+  }
+}
+
+$('layoutList').addEventListener('pointerdown',layoutPointerDown);
+$('layoutList').addEventListener('click',function(e){
+  const t=e.target.closest&&e.target.closest('.ltop');
+  if(!t)return;
+  const i=parseInt(t.getAttribute('data-i'),10);
+  if(isNaN(i))return;
+  const it=layoutFree.splice(i,1)[0];layoutFree.unshift(it);
+  renderLayout();beep(820,40);
+});
+document.querySelectorAll('#segLayout button').forEach(function(b){
+  b.addEventListener('click',function(){setLayoutMode(b.getAttribute('data-l'));});
+});
+$('btnLayoutApply').addEventListener('click',applyLayout);
+$('btnCloseLayoutX').addEventListener('click',closeLayout);
+$('btnReorder').addEventListener('click',function(){openLayout('edit');});
+
 applySettingsToUI();
 updateAiState();
 checkSavedSession();
