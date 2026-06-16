@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v2.9 — pick-by-voice для склада (личный инструмент)
+  PICKER v3.0 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -32,7 +32,7 @@
   --go:#2dd46f;--go-press:#24b35d;
   --warn:#ffb020;--bad:#ff5d5d;--blue:#4aa3ff;
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
 body{margin:0;background:var(--bg);color:var(--txt);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   padding:12px;padding-bottom:calc(14px + env(safe-area-inset-bottom));}
@@ -212,7 +212,7 @@ body.work #moreBar{background:#0a0e13;}
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
   <h1>Picker</h1>
-  <p class="sub" style="margin-bottom:0">v2.9</p>
+  <p class="sub" style="margin-bottom:0">v3.0</p>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div id="resumeBar" class="resume-bar" hidden>
@@ -453,10 +453,11 @@ body.work #moreBar{background:#0a0e13;}
 
 /* ================= НАСТРОЙКИ (persist) ================= */
 const SET_KEY='picker_set', SES_KEY='picker_ses';
-const DEFAULTS={rate:1.1,repOn:true,repSec:8,voiceMode:'off',pod:false,eco:true,ecoSec:20,sortMode:'normal',bigQty:10};
+const DEFAULTS={rate:1.1,repOn:true,repSec:8,voiceMode:'off',pod:true,eco:true,ecoSec:20,sortMode:'normal',bigQty:10};
 let settings=loadSettings();
 // v1.7: режим «Кнопка» удалён — старое значение мигрируем в «Выкл»
 if(settings.voiceMode!=='always'&&settings.voiceMode!=='off')settings.voiceMode='off';
+if(settings.podMig===undefined){settings.pod=true;settings.podMig=true;saveSettings();}  // щелчки вкл по умолчанию (разово)
 function loadSettings(){
   try{return Object.assign({},DEFAULTS,JSON.parse(localStorage.getItem(SET_KEY)||'{}'));}
   catch(e){return Object.assign({},DEFAULTS);}
@@ -1623,6 +1624,11 @@ $('locBig').addEventListener('click',function(){if(Date.now()<uiShield)return;be
 applySettingsToUI();
 updateAiState();
 checkSavedSession();
+
+/* запрет зума: pinch двумя пальцами (iOS Safari). Double-tap гасит touch-action:manipulation */
+document.addEventListener('gesturestart',function(e){e.preventDefault();},{passive:false});
+document.addEventListener('gesturechange',function(e){e.preventDefault();},{passive:false});
+document.addEventListener('gestureend',function(e){e.preventDefault();},{passive:false});
 
 // PWA иконка — canvas, добавляется при загрузке → iOS берёт при Add to Home Screen
 (function(){
