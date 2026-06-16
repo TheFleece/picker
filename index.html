@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v3.0 — pick-by-voice для склада (личный инструмент)
+  PICKER v3.1 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -33,6 +33,7 @@
   --warn:#ffb020;--bad:#ff5d5d;--blue:#4aa3ff;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+html,body{overscroll-behavior:none;}
 body{margin:0;background:var(--bg);color:var(--txt);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   padding:12px;padding-bottom:calc(14px + env(safe-area-inset-bottom));}
@@ -212,7 +213,7 @@ body.work #moreBar{background:#0a0e13;}
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
   <h1>Picker</h1>
-  <p class="sub" style="margin-bottom:0">v3.0</p>
+  <p class="sub" style="margin-bottom:0">v3.1</p>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div id="resumeBar" class="resume-bar" hidden>
@@ -1629,6 +1630,8 @@ checkSavedSession();
 document.addEventListener('gesturestart',function(e){e.preventDefault();},{passive:false});
 document.addEventListener('gesturechange',function(e){e.preventDefault();},{passive:false});
 document.addEventListener('gestureend',function(e){e.preventDefault();},{passive:false});
+// надёжнее gesture-событий: глушим любой жест двумя+ пальцами (зум проходил во время скролла)
+document.addEventListener('touchmove',function(e){if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
 
 // PWA иконка — canvas, добавляется при загрузке → iOS берёт при Add to Home Screen
 (function(){
