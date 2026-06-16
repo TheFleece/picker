@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v3.1 — pick-by-voice для склада (личный инструмент)
+  PICKER v3.2 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -34,7 +34,8 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
 html,body{overscroll-behavior:none;}
-body{margin:0;background:var(--bg);color:var(--txt);
+input,textarea,select{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;}
+body{margin:0;background:var(--bg);color:var(--txt);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   padding:12px;padding-bottom:calc(14px + env(safe-area-inset-bottom));}
 #scrSetup,#scrWork{min-height:calc(100svh - 30px);display:flex;flex-direction:column;}
@@ -213,7 +214,7 @@ body.work #moreBar{background:#0a0e13;}
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
   <h1>Picker</h1>
-  <p class="sub" style="margin-bottom:0">v3.1</p>
+  <p class="sub" style="margin-bottom:0">v3.2</p>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div id="resumeBar" class="resume-bar" hidden>
