@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v3.4 — pick-by-voice для склада (личный инструмент)
+  PICKER v3.5 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -157,12 +157,34 @@ body.work #moreBar{background:#0a0e13;}
 #helpModal b{color:var(--txt);}
 #logModal{position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:46;overflow-y:auto;padding:16px 14px 40px;}
 #logModal h2{margin:4px 0 12px;font-size:20px;}
-#logModal input[type=number]{flex:1;width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;color:var(--txt);font-size:17px;padding:13px;}
-.log-sum{background:#0e1f16;border:1px solid var(--go);border-radius:12px;color:var(--go);padding:12px;font-weight:700;font-size:16px;text-align:center;margin:0 0 12px;}
-.logrow{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
-.logrow .lb{font-weight:700;font-size:16px;color:var(--txt);}
-.logrow .lc{margin-left:auto;color:var(--dim);font-size:15px;}
-.logrow .logdel{flex:0 0 auto;width:34px;height:34px;border-radius:50%;background:#251818;border:1px solid var(--bad);color:var(--bad);font-size:18px;line-height:32px;padding:0;}
+.log-meta{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px;}
+.log-meta .mrow{display:flex;align-items:center;gap:8px;}
+.log-meta .mrow+.mrow{margin-top:10px;}
+.log-meta label{color:var(--dim);font-size:13px;flex:0 0 auto;}
+.log-meta input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--txt);font-size:16px;padding:10px;}
+.log-meta input.short{flex:0 0 76px;text-align:center;}
+.log-meta input[readonly]{color:var(--dim);}
+.log-total{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#0e1f16;border:1px solid var(--go);border-radius:14px;padding:12px 16px;margin-bottom:6px;}
+.log-total .lt-lab{color:#7fd6a0;font-size:13px;line-height:1.25;}
+.log-total .lt-num{color:var(--go);font-weight:800;font-size:36px;font-variant-numeric:tabular-nums;}
+.log-orders{color:var(--dim);font-size:13px;text-align:center;margin:0 0 14px;}
+.log-tbl{border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+.log-tbl .th,.log-tbl .tr{display:grid;grid-template-columns:1fr 1fr 42px;align-items:center;}
+.log-tbl .th{background:#10161e;color:var(--dim);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.log-tbl .th span{padding:10px 12px;}
+.log-tbl .tr{border-top:1px solid var(--line);font-size:16px;}
+.log-tbl .tr>span{padding:11px 12px;}
+.log-tbl .tr .bk{font-weight:700;color:var(--txt);}
+.log-tbl .tr .co{color:var(--dim);font-variant-numeric:tabular-nums;}
+.log-tbl .tr .del{padding:0;display:flex;justify-content:center;}
+.log-tbl .tr .del button{width:30px;height:30px;border-radius:50%;background:#251818;border:1px solid var(--bad);color:var(--bad);font-size:16px;line-height:28px;padding:0;}
+.log-add-row{display:grid;grid-template-columns:1fr 1fr 52px;gap:8px;border-top:1px solid var(--line);padding:8px;background:#0c1116;}
+.log-add-row input{background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--txt);font-size:16px;padding:11px;width:100%;min-width:0;}
+.log-add-row .addb{background:var(--go);border:none;border-radius:10px;color:#06250f;font-size:24px;font-weight:800;padding:0;}
+.log-empty{color:var(--dim);font-size:14px;padding:16px;text-align:center;}
+.log-fromlist{margin-top:10px;}
+.log-actions{display:flex;gap:10px;margin-top:12px;}
+.log-actions .btn{flex:1;}
 /* Пауза — эко-стиль: чистый чёрный, минимум светящихся пикселей (OLED) */
 #pauseOverlay{position:fixed;inset:0;background:#000;z-index:45;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -223,7 +245,7 @@ body.work #moreBar{background:#0a0e13;}
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
   <h1>Picker</h1>
-  <p class="sub" style="margin-bottom:0">v3.4</p>
+  <p class="sub" style="margin-bottom:0">v3.5</p>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div id="resumeBar" class="resume-bar" hidden>
@@ -465,25 +487,29 @@ body.work #moreBar{background:#0a0e13;}
 <!-- ================= ЖУРНАЛ СМЕНЫ ================= -->
 <div id="logModal" hidden>
   <button id="logClose" style="position:fixed;top:max(12px,env(safe-area-inset-top));right:14px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:var(--txt);font-size:18px;z-index:50;line-height:38px;text-align:center;padding:0;">✕</button>
-  <div style="max-width:620px;margin:0 auto">
+  <div style="max-width:560px;margin:0 auto">
     <h2>📋 Журнал смены</h2>
-    <p class="log-sum" id="logSummary">Заказов: 0 · Всего коли: 0</p>
-    <div id="logList"></div>
-    <div class="log-add" style="margin-top:14px">
-      <div class="row">
-        <input type="number" id="logStore" inputmode="numeric" placeholder="Butik (№)">
+    <div class="log-meta">
+      <div class="mrow"><label>Имя</label><input type="text" id="logName" placeholder="Имя и фамилия"></div>
+      <div class="mrow"><label>Дата</label><input type="text" id="logDate" class="short" readonly><label>с</label><input type="text" id="logFrom" class="short" inputmode="numeric" placeholder="16:00"><label>до</label><input type="text" id="logTo" class="short" inputmode="numeric" placeholder="23:45"></div>
+    </div>
+    <div class="log-total"><div class="lt-lab">Total amount<br>colli packed</div><div class="lt-num" id="logSummary">0</div></div>
+    <div class="log-orders" id="logOrders">Заказов: 0</div>
+    <div class="log-tbl">
+      <div class="th"><span>Butik</span><span>Coli</span><span></span></div>
+      <div id="logList"></div>
+      <div class="log-add-row">
+        <input type="number" id="logStore" inputmode="numeric" placeholder="Butik №">
         <input type="number" id="logColi" inputmode="numeric" placeholder="Коли">
-      </div>
-      <div class="row">
-        <button class="btn btn-go" id="logAdd">➕ Добавить</button>
-        <button class="btn" id="logFromList" style="flex:0 0 44%">↩ из листа</button>
+        <button class="addb" id="logAdd" title="Добавить">＋</button>
       </div>
     </div>
-    <div class="row" style="margin-top:14px">
+    <button class="btn btn-small log-fromlist" id="logFromList">↩ Подставить из текущего листа</button>
+    <div class="log-actions">
       <button class="btn btn-small" id="logCopy">Скопировать</button>
       <button class="btn btn-small" id="logClear">Очистить</button>
     </div>
-    <p class="hint" style="margin-top:16px">Записывай Butik (№ магазина) и коли после каждого готового листа. «↩ из листа» подставит магазин и Total coli из текущего скана. Внизу — сколько заказов и сумма коли для отчёта лидеру.</p>
+    <p class="hint" style="margin-top:14px">После готового листа жми «Подставить из текущего листа» — № магазина и Total coli подставятся из скана, затем ＋. Сверху — общая сумма коли и число заказов для отчёта лидеру.</p>
   </div>
 </div>
 
@@ -528,7 +554,12 @@ function normalizeScan(t){
 }
 function parseList(raw){
   let text=normalizeScan(raw);
-  text=text.replace(/total\s*coli[\s\S]*$/i,'');   // хвост листа не должен попасть в описание
+  text=text.split('\n').filter(function(ln){
+    if(/\d{3}-\d{3}/.test(ln))return true;        // строка с локацией — всегда оставляем
+    if(/total\s*coli/i.test(ln))return false;     // «Total coli» (вверху ИЛИ внизу) — убрать
+    if(/^\s*store\b/i.test(ln))return false;      // «Store…» — убрать
+    return true;
+  }).join('\n');
   const found=Array.from(text.matchAll(/\b\d{3}-\d{3}\b/g));
   const out=[];
   for(let i=0;i<found.length;i++){
@@ -580,8 +611,18 @@ const QTY_W={1:'одну',2:'две',3:'три',4:'четыре',5:'пять',6:
   8:'восемь',9:'девять',10:'десять',11:'одиннадцать',12:'двенадцать',
   13:'тринадцать',14:'четырнадцать',15:'пятнадцать',16:'шестнадцать',
   17:'семнадцать',18:'восемнадцать',19:'девятнадцать',20:'двадцать'};
+const ONES=['','один','два','три','четыре','пять','шесть','семь','восемь','девять'];
+const TEENS=['десять','одиннадцать','двенадцать','тринадцать','четырнадцать','пятнадцать','шестнадцать','семнадцать','восемнадцать','девятнадцать'];
+const TENS=['','','двадцать','тридцать','сорок','пятьдесят','шестьдесят','семьдесят','восемьдесят','девяносто'];
+function num2w(n){if(n<10)return ONES[n]||'ноль';if(n<20)return TEENS[n-10];return TENS[Math.floor(n/10)]+(n%10?' '+ONES[n%10]:'');}
+function groupToSpeech(g){
+  const t=String(g).replace(/^0/,'');                                          // убрать ОДИН ведущий ноль: 002→02, 010→10, 030→30
+  if(t.length>=2&&t[0]==='0')return t.split('').map(d=>DIGITS[+d]).join(' ');   // «0X» (02,05) → ноль X цифрами
+  if(/^\d{2}$/.test(t))return num2w(parseInt(t,10));                            // 10..99 → десять, двадцать семь…
+  return t.split('').map(d=>DIGITS[+d]).join(' ');
+}
 function locToSpeech(loc){
-  return loc.split('-').map(g=>g.replace(/^0/,'').split('').map(d=>DIGITS[+d]).join(' ')).join(', ');
+  return loc.split('-').map(groupToSpeech).join(', ');
 }
 function qtyToSpeech(n){return QTY_W[n]||String(n);}
 function shtuk(n){
@@ -1424,19 +1465,29 @@ let shiftLog=(function(){try{return JSON.parse(localStorage.getItem(LOG_KEY)||'[
 function saveLog(){try{localStorage.setItem(LOG_KEY,JSON.stringify(shiftLog));}catch(e){}}
 function renderLog(){
   const sum=shiftLog.reduce(function(s,e){return s+(parseInt(e.coli,10)||0);},0);
-  $('logSummary').textContent='Заказов: '+shiftLog.length+' · Всего коли: '+sum;
+  $('logSummary').textContent=sum;
+  $('logOrders').textContent='Заказов: '+shiftLog.length;
   const box=$('logList');
-  if(!shiftLog.length){box.innerHTML='<p class="hint" style="margin-top:4px">Пока пусто. Добавь Butik и коли после готового листа.</p>';return;}
+  if(!shiftLog.length){box.innerHTML='<div class="log-empty">Пусто. Добавь магазин и коли после готового листа.</div>';return;}
   let h='';
   shiftLog.forEach(function(e,i){
-    h+='<div class="logrow"><span class="lb">Butik '+(e.store||'—')+'</span><span class="lc">'+(e.coli!=null?e.coli:'?')+' коли</span><button class="logdel" data-i="'+i+'">×</button></div>';
+    h+='<div class="tr"><span class="bk">'+(e.store||'—')+'</span><span class="co">'+(e.coli!=null?e.coli:'?')+'</span><span class="del"><button data-i="'+i+'">×</button></span></div>';
   });
   box.innerHTML=h;
-  box.querySelectorAll('.logdel').forEach(function(b){
+  box.querySelectorAll('.del button').forEach(function(b){
     b.addEventListener('click',function(){shiftLog.splice(parseInt(b.getAttribute('data-i'),10),1);saveLog();renderLog();});
   });
 }
+function todayStr(){const d=new Date(),p=function(n){return(n<10?'0':'')+n;};return p(d.getDate())+'-'+p(d.getMonth()+1);}
+const META_KEY='picker_shiftmeta_v1';
+function loadMeta(){try{return JSON.parse(localStorage.getItem(META_KEY)||'{}')||{};}catch(e){return{};}}
+function saveMeta(){try{localStorage.setItem(META_KEY,JSON.stringify({name:$('logName').value,from:$('logFrom').value,to:$('logTo').value}));}catch(e){}}
 function openLog(store,coli){
+  const meta=loadMeta();
+  $('logName').value=meta.name||'';
+  $('logFrom').value=meta.from||'';
+  $('logTo').value=meta.to||'';
+  $('logDate').value=todayStr();
   $('logStore').value=store!=null?store:'';
   $('logColi').value=coli!=null?coli:'';
   renderLog();
@@ -1444,6 +1495,7 @@ function openLog(store,coli){
 }
 $('btnLog').addEventListener('click',function(){openLog(null,null);});
 $('logClose').addEventListener('click',function(){$('logModal').hidden=true;});
+['logName','logFrom','logTo'].forEach(function(id){var el=$(id);if(el)el.addEventListener('input',saveMeta);});
 $('logAdd').addEventListener('click',function(){
   const st=String($('logStore').value||'').trim();
   const co=parseInt($('logColi').value,10);
@@ -1460,7 +1512,14 @@ $('logFromList').addEventListener('click',function(){
 });
 $('logCopy').addEventListener('click',function(){
   const sum=shiftLog.reduce(function(s,e){return s+(parseInt(e.coli,10)||0);},0);
-  const txt=shiftLog.map(function(e){return (e.store||'—')+' — '+(e.coli!=null?e.coli:'?');}).join('\n')+'\nЗаказов: '+shiftLog.length+' · Всего: '+sum;
+  const lines=[];
+  if($('logName').value)lines.push('Имя: '+$('logName').value);
+  let dl='Дата: '+$('logDate').value;
+  if($('logFrom').value||$('logTo').value)dl+='  '+($('logFrom').value||'?')+'–'+($('logTo').value||'?');
+  lines.push(dl,'','Butik   Coli');
+  shiftLog.forEach(function(e){lines.push((e.store||'—')+'   '+(e.coli!=null?e.coli:'?'));});
+  lines.push('','Заказов: '+shiftLog.length+' · Всего коли: '+sum);
+  const txt=lines.join('\n');
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){try{beep(880,70);}catch(e){}},function(){});}
 });
 $('logClear').addEventListener('click',function(){
