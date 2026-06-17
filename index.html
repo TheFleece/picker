@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v3.2 — pick-by-voice для склада (личный инструмент)
+  PICKER v3.4 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -61,6 +61,7 @@ textarea{margin-top:12px;width:100%;min-height:110px;background:var(--card);colo
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
 .row{display:flex;gap:10px;}
 .row .btn{flex:1;}
+.btn-ico{flex:0 0 56px;padding-left:6px;padding-right:6px;font-size:20px;}
 table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px;}
 td,th{padding:7px 4px;border-bottom:1px solid var(--line);text-align:left;}
 th{color:var(--dim);font-weight:500;font-size:12px;}
@@ -154,6 +155,14 @@ body.work #moreBar{background:#0a0e13;}
 #helpModal p,#helpModal li{color:var(--dim);font-size:14.5px;line-height:1.55;}
 #helpModal ul{padding-left:18px;margin:4px 0;}
 #helpModal b{color:var(--txt);}
+#logModal{position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:46;overflow-y:auto;padding:16px 14px 40px;}
+#logModal h2{margin:4px 0 12px;font-size:20px;}
+#logModal input[type=number]{flex:1;width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;color:var(--txt);font-size:17px;padding:13px;}
+.log-sum{background:#0e1f16;border:1px solid var(--go);border-radius:12px;color:var(--go);padding:12px;font-weight:700;font-size:16px;text-align:center;margin:0 0 12px;}
+.logrow{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
+.logrow .lb{font-weight:700;font-size:16px;color:var(--txt);}
+.logrow .lc{margin-left:auto;color:var(--dim);font-size:15px;}
+.logrow .logdel{flex:0 0 auto;width:34px;height:34px;border-radius:50%;background:#251818;border:1px solid var(--bad);color:var(--bad);font-size:18px;line-height:32px;padding:0;}
 /* Пауза — эко-стиль: чистый чёрный, минимум светящихся пикселей (OLED) */
 #pauseOverlay{position:fixed;inset:0;background:#000;z-index:45;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -214,7 +223,7 @@ body.work #moreBar{background:#0a0e13;}
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
   <h1>Picker</h1>
-  <p class="sub" style="margin-bottom:0">v3.2</p>
+  <p class="sub" style="margin-bottom:0">v3.4</p>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div id="resumeBar" class="resume-bar" hidden>
@@ -253,6 +262,7 @@ body.work #moreBar{background:#0a0e13;}
     <button class="btn btn-small" id="btnKey">AI-ключ</button>
     <button class="btn btn-small" id="btnClear">Очистить</button>
   </div>
+  <button class="btn btn-small" id="btnLog" style="margin-top:10px">📋 Журнал смены</button>
   <div class="grow"></div>
   <button class="btn btn-go" id="btnStart" hidden>СТАРТ</button>
 </div>
@@ -282,6 +292,7 @@ body.work #moreBar{background:#0a0e13;}
   </div>
   <div class="row">
     <button class="btn" id="btnArt">Артикул</button>
+    <button class="btn btn-ico" id="btnRepeat" title="Повтор">🔁</button>
     <button class="btn" id="btnViewSummary">Итог</button>
     <button class="btn btn-mic" id="btnVoice">🎙</button>
   </div>
@@ -322,7 +333,7 @@ body.work #moreBar{background:#0a0e13;}
     <button class="btn btn-small" id="btnEdit">✎ Назад к списку</button>
 
     <div class="hint">
-      Команды: «взял» «меньше» «назад» «артикул» «товар» «пауза» «продолжи» «сводка» «конец»<br>
+      Команды: «взял» «меньше» «назад» «артикул» «повтор» «товар» «пауза» «продолжи» «сводка» «конец»<br>
       Щелчки: 1 = ВЗЯЛ · 2 = Назад · 3 = Пауза/Продолжить<br>
       Тап × — исправить Qty · тап по цифрам локации — изменить порядок обхода
     </div>
@@ -338,6 +349,7 @@ body.work #moreBar{background:#0a0e13;}
   <div id="doneTable"></div>
   <button class="btn" id="btnBackToWork">← Вернуться к листу</button>
   <button class="btn" id="btnSayAll">Озвучить итог</button>
+  <button class="btn" id="btnDoneLog">📋 Записать в журнал</button>
   <button class="btn" id="btnNew">Новый лист</button>
 </div>
 
@@ -450,6 +462,31 @@ body.work #moreBar{background:#0a0e13;}
   <button class="btn-dim" id="btnResume">▶ Продолжить</button>
 </div>
 
+<!-- ================= ЖУРНАЛ СМЕНЫ ================= -->
+<div id="logModal" hidden>
+  <button id="logClose" style="position:fixed;top:max(12px,env(safe-area-inset-top));right:14px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:var(--txt);font-size:18px;z-index:50;line-height:38px;text-align:center;padding:0;">✕</button>
+  <div style="max-width:620px;margin:0 auto">
+    <h2>📋 Журнал смены</h2>
+    <p class="log-sum" id="logSummary">Заказов: 0 · Всего коли: 0</p>
+    <div id="logList"></div>
+    <div class="log-add" style="margin-top:14px">
+      <div class="row">
+        <input type="number" id="logStore" inputmode="numeric" placeholder="Butik (№)">
+        <input type="number" id="logColi" inputmode="numeric" placeholder="Коли">
+      </div>
+      <div class="row">
+        <button class="btn btn-go" id="logAdd">➕ Добавить</button>
+        <button class="btn" id="logFromList" style="flex:0 0 44%">↩ из листа</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn btn-small" id="logCopy">Скопировать</button>
+      <button class="btn btn-small" id="logClear">Очистить</button>
+    </div>
+    <p class="hint" style="margin-top:16px">Записывай Butik (№ магазина) и коли после каждого готового листа. «↩ из листа» подставит магазин и Total coli из текущего скана. Внизу — сколько заказов и сумма коли для отчёта лидеру.</p>
+  </div>
+</div>
+
 <script>
 'use strict';
 
@@ -499,7 +536,7 @@ function parseList(raw){
     const seg=text.slice(m.index+m[0].length,(i+1<found.length)?found[i+1].index:text.length);
     const tok=seg.split(/\s+/).filter(Boolean);
     let article=null,qty=null;
-    const ai=tok.findIndex(t=>/^\d{8}$/.test(t));
+    const ai=tok.findIndex(t=>/^\d{8,}$/.test(t));
     if(ai!==-1)article=tok[ai];
     let qi=-1;
     for(let j=0;j<(ai!==-1?ai:tok.length);j++){if(/^\d{1,2}$/.test(tok[j])){qi=j;break;}}
@@ -526,6 +563,11 @@ function foldItems(raw){
     if((it.desc||'').length>(ex.desc||'').length)ex.desc=it.desc;
   }
   return out;
+}
+let scanStore=null;
+function detectStore(raw){
+  const m=normalizeScan(raw).match(/store\s*(?:number|nr)?[^0-9]{0,12}(\d{3,5})\b/i);
+  return m?m[1]:null;
 }
 function detectTotal(raw){
   const m=normalizeScan(raw).match(/total\s*coli[^0-9]{0,12}(\d{1,3})\b/i);
@@ -580,6 +622,7 @@ function speak(text){
   const done=function(){
     if(curUtter!==u)return;       // отменили — это уже не наша озвучка
     ttsSpeaking=false;
+    if(shouldAutoListen()&&!micActive)micSchedule(150);   // после озвучки сразу оживляем мик
   };
   u.onend=done;u.onerror=done;
   // страховка: iOS иногда глотает onend
@@ -616,6 +659,7 @@ const VCMDS=[
   {w:['взял','готово','следующий','дальше'],       a:'take'},
   {w:['назад','предыдущий','вернись'],             a:'back'},
   {w:['артикул','номер'],                          a:'article'},
+  {w:['повтор','повтори','повторить','ещё раз','еще раз'],a:'repeat'},
   {w:['товар','название','описание'],              a:'name'},
   {w:['сколько','количество'],                     a:'qty'},
   {w:['пауза','стоп','перерыв'],                   a:'pause'},
@@ -667,8 +711,8 @@ function micToggleByUser(){
    Если мик должен слушать, но молчит >3.5с — реанимируем. */
 let lastMicTry=0;
 setInterval(function(){
-  if(shouldAutoListen()&&!micActive&&Date.now()-lastMicTry>3500)micStart();
-},4000);
+  if(shouldAutoListen()&&!micActive&&Date.now()-lastMicTry>2000)micStart();
+},2500);
 
 function micStart(){
   if(micActive)return;
@@ -700,7 +744,7 @@ function micStart(){
       lastCmdAt=Date.now();
       ready=false;
       clearTimeout(armT);
-      armT=setTimeout(function(){ready=true;},2500); // страховка, если iOS зажала финал
+      armT=setTimeout(function(){ready=true;},1200); // страховка, если iOS зажала финал
       executeVCmd(a);   // мик НЕ останавливаем — слушаем дальше без перерыва
     }
   };
@@ -752,7 +796,7 @@ function speakDesc(){
   if(daVoice){u.voice=daVoice;u.lang=daVoice.lang;}else{u.lang='da-DK';}
   u.rate=1.0;
   ttsSpeaking=true;
-  const done=function(){if(curUtter!==u)return;ttsSpeaking=false;};
+  const done=function(){if(curUtter!==u)return;ttsSpeaking=false;if(shouldAutoListen()&&!micActive)micSchedule(150);};
   u.onend=done;u.onerror=done;
   setTimeout(function(){if(curUtter===u&&ttsSpeaking)ttsSpeaking=false;},
     Math.min(12000,1500+it.desc.length*90));
@@ -764,6 +808,7 @@ function executeVCmd(a){
   if(a==='take')take();
   else if(a==='back')back();
   else if(a==='article')speak(articleToSpeech(items[idx]&&items[idx].article));
+  else if(a==='repeat')doRepeat();
   else if(a==='name')speakDesc();
   else if(a==='qty'){const it=items[idx];if(!it)return;const q=it.actualQty!=null?it.actualQty:it.qty;speak(q!=null?qtyToSpeech(q)+' '+shtuk(q):'не распознано');}
   else if(a==='pause')pauseWork();
@@ -804,6 +849,7 @@ function render(){
   }
 }
 function sayItem(){if(!paused){render();speak(itemPhrase(items[idx]));}}
+function doRepeat(){if(!inWork||paused)return;sayItem();scheduleRepeat();}
 
 function take(){
   if(paused||!inWork)return;
@@ -938,7 +984,7 @@ function saveSession(){
   if(!inWork)return;
   try{
     localStorage.setItem(SES_KEY,JSON.stringify({
-      v:1,items:items,idx:idx,exp:$('expTotal').value,ts:Date.now()
+      v:1,items:items,idx:idx,exp:$('expTotal').value,store:scanStore,ts:Date.now()
     }));
   }catch(e){}
 }
@@ -954,6 +1000,7 @@ function checkSavedSession(){
   $('btnResumeSession').onclick=function(){
     items=s.items;idx=Math.min(s.idx,items.length-1);
     if(s.exp)$('expTotal').value=s.exp;
+    if(s.store)scanStore=s.store;
     $('resumeBar').hidden=true;
     startWork(true);   // true = не сбрасывать прогресс
   };
@@ -1017,6 +1064,7 @@ function registerPodHandlers(){
   if(!('mediaSession'in navigator)||!pod)return;
   try{
     navigator.mediaSession.metadata=new MediaMetadata({title:'Picker'});
+    navigator.mediaSession.playbackState='playing';
     navigator.mediaSession.setActionHandler('pause',function(){stemAction('take');pod.play();});
     navigator.mediaSession.setActionHandler('play',function(){stemAction('take');pod.play();});
     navigator.mediaSession.setActionHandler('nexttrack',function(){stemAction('back');});
@@ -1047,6 +1095,7 @@ async function podToggle(on){
       $('podChk').checked=false;settings.pod=false;saveSettings();updateModeUI();return;
     }
     registerPodHandlers();
+    setTimeout(registerPodHandlers,800);   // iOS активирует медиасессию с задержкой — переустановим хэндлеры
   }else if(pod){podIgnorePause=Date.now()+1200;pod.pause();}
 }
 
@@ -1096,13 +1145,23 @@ function loadToCanvas(file,maxSide){
 // Ключ только в localStorage этого телефона. В код/GitHub НЕ вставлять.
 const AI_MODELS=['gemini-2.5-flash','gemini-2.0-flash','gemini-2.0-flash-lite','gemini-1.5-flash-latest'];
 function buildPrompt(n){
-  const multi=n>1?'These are '+n+' photos of the SAME picking list. Extract ALL unique rows (same Location = one row).\n':'';
+  const multi=n>1?'You are given '+n+' photos of the SAME picking list (they may overlap). Transcribe every printed row in order; if the exact same row appears in two photos, output it only once. Do not reconcile or fix differences - transcribe what is printed.\n\n':'';
   return multi+
-    'Photo(s) of a warehouse picking list with columns: Location, Qty, Article, Description.\n'+
-    'Output each data row on one line: LOCATION QTY ARTICLE DESCRIPTION\n'+
-    'LOCATION=3digits-3digits  QTY=integer  ARTICLE=8digits  unreadable=?\n'+
-    'If "Total coli" visible anywhere: add last line: Total coli: N\n'+
-    'Output NOTHING else - no headers, no markdown, no explanations.';
+'You are a STRICT TRANSCRIBER of a warehouse picking list. Copy EXACTLY what is printed. You may NOT interpret, infer, complete, correct, renumber, deduplicate, or invent anything.\n\n'+
+'The table has 4 columns: Location, Qty, Article, Description. Output ONE line per visible row, top to bottom, in the exact printed order:\n'+
+'LOCATION QTY ARTICLE DESCRIPTION\n\n'+
+'ABSOLUTE RULES:\n'+
+'1. Transcribe ONLY rows you can actually see. NEVER add a row that is not printed.\n'+
+'2. Locations are NOT necessarily consecutive - gaps are normal and correct. If you see 002-003 then 002-005, output exactly those. NEVER insert a missing number like 002-004.\n'+
+'3. NEVER renumber, reorder or change a Location. Copy each Qty digit exactly as printed; never compute, sum or adjust it.\n'+
+'4. Copy the Article number digit-for-digit, with however many digits it has (8, 9, 11, 13...). Do NOT pad, shorten or alter it.\n'+
+'5. If any character or field is unreadable, cut off or unclear, write ? in its place. NEVER guess a plausible value.\n'+
+'6. One printed row = one output line. NEVER merge two rows or split one row.\n'+
+'7. Keep duplicate-looking rows: if two rows share an article or similar text, output BOTH.\n'+
+'8. LOCATION is digits-dash-digits exactly as printed (e.g. 003-002).\n\n'+
+'If a "Total coli" total number is visible, add a line exactly: Total coli: N\n'+
+'If a "Store Number" is visible, add a line exactly: Store: N\n'+
+'Output NOTHING except the row lines (and the optional Total coli and Store lines). No headers, no column titles, no markdown, no notes.';
 }
 function aiKey(){try{return localStorage.getItem('aikey')||'';}catch(e){return'';}}
 function updateAiState(){
@@ -1202,6 +1261,7 @@ function doParse(){
   const raw=$('raw').value;
   const det=detectTotal(raw);
   if(det!=null&&!$('expTotal').value)$('expTotal').value=det;
+  scanStore=detectStore(raw);
   items=foldItems(parseList(raw));
   items.forEach(function(it){if(manualQty[it.loc]!=null){it.qty=manualQty[it.loc];it.conflict=false;}});
   items.sort(function(a,b){return a.loc<b.loc?-1:a.loc>b.loc?1:0;});
@@ -1316,6 +1376,7 @@ $('btnPause').addEventListener('click',pauseWork);
 $('btnResume').addEventListener('click',resumeWork);
 $('btnBack').addEventListener('click',back);
 $('btnArt').addEventListener('click',function(){if(Date.now()>=uiShield)speak(articleToSpeech(items[idx]&&items[idx].article));});
+$('btnRepeat').addEventListener('click',function(){if(Date.now()>=uiShield)doRepeat();});
 $('btnPartial').addEventListener('click',function(){if(Date.now()>=uiShield)setPartialQty();});
 $('btnVoice').addEventListener('click',function(){
   if(Date.now()<uiShield)return;
@@ -1356,6 +1417,60 @@ $('btnCloseHelp').addEventListener('click',function(){$('helpModal').hidden=true
 $('btnBackToWork').addEventListener('click',function(){$('scrDone').hidden=true;startWork(true);});
 $('btnSayAll').addEventListener('click',sayAll);
 $('btnNew').addEventListener('click',function(){clearSession();location.reload();});
+
+/* ================= ЖУРНАЛ СМЕНЫ (Butik / Coli) ================= */
+const LOG_KEY='picker_shiftlog_v1';
+let shiftLog=(function(){try{return JSON.parse(localStorage.getItem(LOG_KEY)||'[]')||[];}catch(e){return[];}})();
+function saveLog(){try{localStorage.setItem(LOG_KEY,JSON.stringify(shiftLog));}catch(e){}}
+function renderLog(){
+  const sum=shiftLog.reduce(function(s,e){return s+(parseInt(e.coli,10)||0);},0);
+  $('logSummary').textContent='Заказов: '+shiftLog.length+' · Всего коли: '+sum;
+  const box=$('logList');
+  if(!shiftLog.length){box.innerHTML='<p class="hint" style="margin-top:4px">Пока пусто. Добавь Butik и коли после готового листа.</p>';return;}
+  let h='';
+  shiftLog.forEach(function(e,i){
+    h+='<div class="logrow"><span class="lb">Butik '+(e.store||'—')+'</span><span class="lc">'+(e.coli!=null?e.coli:'?')+' коли</span><button class="logdel" data-i="'+i+'">×</button></div>';
+  });
+  box.innerHTML=h;
+  box.querySelectorAll('.logdel').forEach(function(b){
+    b.addEventListener('click',function(){shiftLog.splice(parseInt(b.getAttribute('data-i'),10),1);saveLog();renderLog();});
+  });
+}
+function openLog(store,coli){
+  $('logStore').value=store!=null?store:'';
+  $('logColi').value=coli!=null?coli:'';
+  renderLog();
+  $('logModal').hidden=false;
+}
+$('btnLog').addEventListener('click',function(){openLog(null,null);});
+$('logClose').addEventListener('click',function(){$('logModal').hidden=true;});
+$('logAdd').addEventListener('click',function(){
+  const st=String($('logStore').value||'').trim();
+  const co=parseInt($('logColi').value,10);
+  if(!st&&isNaN(co))return;
+  shiftLog.push({store:st,coli:isNaN(co)?null:co,t:Date.now()});
+  saveLog();renderLog();
+  $('logStore').value='';$('logColi').value='';
+  try{beep(660,50);}catch(e){}
+});
+$('logFromList').addEventListener('click',function(){
+  $('logStore').value=scanStore||'';
+  const t=parseInt($('expTotal').value,10);
+  $('logColi').value=isNaN(t)?'':t;
+});
+$('logCopy').addEventListener('click',function(){
+  const sum=shiftLog.reduce(function(s,e){return s+(parseInt(e.coli,10)||0);},0);
+  const txt=shiftLog.map(function(e){return (e.store||'—')+' — '+(e.coli!=null?e.coli:'?');}).join('\n')+'\nЗаказов: '+shiftLog.length+' · Всего: '+sum;
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){try{beep(880,70);}catch(e){}},function(){});}
+});
+$('logClear').addEventListener('click',function(){
+  if(shiftLog.length&&confirm('Очистить весь журнал смены?')){shiftLog=[];saveLog();renderLog();}
+});
+$('btnDoneLog').addEventListener('click',function(){
+  const sumTaken=items.filter(function(i){return i.taken;}).reduce(function(s,i){return s+(i.actualQty!=null?i.actualQty:(i.qty||0));},0);
+  const t=parseInt($('expTotal').value,10);
+  openLog(scanStore,isNaN(t)?sumTaken:t);
+});
 
 /* настройки */
 $('rate').addEventListener('input',function(){
