@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v3.5 — pick-by-voice для склада (личный инструмент)
+  PICKER v3.7 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -167,7 +167,25 @@ body.work #moreBar{background:#0a0e13;}
 .log-total{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#0e1f16;border:1px solid var(--go);border-radius:14px;padding:12px 16px;margin-bottom:6px;}
 .log-total .lt-lab{color:#7fd6a0;font-size:13px;line-height:1.25;}
 .log-total .lt-num{color:var(--go);font-weight:800;font-size:36px;font-variant-numeric:tabular-nums;}
-.log-orders{color:var(--dim);font-size:13px;text-align:center;margin:0 0 14px;}
+.log-orders{color:var(--dim);font-size:13px;text-align:center;margin:0 0 10px;}
+.log-mhint{color:var(--dim);font-size:13px;flex:0 0 auto;}
+.log-bonus{margin:0 0 14px;}
+.log-bonus .lb-dim{color:var(--dim);font-size:13px;display:block;padding:2px 2px;}
+.log-bonus .lb-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border-radius:14px;padding:12px 16px;border:1px solid var(--line);background:var(--card);}
+.log-bonus .lb-num{font-weight:800;font-size:34px;font-variant-numeric:tabular-nums;line-height:1;}
+.log-bonus .lb-lab{color:var(--dim);font-size:12px;margin-top:2px;}
+.log-bonus .lb-side{text-align:right;}
+.log-bonus .lb-band{font-size:13px;font-weight:700;}
+.log-bonus .lb-kr{font-size:13px;color:var(--dim);margin-top:2px;}
+.log-bonus .lb-low{border-color:#33404f;}
+.log-bonus .lb-low .lb-num,.log-bonus .lb-low .lb-band{color:var(--dim);}
+.log-bonus .lb-on{border-color:var(--warn);background:#241a09;}
+.log-bonus .lb-on .lb-num,.log-bonus .lb-on .lb-band{color:var(--warn);}
+.log-bonus .lb-max{border-color:var(--go);background:#0e1f16;}
+.log-bonus .lb-max .lb-num,.log-bonus .lb-max .lb-band{color:var(--go);}
+.log-bonus .lb-real{color:#9fb0c2;font-size:12.5px;margin-top:8px;text-align:center;}
+.log-bonus .lb-note{color:#56687c;font-size:11.5px;line-height:1.4;margin-top:8px;}
+.log-restore{margin-top:10px;}
 .log-tbl{border:1px solid var(--line);border-radius:14px;overflow:hidden;}
 .log-tbl .th,.log-tbl .tr{display:grid;grid-template-columns:1fr 1fr 42px;align-items:center;}
 .log-tbl .th{background:#10161e;color:var(--dim);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
@@ -237,6 +255,23 @@ body.work #moreBar{background:#0a0e13;}
   padding:10px 12px calc(12px + env(safe-area-inset-bottom));}
 #btnLayoutReset{flex:0 0 38%;background:#1a2230;border-color:#33404f;color:var(--dim);
   margin-top:0;font-size:16px;padding:16px;}
+/* Таблица распознанного листа (главный экран) */
+#parseOut .pt-wrap{margin-top:12px;border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+#parseOut .pt-head,#parseOut .pt-row{display:grid;grid-template-columns:58px 30px 1fr 38px;align-items:center;gap:8px;}
+#parseOut .pt-head{background:#10161e;color:var(--dim);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:9px 10px;}
+#parseOut .pt-row{padding:9px 10px;border-top:1px solid var(--line);}
+#parseOut .pt-loc{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;}
+#parseOut .pt-qty{font-weight:700;font-size:16px;font-variant-numeric:tabular-nums;text-align:center;text-decoration:underline dotted;text-underline-offset:3px;}
+#parseOut .pt-mid{min-width:0;display:flex;flex-direction:column;gap:1px;}
+#parseOut .pt-desc{font-size:13px;line-height:1.2;word-break:break-word;}
+#parseOut .pt-art{color:#6a7c8f;font-size:11px;font-variant-numeric:tabular-nums;}
+#parseOut .pt-row.bad .pt-qty,#parseOut .pt-row.bad .pt-art{color:var(--bad);}
+#parseOut .pt-row.dup{background:#241a0a;}
+#parseOut .pt-row.excluded{opacity:.45;}
+#parseOut .pt-row.excluded .pt-loc,#parseOut .pt-row.excluded .pt-qty,#parseOut .pt-row.excluded .pt-desc,#parseOut .pt-row.excluded .pt-art{text-decoration:line-through;}
+#parseOut .pt-x{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--dim);font-size:15px;padding:0;line-height:1;}
+#parseOut .pt-x:active{background:#1a222e;}
+#parseOut .pt-row.excluded .pt-x{border-color:var(--go);color:var(--go);}
 [hidden]{display:none !important;}
 </style>
 </head>
@@ -245,7 +280,7 @@ body.work #moreBar{background:#0a0e13;}
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
   <h1>Picker</h1>
-  <p class="sub" style="margin-bottom:0">v3.5</p>
+  <p class="sub" style="margin-bottom:0">v3.7</p>
   <p class="sub">Pick-by-voice · личный прототип</p>
 
   <div id="resumeBar" class="resume-bar" hidden>
@@ -491,10 +526,13 @@ body.work #moreBar{background:#0a0e13;}
     <h2>📋 Журнал смены</h2>
     <div class="log-meta">
       <div class="mrow"><label>Имя</label><input type="text" id="logName" placeholder="Имя и фамилия"></div>
-      <div class="mrow"><label>Дата</label><input type="text" id="logDate" class="short" readonly><label>с</label><input type="text" id="logFrom" class="short" inputmode="numeric" placeholder="16:00"><label>до</label><input type="text" id="logTo" class="short" inputmode="numeric" placeholder="23:45"></div>
+      <div class="mrow"><label>Дата</label><input type="text" id="logDate" class="short" readonly><label>Пришёл</label><input type="text" id="logFrom" class="short" inputmode="numeric" placeholder="16:00"><label>Ушёл</label><input type="text" id="logTo" class="short" inputmode="numeric" placeholder="23:45"></div>
+      <div class="mrow"><label>Начал сбор</label><input type="text" id="logStart" class="short" inputmode="numeric" placeholder="17:20"><label>Перерыв</label><input type="text" id="logBreak" class="short" inputmode="numeric" placeholder="40"><span class="log-mhint">мин</span></div>
+      <div class="mrow"><label>Причина</label><input type="text" id="logReason" placeholder="напр. не было заказов / не выдали погрузчик"></div>
     </div>
     <div class="log-total"><div class="lt-lab">Total amount<br>colli packed</div><div class="lt-num" id="logSummary">0</div></div>
     <div class="log-orders" id="logOrders">Заказов: 0</div>
+    <div class="log-bonus" id="logBonus"></div>
     <div class="log-tbl">
       <div class="th"><span>Butik</span><span>Coli</span><span></span></div>
       <div id="logList"></div>
@@ -1191,6 +1229,9 @@ function buildPrompt(n){
 'You are a STRICT TRANSCRIBER of a warehouse picking list. Copy EXACTLY what is printed. You may NOT interpret, infer, complete, correct, renumber, deduplicate, or invent anything.\n\n'+
 'The table has 4 columns: Location, Qty, Article, Description. Output ONE line per visible row, top to bottom, in the exact printed order:\n'+
 'LOCATION QTY ARTICLE DESCRIPTION\n\n'+
+'ROW INTEGRITY (most important - prevents column shift):\n'+
+'Columns are separated by vertical lines; rows by horizontal lines. The Location, Qty, Article and Description of ONE item ALL sit between the SAME two horizontal lines. Read the table strictly ONE ROW AT A TIME, left to right, using the cell borders to keep the four values on the same row aligned. NEVER scan a whole column top-to-bottom on its own - that desynchronizes the columns so a Location gets paired with the wrong Qty and Article.\n'+
+'Each Location appears on EXACTLY ONE row; locations are never repeated. If you are about to output the same Location twice, you have lost row alignment - stop and re-read that section row by row. The number of output lines MUST equal the number of Location cells and the number of Article cells.\n\n'+
 'ABSOLUTE RULES:\n'+
 '1. Transcribe ONLY rows you can actually see. NEVER add a row that is not printed.\n'+
 '2. Locations are NOT necessarily consecutive - gaps are normal and correct. If you see 002-003 then 002-005, output exactly those. NEVER insert a missing number like 002-004.\n'+
@@ -1311,27 +1352,47 @@ function doParse(){
 function renderParse(){
   const out=$('parseOut');
   if(!items.length){out.innerHTML='<p class="warn-line">Не нашёл ни одной локации вида 003-002.</p>';$('btnStart').hidden=true;return;}
-  const sum=items.reduce((s,i)=>s+(i.qty||0),0);
-  const miss=items.filter(i=>i.qty==null).length;
-  const conf=items.filter(i=>i.conflict).length;
-  let html='<table><tr><th>Локация</th><th>Qty ✎</th><th>Артикул</th><th>Описание</th></tr>';
+  const locCount={};
+  items.forEach(function(it){locCount[it.loc]=(locCount[it.loc]||0)+1;});
+  const active=items.filter(function(i){return !i.excluded;});
+  const sum=active.reduce(function(s,i){return s+(i.qty||0);},0);
+  const miss=active.filter(function(i){return i.qty==null;}).length;
+  const conf=active.filter(function(i){return i.conflict;}).length;
+  const dup=active.filter(function(i){return locCount[i.loc]>1;}).length;
+  let html='<div class="pt-wrap"><div class="pt-head"><span>Лок.</span><span>Кол</span><span>Артикул / Описание</span><span></span></div>';
   items.forEach(function(it,i){
-    const bad=(it.qty==null||it.conflict)?' bad-cell':'';
-    html+='<tr><td class="num">'+it.loc+'</td>'
-      +'<td class="num qcell'+bad+'" data-i="'+i+'">'+(it.qty!=null?it.qty:'?')+(it.conflict?' ⚠':'')+'</td>'
-      +'<td class="num'+(!it.article?' bad-cell':'')+'">'+(it.article||'?')+'</td>'
-      +'<td>'+(it.desc||'')+'</td></tr>';
+    const cls=['pt-row'];
+    if(it.qty==null||it.conflict)cls.push('bad');
+    if(locCount[it.loc]>1&&!it.excluded)cls.push('dup');
+    if(it.excluded)cls.push('excluded');
+    html+='<div class="'+cls.join(' ')+'">'
+      +'<span class="pt-loc">'+it.loc+'</span>'
+      +'<span class="pt-qty" data-q="'+i+'">'+(it.qty!=null?it.qty:'?')+(it.conflict?'⚠':'')+'</span>'
+      +'<span class="pt-mid"><span class="pt-desc">'+escHtml(it.desc||'')+'</span>'
+        +'<span class="pt-art">'+(it.article||'?')+'</span></span>'
+      +'<button class="pt-x" data-x="'+i+'">'+(it.excluded?'↩':'✕')+'</button>'
+      +'</div>';
   });
-  html+='</table>';
+  html+='</div>';
   const exp=parseInt($('expTotal').value,10);
-  let line='Позиций: '+items.length+' · Сумма Qty: '+sum,cls='ok-line';
+  let line='Позиций: '+active.length+' · Сумма Qty: '+sum,cls='ok-line';
   if(!isNaN(exp)){if(sum===exp)line+=' = Total coli ✓';else{line+=' ≠ Total coli ('+exp+'), разница '+(exp-sum);cls='warn-line';}}
   else line+=' — сверь с «Total coli» на листе';
   html+='<p class="'+cls+'">'+line+'</p>';
-  if(miss||conf)html+='<p class="warn-line">⚠️ '+(miss?miss+' позиций без Qty. ':'')+(conf?conf+' с расхождением. ':'')+'Нажми на число в Qty, чтобы исправить.</p>';
+  if(dup)html+='<p class="warn-line">⚠️ '+dup+' строк с повторяющейся локацией. На чистом листе локации не повторяются — ИИ мог сдвинуть колонку. Сверь с бумагой и вычеркни лишние (✕).</p>';
+  if(miss||conf)html+='<p class="warn-line">⚠️ '+(miss?miss+' без Qty. ':'')+(conf?conf+' с расхождением. ':'')+'Тапни число, чтобы исправить.</p>';
   out.innerHTML=html;
-  out.querySelectorAll('.qcell').forEach(function(el){
-    el.addEventListener('click',function(){editQty(parseInt(el.getAttribute('data-i'),10));});
+  out.querySelectorAll('.pt-qty').forEach(function(el){
+    el.addEventListener('click',function(){editQty(parseInt(el.getAttribute('data-q'),10));});
+  });
+  out.querySelectorAll('.pt-x').forEach(function(el){
+    el.addEventListener('click',function(){
+      const i=parseInt(el.getAttribute('data-x'),10);
+      if(isNaN(i)||!items[i])return;
+      items[i].excluded=!items[i].excluded;
+      try{beep(items[i].excluded?420:720,40);}catch(e){}
+      renderParse();
+    });
   });
   $('btnStart').hidden=false;
 }
@@ -1462,31 +1523,103 @@ $('btnNew').addEventListener('click',function(){clearSession();location.reload()
 /* ================= ЖУРНАЛ СМЕНЫ (Butik / Coli) ================= */
 const LOG_KEY='picker_shiftlog_v1';
 let shiftLog=(function(){try{return JSON.parse(localStorage.getItem(LOG_KEY)||'[]')||[];}catch(e){return[];}})();
-function saveLog(){try{localStorage.setItem(LOG_KEY,JSON.stringify(shiftLog));}catch(e){}}
+let lastClearedLog=null;            // отмена «Очистить» в рамках сессии
+function saveLog(){
+  // запись + проверка чтением: журнал = деньги, молчаливая потеря недопустима
+  try{const str=JSON.stringify(shiftLog);localStorage.setItem(LOG_KEY,str);return localStorage.getItem(LOG_KEY)===str;}
+  catch(e){return false;}
+}
+function logSum(){return shiftLog.reduce(function(s,e){return s+(parseInt(e.coli,10)||0);},0);}
+/* ЧЧ:ММ → число в стиле сводки лидера (минуты как сотые: 23:45 → 23.45) */
+function timeDec(v){
+  v=String(v||'').trim().replace(/[.,]/,':');
+  if(!v)return null;
+  const m=v.match(/^(\d{1,2})(?::(\d{1,2}))?$/);
+  if(!m)return null;
+  const h=parseInt(m[1],10),mm=m[2]?parseInt(m[2],10):0;
+  if(h>23||mm>59)return null;
+  return h+mm/100;
+}
+function updateBonus(){
+  const el=$('logBonus');if(!el)return;
+  const sum=logSum();
+  const f=timeDec($('logFrom').value),t=timeDec($('logTo').value);
+  const bm=parseInt($('logBreak').value,10);const bd=isNaN(bm)?0:bm/100;
+  if(f==null||t==null){el.innerHTML='<span class="lb-dim">Заполни «Пришёл» и «Ушёл» — посчитаю coli/час и бонус.</span>';return;}
+  let hrs=t-f-bd;if(hrs<=0)hrs=(t+24)-f-bd;
+  if(hrs<=0){el.innerHTML='<span class="lb-dim">Проверь время.</span>';return;}
+  const cph=sum/hrs;
+  let band,cls,bonus;
+  if(cph<150){band='ниже бонуса (нужно 150+)';cls='lb-low';bonus=0;}
+  else if(cph>=300){band='максимум 🔥';cls='lb-max';bonus=30;}
+  else{bonus=Math.round((cph-150)/150*30);band='в бонусе';cls='lb-on';}
+  let html='<div class="lb-row '+cls+'"><div><div class="lb-num">'+Math.round(cph)+'</div><div class="lb-lab">coli / час</div></div>'+
+    '<div class="lb-side"><div class="lb-band">'+band+'</div><div class="lb-kr">&#8776; +'+bonus+' кр/ч</div></div></div>';
+  const st=timeDec($('logStart').value);
+  if(st!=null){let rh=t-st-bd;if(rh<=0)rh=(t+24)-st-bd;if(rh>0)html+='<div class="lb-real">Реальный пейс от начала сбора ('+escHtml($('logStart').value)+'): <b>'+Math.round(sum/rh)+'</b> coli/ч</div>';}
+  html+='<div class="lb-note">&#8776; оценка. Точная ставка между 150 и 300 может отличаться. На сводке лидера перерыв = 0,60 (60 мин).</div>';
+  el.innerHTML=html;
+}
 function renderLog(){
-  const sum=shiftLog.reduce(function(s,e){return s+(parseInt(e.coli,10)||0);},0);
-  $('logSummary').textContent=sum;
+  $('logSummary').textContent=logSum();
   $('logOrders').textContent='Заказов: '+shiftLog.length;
+  updateBonus();
   const box=$('logList');
-  if(!shiftLog.length){box.innerHTML='<div class="log-empty">Пусто. Добавь магазин и коли после готового листа.</div>';return;}
+  if(!shiftLog.length){
+    let h='<div class="log-empty">Пусто. Добавь butik и coli после готового листа.';
+    if(lastClearedLog&&lastClearedLog.length)h+='<br><button class="btn btn-small log-restore" id="logRestore">↩ Вернуть '+lastClearedLog.length+' заказов</button>';
+    h+='</div>';
+    box.innerHTML=h;
+    const rb=$('logRestore');
+    if(rb)rb.addEventListener('click',function(){shiftLog=lastClearedLog.slice();lastClearedLog=null;if(!saveLog())alert('⚠ Не удалось сохранить журнал!');renderLog();try{beep(760,60);}catch(e){}});
+    return;
+  }
   let h='';
   shiftLog.forEach(function(e,i){
-    h+='<div class="tr"><span class="bk">'+(e.store||'—')+'</span><span class="co">'+(e.coli!=null?e.coli:'?')+'</span><span class="del"><button data-i="'+i+'">×</button></span></div>';
+    h+='<div class="tr"><span class="bk">'+escHtml(e.store||'—')+'</span><span class="co">'+(e.coli!=null?e.coli:'?')+'</span><span class="del"><button data-i="'+i+'">×</button></span></div>';
   });
   box.innerHTML=h;
   box.querySelectorAll('.del button').forEach(function(b){
-    b.addEventListener('click',function(){shiftLog.splice(parseInt(b.getAttribute('data-i'),10),1);saveLog();renderLog();});
+    b.addEventListener('click',function(){
+      const i=parseInt(b.getAttribute('data-i'),10);
+      const e=shiftLog[i];if(!e)return;
+      if(!confirm('Удалить заказ butik '+(e.store||'—')+' ('+(e.coli!=null?e.coli:'?')+' coli)?'))return;
+      shiftLog.splice(i,1);
+      if(!saveLog())alert('⚠ Не удалось сохранить журнал!');
+      renderLog();
+    });
   });
 }
 function todayStr(){const d=new Date(),p=function(n){return(n<10?'0':'')+n;};return p(d.getDate())+'-'+p(d.getMonth()+1);}
 const META_KEY='picker_shiftmeta_v1';
 function loadMeta(){try{return JSON.parse(localStorage.getItem(META_KEY)||'{}')||{};}catch(e){return{};}}
-function saveMeta(){try{localStorage.setItem(META_KEY,JSON.stringify({name:$('logName').value,from:$('logFrom').value,to:$('logTo').value}));}catch(e){}}
+function saveMeta(){try{localStorage.setItem(META_KEY,JSON.stringify({name:$('logName').value,from:$('logFrom').value,to:$('logTo').value,start:$('logStart').value,brk:$('logBreak').value,reason:$('logReason').value}));}catch(e){}}
+/* Добавление заказа с защитой от СЛУЧАЙНОГО дубля.
+   Тот же butik + то же кол-во уже есть → спрашиваем (вдруг это другой заказ
+   под тем же номером: chilled на одной палете + dry на другой). Никогда не
+   удаляем, не схлопываем и не дублируем молча. */
+function logAddEntry(store,coli){
+  store=String(store==null?'':store).trim();
+  const co=parseInt(coli,10);
+  if(!store&&isNaN(co)){alert('Укажи butik или коли.');return false;}
+  const dup=shiftLog.some(function(e){return String(e.store)===store&&(parseInt(e.coli,10)||null)===(isNaN(co)?null:co);});
+  if(dup){
+    if(!confirm('Заказ butik '+(store||'—')+' на '+(isNaN(co)?'?':co)+' coli уже в журнале.\n\nЭто ДРУГОЙ заказ под тем же номером (напр. chilled и dry на разных палетах)?\nОК — добавлю отдельной строкой. Отмена — не добавлять.'))return false;
+  }
+  shiftLog.push({store:store,coli:isNaN(co)?null:co,t:Date.now()});
+  if(!saveLog()){alert('⚠ НЕ СОХРАНИЛОСЬ! Журнал в опасности — перепиши данные вручную.');}
+  renderLog();
+  try{beep(660,50);setTimeout(function(){beep(990,70);},70);}catch(e){}
+  return true;
+}
 function openLog(store,coli){
   const meta=loadMeta();
   $('logName').value=meta.name||'';
   $('logFrom').value=meta.from||'';
   $('logTo').value=meta.to||'';
+  $('logStart').value=meta.start||'';
+  $('logBreak').value=meta.brk||'40';
+  $('logReason').value=meta.reason||'';
   $('logDate').value=todayStr();
   $('logStore').value=store!=null?store:'';
   $('logColi').value=coli!=null?coli:'';
@@ -1495,15 +1628,11 @@ function openLog(store,coli){
 }
 $('btnLog').addEventListener('click',function(){openLog(null,null);});
 $('logClose').addEventListener('click',function(){$('logModal').hidden=true;});
-['logName','logFrom','logTo'].forEach(function(id){var el=$(id);if(el)el.addEventListener('input',saveMeta);});
+['logName','logFrom','logTo','logStart','logBreak','logReason'].forEach(function(id){
+  var el=$(id);if(el)el.addEventListener('input',function(){saveMeta();updateBonus();});
+});
 $('logAdd').addEventListener('click',function(){
-  const st=String($('logStore').value||'').trim();
-  const co=parseInt($('logColi').value,10);
-  if(!st&&isNaN(co))return;
-  shiftLog.push({store:st,coli:isNaN(co)?null:co,t:Date.now()});
-  saveLog();renderLog();
-  $('logStore').value='';$('logColi').value='';
-  try{beep(660,50);}catch(e){}
+  if(logAddEntry($('logStore').value,$('logColi').value)){$('logStore').value='';$('logColi').value='';}
 });
 $('logFromList').addEventListener('click',function(){
   $('logStore').value=scanStore||'';
@@ -1511,26 +1640,39 @@ $('logFromList').addEventListener('click',function(){
   $('logColi').value=isNaN(t)?'':t;
 });
 $('logCopy').addEventListener('click',function(){
-  const sum=shiftLog.reduce(function(s,e){return s+(parseInt(e.coli,10)||0);},0);
+  const sum=logSum();
   const lines=[];
   if($('logName').value)lines.push('Имя: '+$('logName').value);
-  let dl='Дата: '+$('logDate').value;
-  if($('logFrom').value||$('logTo').value)dl+='  '+($('logFrom').value||'?')+'–'+($('logTo').value||'?');
-  lines.push(dl,'','Butik   Coli');
+  lines.push('Дата: '+$('logDate').value);
+  if($('logFrom').value||$('logTo').value)lines.push('Смена: '+($('logFrom').value||'?')+'–'+($('logTo').value||'?'));
+  if($('logStart').value)lines.push('Начал сбор: '+$('logStart').value+($('logReason').value?' ('+$('logReason').value+')':''));
+  lines.push('','Butik   Coli');
   shiftLog.forEach(function(e){lines.push((e.store||'—')+'   '+(e.coli!=null?e.coli:'?'));});
   lines.push('','Заказов: '+shiftLog.length+' · Всего коли: '+sum);
+  const f=timeDec($('logFrom').value),t=timeDec($('logTo').value),bm=parseInt($('logBreak').value,10),bd=isNaN(bm)?0:bm/100;
+  if(f!=null&&t!=null){let hrs=t-f-bd;if(hrs<=0)hrs=(t+24)-f-bd;if(hrs>0)lines.push('Coli/час ≈ '+Math.round(sum/hrs));}
   const txt=lines.join('\n');
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){try{beep(880,70);}catch(e){}},function(){});}
 });
 $('logClear').addEventListener('click',function(){
-  if(shiftLog.length&&confirm('Очистить весь журнал смены?')){shiftLog=[];saveLog();renderLog();}
+  if(!shiftLog.length)return;
+  if(!confirm('Очистить ВЕСЬ журнал? ('+shiftLog.length+' заказов)\nПока журнал открыт, можно вернуть кнопкой «↩ Вернуть».'))return;
+  lastClearedLog=shiftLog.slice();
+  shiftLog=[];
+  if(!saveLog())alert('⚠ Не удалось сохранить журнал!');
+  renderLog();
 });
 $('btnDoneLog').addEventListener('click',function(){
   const sumTaken=items.filter(function(i){return i.taken;}).reduce(function(s,i){return s+(i.actualQty!=null?i.actualQty:(i.qty||0));},0);
   const t=parseInt($('expTotal').value,10);
-  openLog(scanStore,isNaN(t)?sumTaken:t);
+  const coli=isNaN(t)?sumTaken:t;
+  if(scanStore){
+    openLog(null,null);          // журнал откроется
+    logAddEntry(scanStore,coli); // и сразу впишем заказ (с защитой от дубля)
+  }else{
+    openLog(scanStore,coli);     // butik не распознан → подставим коли, butik введёшь сам и жми ＋
+  }
 });
-
 /* настройки */
 $('rate').addEventListener('input',function(){
   settings.rate=parseFloat(this.value)||1.1;
@@ -1599,8 +1741,10 @@ function openLayout(ctx){
     layoutLocked=items.filter(function(i){return i.taken;});
     layoutFree=items.filter(function(i){return !i.taken;});
   }else{
+    const act=items.filter(function(i){return !i.excluded;});
+    if(!act.length){alert('Все позиции вычеркнуты — нечего собирать.');return;}
     layoutLocked=[];
-    layoutFree=items.slice();
+    layoutFree=act;
   }
   layoutMode=(settings.sortMode==='qtydesc'||settings.sortMode==='custom')?settings.sortMode:'normal';
   if(layoutMode!=='custom')layoutFree=buildFree(layoutMode,layoutFree);
