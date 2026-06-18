@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v3.9 — pick-by-voice для склада (личный инструмент)
+  PICKER v3.10 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -69,6 +69,12 @@ textarea{margin-top:12px;width:100%;min-height:110px;background:var(--card);colo
 .row{display:flex;gap:10px;}
 .row .btn{flex:1;}
 .btn-ico{flex:0 0 56px;padding-left:6px;padding-right:6px;font-size:20px;}
+.pbar{display:flex;align-items:center;gap:10px;margin-top:10px;background:#251809;border:1px solid var(--warn);border-radius:14px;padding:10px 12px;}
+.pbar-lab{color:var(--warn);font-size:16px;font-weight:700;flex:0 0 auto;}
+.pbar input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--warn);border-radius:10px;color:var(--txt);font-size:24px;font-weight:800;text-align:center;padding:10px;font-variant-numeric:tabular-nums;}
+.pbar-ok{flex:0 0 auto;width:58px;background:var(--go);border:none;border-radius:10px;color:#06250f;font-size:26px;font-weight:800;padding:12px 0;}
+.pbar-ok:active{background:var(--go-press);}
+.pbar-x{flex:0 0 auto;width:50px;background:#1a2230;border:1px solid var(--line);border-radius:10px;color:var(--dim);font-size:18px;padding:12px 0;}
 table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px;}
 td,th{padding:7px 4px;border-bottom:1px solid var(--line);text-align:left;}
 th{color:var(--dim);font-weight:500;font-size:12px;}
@@ -296,7 +302,7 @@ body.work #moreBar{background:#0a0e13;}
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
   <div class="hdr">
-    <div><h1>Picker</h1><p class="sub" style="margin-bottom:0">v3.9</p></div>
+    <div><h1>Picker</h1><p class="sub" style="margin-bottom:0">v3.10</p></div>
     <div class="lang" id="langSel">
       <button data-lang="ru">RU</button>
       <button data-lang="en">EN</button>
@@ -360,6 +366,13 @@ body.work #moreBar{background:#0a0e13;}
     <div id="descTxt"></div>
     <div id="artTxt"></div>
     <div id="nextTxt"></div>
+  </div>
+
+  <div id="partialBar" class="pbar" hidden>
+    <span class="pbar-lab" data-i18n="partialBarLabel">Взял:</span>
+    <input id="partialInp" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+    <button id="partialOk" class="pbar-ok" title="OK">✓</button>
+    <button id="partialX" class="pbar-x" title="Отмена">✕</button>
   </div>
 
   <button class="btn btn-go" id="btnTake" data-i18n="take" style="padding:26px">ВЗЯЛ</button>
@@ -585,7 +598,7 @@ missQty:'{n} позиций без Qty. ', confQty:'{n} с расхождени�
 thLocShort:'Лок.', thQtyShort:'Кол', thArtDesc:'Артикул / Описание',
 dupRows:'⚠️ {n} строк с повторяющейся локацией. На чистом листе локации не повторяются — ИИ мог сдвинуть колонку. Сверь с бумагой и вычеркни лишние (✕).',
 qtyPrompt:'Qty для {loc}:', partialPrompt:'Сколько взял по факту?\n(по плану: {plan})',
-partialBad:'Введи число от 0 до {plan}.', partialOver:'Нельзя взять больше плана ({plan}).\nЕсли ошибка в листе — исправь Qty тапом на ×.',
+partialBad:'Введи число от 0 до {plan}.', partialOver:'Нельзя взять больше плана ({plan}).\nЕсли ошибка в листе — исправь Qty тапом на ×.', partialBarLabel:'Взял:',
 finishConfirm:'Не все позиции взяты ({n} осталось). Точно закончить?', allExcluded:'Все позиции вычеркнуты — нечего собирать.',
 aiKeyPrompt:'API-ключ Google AI Studio (вида AIza… или AQ…).\nПусто = удалить.',
 ocrCompress:'Сжимаю {n} фото…', ocrReading:'AI читает лист ({n} фото, {mb} МБ, один запрос)…',
@@ -664,7 +677,7 @@ missQty:'{n} positions without Qty. ', confQty:'{n} with a mismatch. ', fixHint:
 thLocShort:'Loc.', thQtyShort:'Qty', thArtDesc:'Article / Description',
 dupRows:'⚠️ {n} rows with a repeated location. On a clean sheet locations are unique — the AI may have shifted a column. Check the paper and cross out extras (✕).',
 qtyPrompt:'Qty for {loc}:', partialPrompt:'How many did you actually take?\n(planned: {plan})',
-partialBad:'Enter a number from 0 to {plan}.', partialOver:'You cannot take more than planned ({plan}).\nIf the sheet is wrong — fix Qty by tapping ×.',
+partialBad:'Enter a number from 0 to {plan}.', partialOver:'You cannot take more than planned ({plan}).\nIf the sheet is wrong — fix Qty by tapping ×.', partialBarLabel:'Picked:',
 finishConfirm:'Not all positions are picked ({n} left). Finish anyway?', allExcluded:'All positions are crossed out — nothing to pick.',
 aiKeyPrompt:'Google AI Studio API key (like AIza… or AQ…).\nEmpty = remove.',
 ocrCompress:'Compressing {n} photos…', ocrReading:'AI is reading the list ({n} photos, {mb} MB, one request)…',
@@ -743,7 +756,7 @@ missQty:'{n} positioner uden Qty. ', confQty:'{n} med uoverensstemmelse. ', fixH
 thLocShort:'Lok.', thQtyShort:'Antal', thArtDesc:'Artikel / Beskrivelse',
 dupRows:'⚠️ {n} rækker med gentaget lokation. På en ren liste er lokationer unikke — AI kan have forskudt en kolonne. Tjek papiret og streg ekstra ud (✕).',
 qtyPrompt:'Qty for {loc}:', partialPrompt:'Hvor mange tog du faktisk?\n(planlagt: {plan})',
-partialBad:'Indtast et tal fra 0 til {plan}.', partialOver:'Du kan ikke tage mere end planlagt ({plan}).\nHvis listen er forkert — ret Qty ved at trykke ×.',
+partialBad:'Indtast et tal fra 0 til {plan}.', partialOver:'Du kan ikke tage mere end planlagt ({plan}).\nHvis listen er forkert — ret Qty ved at trykke ×.', partialBarLabel:'Taget:',
 finishConfirm:'Ikke alle positioner er taget ({n} tilbage). Afslut alligevel?', allExcluded:'Alle positioner er streget ud — intet at plukke.',
 aiKeyPrompt:'Google AI Studio API-nøgle (som AIza… eller AQ…).\nTom = fjern.',
 ocrCompress:'Komprimerer {n} fotos…', ocrReading:'AI læser listen ({n} fotos, {mb} MB, én forespørgsel)…',
@@ -799,6 +812,7 @@ let repeatTimer=null;
 let manualQty={};
 let layoutHold=false;     // открыта «Раскладка»: мик/озвучка/эко на паузе
 let summaryHold=false;   // открыт «Итог»: озвучка/мик/эко на паузе
+let partialHold=false;   // открыт ввод «Меньше»: эко/автоповтор на паузе
 let renderedIdx=-1;      // для анимации смены позиции
 let photoQ=[];           // очередь фото: {file,url}
 let uiShield=0;   // щит от мисс-кликов после эко-экрана
@@ -965,7 +979,7 @@ function speakSeq(arr){
 /* ================= АВТОПОВТОР ================= */
 function scheduleRepeat(){
   clearTimeout(repeatTimer);
-  if(!inWork||paused||!$('repChk').checked)return;
+  if(!inWork||paused||partialHold||!$('repChk').checked)return;
   const s=Math.max(3,parseInt($('repSec').value,10)||8);
   repeatTimer=setTimeout(function(){sayItem();},s*1000);
 }
@@ -1037,6 +1051,7 @@ function take(){
 function back(){
   if(paused||!inWork)return;
   if(Date.now()<uiShield)return;
+  hidePartial();
   if(idx>0){idx--;items[idx].taken=false;items[idx].actualQty=null;}
   beep(520,55);setTimeout(function(){beep(390,80);},70);   // нисходящий «назад»
   sayItem();saveSession();
@@ -1046,30 +1061,44 @@ function midSummary(){
   const sum=done.reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
   speak(tpl('ttsMid',{a:done.length,b:items.length,c:sum}));
 }
-function setPartialQty(){
-  if(paused)return;
-  const it=items[idx];
-  const plan=it.qty;
-  const v=prompt(tpl('partialPrompt',{plan:(plan!=null?plan:'?')}),it.actualQty!=null?it.actualQty:'');
-  if(v===null)return;
-  const n=parseInt(v,10);
-  if(isNaN(n)||n<0){alert(tpl('partialBad',{plan:(plan!=null?plan:'?')}));return;}
-  if(plan!=null&&n>plan){
-    alert(tpl('partialOver',{plan:plan}));
-    return;
+/* Быстрый ввод «меньше»: цифровое поле + сразу ВЗЯЛ. */
+function openPartial(){
+  if(paused||!inWork||Date.now()<uiShield)return;
+  const it=items[idx];if(!it)return;
+  partialHold=true;clearTimeout(repeatTimer);
+  $('partialInp').value='';
+  $('partialInp').placeholder=(it.qty!=null?String(it.qty):'?');
+  $('partialBar').hidden=false;
+  beep(700,40);
+  setTimeout(function(){try{$('partialInp').focus();}catch(e){}},60);
+}
+function hidePartial(){partialHold=false;$('partialBar').hidden=true;try{$('partialInp').blur();}catch(e){}}
+/* применить введённое; вернуть true если можно идти дальше (ВЗЯЛ) */
+function applyPartialValue(){
+  const it=items[idx];if(!it)return true;
+  const raw=String($('partialInp').value||'').trim();
+  if(raw===''){return true;}                       // пусто → берём полностью
+  const n=parseInt(raw,10),plan=it.qty;
+  if(isNaN(n)||n<0){beep(300,140);return false;}
+  if(plan!=null&&n>plan){alert(tpl('partialOver',{plan:plan}));return false;}
+  it.actualQty=(plan!=null&&n===plan)?null:n;
+  return true;
+}
+/* ВЗЯЛ: если открыт ввод «меньше» — применяем и идём дальше */
+function takeBtn(){
+  if(Date.now()<uiShield)return;
+  if(!$('partialBar').hidden){
+    if(!applyPartialValue())return;                // ошибка ввода → остаёмся в поле
+    hidePartial();
   }
-  if(plan!=null&&n===plan){
-    it.actualQty=null;render();saveSession();
-    speak(tpl('ttsRestored',{q:qtyWord(plan)}));return;
-  }
-  it.actualQty=n;render();saveSession();
-  speak(n===0?t('ttsZeroNone'):tpl('ttsWrote',{q:qtyWord(n)}));
+  take();
 }
 function finish(force){
   if(force!==true&&inWork&&items.some(function(i){return !i.taken;})){
     if(!confirm(tpl('finishConfirm',{n:items.filter(i=>!i.taken).length})))return;
   }
   if(inWork)saveSession();   // к листу можно вернуться после итога
+  hidePartial();
   inWork=false;paused=false;clearTimeout(repeatTimer);
   hideEco();hidePause();$('summaryModal').hidden=true;summaryHold=false;
   updateAudio();
@@ -1109,7 +1138,7 @@ function sayAll(){
 function showInterimSummary(){
   if(!items.length)return;
   // сверка с бумагой: озвучка и мик молчат, автоповтор стоит
-  summaryHold=true;
+  summaryHold=true;hidePartial();
   clearTimeout(repeatTimer);
   try{if(window.speechSynthesis)speechSynthesis.cancel();}catch(e){}
   curUtter=null;ttsSpeaking=false;
@@ -1135,6 +1164,7 @@ function showInterimSummary(){
 /* ================= ПАУЗА ================= */
 function pauseWork(){
   if(!inWork)return;
+  hidePartial();
   paused=true;clearTimeout(repeatTimer);
   if(window.speechSynthesis)speechSynthesis.cancel();
   curUtter=null;ttsSpeaking=false;
@@ -1247,7 +1277,7 @@ function stemAction(kind){
   const now=Date.now();if(now<podGuard)return;podGuard=now+300;
   if(kind==='third'){if(paused)resumeWork();else pauseWork();return;}  // 3 клика
   if(paused)return;
-  if(kind==='take')take();
+  if(kind==='take')takeBtn();
   else if(kind==='back')back();
 }
 async function podToggle(on){
@@ -1276,7 +1306,7 @@ document.addEventListener('pointerdown',function(){
   if(settings.pod&&pod&&pod.paused)pod.play().catch(function(){});
 });
 setInterval(function(){
-  if(inWork&&!paused&&!summaryHold&&!layoutHold&&settings.eco&&!ecoShown&&Date.now()-lastTouch>Math.max(5,settings.ecoSec||20)*1000)showEco();
+  if(inWork&&!paused&&!summaryHold&&!layoutHold&&!partialHold&&settings.eco&&!ecoShown&&Date.now()-lastTouch>Math.max(5,settings.ecoSec||20)*1000)showEco();
 },3000);
 function showEco(){
   if(!items.length)return;
@@ -1545,11 +1575,14 @@ $('btnParse').addEventListener('click',doParse);
 $('expTotal').addEventListener('input',function(){if(items.length)renderParse();});
 $('btnStart').addEventListener('click',function(){openLayout('start');});
 
-$('btnTake').addEventListener('click',take);
+$('btnTake').addEventListener('click',takeBtn);
 $('btnPause').addEventListener('click',pauseWork);
 $('btnResume').addEventListener('click',resumeWork);
 $('btnBack').addEventListener('click',back);
-$('btnPartial').addEventListener('click',function(){if(Date.now()>=uiShield)setPartialQty();});
+$('btnPartial').addEventListener('click',openPartial);
+$('partialOk').addEventListener('click',takeBtn);
+$('partialX').addEventListener('click',hidePartial);
+$('partialInp').addEventListener('keydown',function(e){if(e.key==='Enter')takeBtn();});
 $('summaryTap').addEventListener('click',function(){if(Date.now()>=uiShield){beep(660,50);midSummary();}});
 $('moreBar').addEventListener('click',function(){
   const open=!$('morePanel').classList.contains('open');
@@ -1595,6 +1628,7 @@ function saveLog(){
   catch(e){return false;}
 }
 function logSum(){return shiftLog.reduce(function(s,e){return s+(parseInt(e.coli,10)||0);},0);}
+function pickedSum(){return items.filter(function(i){return i.taken;}).reduce(function(s,i){return s+(i.actualQty!=null?i.actualQty:(i.qty||0));},0);}
 /* ЧЧ:ММ → число в стиле сводки лидера (минуты как сотые: 23:45 → 23.45) */
 function timeDec(v){
   v=String(v||'').trim().replace(/[.,]/,':');
@@ -1608,10 +1642,10 @@ function timeDec(v){
 function updateBonus(){
   const el=$('logBonus');if(!el)return;
   const sum=logSum();
-  const f=timeDec($('logFrom').value),t=timeDec($('logTo').value);
+  const f=timeDec($('logFrom').value),tt=timeDec($('logTo').value);
   const bm=parseInt($('logBreak').value,10);const bd=isNaN(bm)?0:bm/60;   // их система: 36 мин = 0,60
-  if(f==null||t==null){el.innerHTML='<span class="lb-dim">'+t('bonusFill')+'</span>';return;}
-  let hrs=t-f-bd;if(hrs<=0)hrs=(t+24)-f-bd;
+  if(f==null||tt==null){el.innerHTML='<span class="lb-dim">'+t('bonusFill')+'</span>';return;}
+  let hrs=tt-f-bd;if(hrs<=0)hrs=(tt+24)-f-bd;
   if(hrs<=0){el.innerHTML='<span class="lb-dim">'+t('bonusCheck')+'</span>';return;}
   const cph=sum/hrs;
   let band,cls;
@@ -1621,7 +1655,7 @@ function updateBonus(){
   let html='<div class="lb-row '+cls+'"><div><div class="lb-num">'+Math.round(cph)+'</div><div class="lb-lab">'+t('coliPerH')+'</div></div>'+
     '<div class="lb-side"><div class="lb-band">'+band+'</div></div></div>';
   const st=timeDec($('logStart').value);
-  if(st!=null){let rh=t-st-bd;if(rh<=0)rh=(t+24)-st-bd;if(rh>0)html+='<div class="lb-real">'+t('realPace')+' ('+escHtml($('logStart').value)+'): <b>'+Math.round(sum/rh)+'</b> '+t('coliPerHShort')+'</div>';}
+  if(st!=null){let rh=tt-st-bd;if(rh<=0)rh=(tt+24)-st-bd;if(rh>0)html+='<div class="lb-real">'+t('realPace')+' ('+escHtml($('logStart').value)+'): <b>'+Math.round(sum/rh)+'</b> '+t('coliPerHShort')+'</div>';}
   html+='<div class="lb-note">'+t('bonusNote')+'</div>';
   el.innerHTML=html;
 }
@@ -1709,8 +1743,8 @@ $('logAdd').addEventListener('click',function(){
 });
 $('logFromList').addEventListener('click',function(){
   $('logStore').value=scanStore||'';
-  const t=parseInt($('expTotal').value,10);
-  $('logColi').value=isNaN(t)?'':t;
+  const ps=pickedSum();
+  $('logColi').value=ps>0?ps:'';
 });
 $('logCopy').addEventListener('click',function(){
   const sum=logSum();
@@ -1736,9 +1770,7 @@ $('logClear').addEventListener('click',function(){
   renderLog();
 });
 $('btnDoneLog').addEventListener('click',function(){
-  const sumTaken=items.filter(function(i){return i.taken;}).reduce(function(s,i){return s+(i.actualQty!=null?i.actualQty:(i.qty||0));},0);
-  const t=parseInt($('expTotal').value,10);
-  const coli=isNaN(t)?sumTaken:t;
+  const coli=pickedSum();
   if(scanStore){
     openLog(null,null);          // журнал откроется
     logAddEntry(scanStore,coli); // и сразу впишем заказ (с защитой от дубля)
@@ -1790,6 +1822,7 @@ function escHtml(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){ret
 function openLayout(ctx){
   if(!items.length)return;
   if(Date.now()<uiShield)return;
+  if(typeof hidePartial==="function")hidePartial();
   layoutCtx=ctx;
   if(ctx==='edit'){
     // взятые закреплены, переставляем ТОЛЬКО оставшиеся → прогресс не сбить
