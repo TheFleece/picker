@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v3.8 — pick-by-voice для склада (личный инструмент)
+  PICKER v3.9 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -45,6 +45,11 @@ body{margin:0;background:var(--bg);color:var(--txt);-webkit-user-select:none;use
 body.work{background:#000;}
 h1{font-size:20px;margin:4px 0 2px;}
 .sub{color:var(--dim);font-size:13px;margin:0 0 14px;}
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.lang{display:flex;background:var(--card);border:1px solid var(--line);border-radius:11px;overflow:hidden;flex:0 0 auto;margin-top:2px;}
+.lang button{padding:8px 11px;background:none;border:none;color:var(--dim);font-size:13px;font-weight:700;letter-spacing:.5px;}
+.lang button.on{background:#1d2a3a;color:var(--txt);}
+.lang button+button{border-left:1px solid var(--line);}
 textarea{margin-top:12px;width:100%;min-height:110px;background:var(--card);color:var(--txt);
   border:1px solid var(--line);border-radius:12px;padding:12px;font-size:15px;}
 .btn{display:block;width:100%;border:1px solid var(--line);border-radius:14px;
@@ -150,6 +155,7 @@ body.work #moreBar{background:#0a0e13;}
 #eco .em{position:absolute;top:18px;right:20px;font-size:22px;opacity:.55;}
 #eco .ed{color:#44505c;font-size:19px;font-weight:600;max-width:92%;text-align:center;
   word-break:break-word;line-height:1.3;margin-top:6px;}
+#eco .eart{color:#36424e;font-size:16px;font-weight:600;margin-top:5px;font-variant-numeric:tabular-nums;}
 /* Помощь */
 #helpModal{position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:46;overflow-y:auto;padding:16px 14px 40px;}
 #helpModal h2{margin:4px 0 10px;font-size:20px;}
@@ -289,23 +295,29 @@ body.work #moreBar{background:#0a0e13;}
 
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
-  <h1>Picker</h1>
-  <p class="sub" style="margin-bottom:0">v3.8</p>
-  <p class="sub">Pick-by-voice · личный прототип</p>
+  <div class="hdr">
+    <div><h1>Picker</h1><p class="sub" style="margin-bottom:0">v3.9</p></div>
+    <div class="lang" id="langSel">
+      <button data-lang="ru">RU</button>
+      <button data-lang="en">EN</button>
+      <button data-lang="da">DA</button>
+    </div>
+  </div>
+  <p class="sub" data-i18n="tagline">Pick-by-voice · личный прототип</p>
 
   <div id="resumeBar" class="resume-bar" hidden>
-    <p>⏳ Есть незаконченный лист: <b id="resumeInfo"></b></p>
+    <p>⏳ <span data-i18n="resumeTitle">Есть незаконченный лист:</span> <b id="resumeInfo"></b></p>
     <div class="row">
-      <button class="btn btn-go" id="btnResumeSession" style="font-size:18px;padding:14px">▶ Продолжить</button>
-      <button class="btn" id="btnDropSession" style="flex:0 0 38%">Удалить</button>
+      <button class="btn btn-go" id="btnResumeSession" data-i18n="continue" style="font-size:18px;padding:14px">▶ Продолжить</button>
+      <button class="btn" id="btnDropSession" data-i18n="delete" style="flex:0 0 38%">Удалить</button>
     </div>
   </div>
 
   <div class="settings">
     <div class="sec" style="margin-top:4px">
-      <h3>Сканирование листа</h3>
-      <button class="btn" id="btnPhoto">Добавить фото</button>
-      <p class="tip">Весь лист + нижняя часть при мелком шрифте</p>
+      <h3 data-i18n="secScan">Сканирование листа</h3>
+      <button class="btn" id="btnPhoto" data-i18n="addPhoto">Добавить фото</button>
+      <p class="tip" data-i18n="photoHint">Весь лист + нижняя часть при мелком шрифте</p>
       <div id="photoQueue" class="pq" hidden></div>
       <button class="btn btn-go" id="btnScanAI" style="font-size:19px;padding:16px" hidden>Сканировать</button>
       <div id="ocrStatus" class="warn-line" hidden></div>
@@ -314,31 +326,31 @@ body.work #moreBar{background:#0a0e13;}
   </div>
   <input type="file" id="photoInput" accept="image/*" multiple hidden>
 
-  <textarea id="raw" placeholder="Текст с фото — или вставь вручную"></textarea>
+  <textarea id="raw" data-i18n-ph="rawPh" placeholder="Текст с фото — или вставь вручную"></textarea>
 
-  <button class="btn" id="btnParse">Распознать лист</button>
+  <button class="btn" id="btnParse" data-i18n="parseBtn">Распознать лист</button>
 
-  <label class="totline">Total coli с листа:
+  <label class="totline"><span data-i18n="totalLabel">Total coli с листа:</span>
     <input type="number" id="expTotal" inputmode="numeric">
-    <span class="hint" style="margin-top:0">(заполнится само, если попало в скан)</span>
+    <span class="hint" data-i18n="totalHint" style="margin-top:0">(заполнится само, если попало в скан)</span>
   </label>
 
   <div id="parseOut"></div>
   <div class="row">
-    <button class="btn btn-small" id="btnHelp">Помощь</button>
-    <button class="btn btn-small" id="btnKey">AI-ключ</button>
-    <button class="btn btn-small" id="btnClear">Очистить</button>
+    <button class="btn btn-small" id="btnHelp" data-i18n="help">Помощь</button>
+    <button class="btn btn-small" id="btnKey" data-i18n="aiKey">AI-ключ</button>
+    <button class="btn btn-small" id="btnClear" data-i18n="clear">Очистить</button>
   </div>
-  <button class="btn btn-small" id="btnLog" style="margin-top:10px">📋 Журнал смены</button>
+  <button class="btn btn-small" id="btnLog" data-i18n="shiftLog" style="margin-top:10px">📋 Журнал смены</button>
   <div class="grow"></div>
-  <button class="btn btn-go" id="btnStart" hidden>СТАРТ</button>
+  <button class="btn btn-go" id="btnStart" data-i18n="start" hidden>СТАРТ</button>
 </div>
 
 <!-- ================= ЭКРАН 2: РАБОТА ================= -->
 <div id="scrWork" hidden>
   <div class="progress">
     <span id="posTxt">1 / 1</span>
-    <span id="summaryTap">Сводка</span>
+    <span id="summaryTap" data-i18n="summary">Сводка</span>
     <span id="takenTxt">взято 0 шт</span>
   </div>
 
@@ -350,51 +362,45 @@ body.work #moreBar{background:#0a0e13;}
     <div id="nextTxt"></div>
   </div>
 
-  <button class="btn btn-go" id="btnTake" style="padding:26px">ВЗЯЛ</button>
+  <button class="btn btn-go" id="btnTake" data-i18n="take" style="padding:26px">ВЗЯЛ</button>
 
   <div class="row" style="margin-top:10px">
-    <button class="btn" id="btnPause">Пауза</button>
-    <button class="btn btn-warn" id="btnPartial">⚠ Меньше</button>
-    <button class="btn" id="btnBack">Назад</button>
+    <button class="btn" id="btnBack" data-i18n="back">Назад</button>
+    <button class="btn btn-warn" id="btnPartial" data-i18n="less">⚠ Меньше</button>
   </div>
   <div class="row">
-    <button class="btn" id="btnArt">Артикул</button>
-    <button class="btn btn-ico" id="btnRepeat" title="Повтор">🔁</button>
-    <button class="btn" id="btnViewSummary">Итог</button>
+    <button class="btn" id="btnPause" data-i18n="pause">Пауза</button>
+    <button class="btn" id="btnViewSummary" data-i18n="review">Итог</button>
   </div>
 
-  <button id="moreBar"><span>⚙️ Ещё</span><span class="chev">▾</span></button>
+  <button id="moreBar"><span data-i18n="more">⚙️ Ещё</span><span class="chev">▾</span></button>
   <div id="morePanel">
   <div class="settings">
     <div class="sec">
       <h3>AirPods</h3>
-      <label class="sw" id="podRow"><span>Щелчки по ножке AirPods</span><input type="checkbox" id="podChk"><span class="tg"></span></label>
-      <p class="hint" style="margin-top:8px">1 щелчок = ВЗЯЛ · 2 = Назад · 3 = Пауза / Продолжить.</p>
+      <label class="sw" id="podRow"><span data-i18n="podLabel">Щелчки по ножке AirPods</span><input type="checkbox" id="podChk"><span class="tg"></span></label>
+      <p class="hint" data-i18n="podHint" style="margin-top:8px">1 щелчок = ВЗЯЛ · 2 = Назад · 3 = Пауза / Продолжить.</p>
     </div>
 
     <div class="sec">
-      <h3>Озвучка</h3>
-      <div class="rate-row">Скорость речи <b id="rateVal">1.1×</b>
+      <h3 data-i18n="speechSec">Озвучка</h3>
+      <div class="rate-row"><span data-i18n="rateLabel">Скорость речи</span> <b id="rateVal">1.1×</b>
         <input type="range" id="rate" min="0.7" max="1.5" step="0.05" value="1.1"></div>
-      <label class="sw"><span>Автоповтор позиции</span><input type="checkbox" id="repChk" checked><span class="tg"></span></label>
-      <div class="inline-num" id="repSecRow"><span>Интервал повтора, сек</span>
+      <label class="sw"><span data-i18n="repLabel">Автоповтор позиции</span><input type="checkbox" id="repChk" checked><span class="tg"></span></label>
+      <div class="inline-num" id="repSecRow"><span data-i18n="repSecLabel">Интервал повтора, сек</span>
         <input type="number" id="repSec" value="8" min="3" max="60"></div>
     </div>
 
     <div class="sec">
-      <h3>Экран</h3>
-      <label class="sw"><span>Эко-экран</span><input type="checkbox" id="ecoChk" checked><span class="tg"></span></label>
-      <div class="inline-num"><span>Гаснет через, сек (мин. 5)</span>
+      <h3 data-i18n="screenSec">Экран</h3>
+      <label class="sw"><span data-i18n="ecoLabel">Эко-экран</span><input type="checkbox" id="ecoChk" checked><span class="tg"></span></label>
+      <div class="inline-num"><span data-i18n="ecoSecLabel">Гаснет через, сек (мин. 5)</span>
         <input type="number" id="ecoSec" value="20" min="5" max="300"></div>
     </div>
-    <button class="btn btn-small" id="btnFinish">Закончить и показать итог</button>
-    <button class="btn btn-small" id="btnEdit">✎ Назад к списку</button>
+    <button class="btn btn-small" id="btnFinish" data-i18n="finishBtn">Закончить и показать итог</button>
+    <button class="btn btn-small" id="btnEdit" data-i18n="editBtn">✎ Назад к списку</button>
 
-    <div class="hint">
-      Щелчки AirPods: 1 = ВЗЯЛ · 2 = Назад · 3 = Пауза / Продолжить<br>
-      Кнопки: ВЗЯЛ · Назад · Меньше · 🔁 повтор · Артикул · Итог<br>
-      Тап × — исправить Qty · тап по цифрам локации — изменить порядок обхода
-    </div>
+    <div class="hint" data-i18n-html="workHint"></div>
   </div>
   </div>
 </div>
@@ -402,67 +408,22 @@ body.work #moreBar{background:#0a0e13;}
 <!-- ================= ЭКРАН 3: ИТОГ ================= -->
 <div id="scrDone" hidden>
   <div class="done-icon">✅</div>
-  <h1 style="text-align:center">Лист готов</h1>
+  <h1 style="text-align:center" data-i18n="doneTitle">Лист готов</h1>
   <p class="sub" style="text-align:center" id="doneSub"></p>
   <div id="doneTable"></div>
-  <button class="btn" id="btnBackToWork">← Вернуться к листу</button>
-  <button class="btn" id="btnSayAll">Озвучить итог</button>
-  <button class="btn" id="btnDoneLog">📋 Записать в журнал</button>
-  <button class="btn" id="btnNew">Новый лист</button>
+  <button class="btn" id="btnBackToWork" data-i18n="backToWork">← Вернуться к листу</button>
+  <button class="btn" id="btnSayAll" data-i18n="sayAllBtn">Озвучить итог</button>
+  <button class="btn" id="btnDoneLog" data-i18n="saveToLog">📋 Записать в журнал</button>
+  <button class="btn" id="btnNew" data-i18n="newList">Новый лист</button>
 </div>
 
 <!-- ================= ПОМОЩЬ ================= -->
 <div id="helpModal" hidden>
   <button id="btnCloseHelpX" style="position:fixed;top:max(12px,env(safe-area-inset-top));right:14px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:var(--txt);font-size:18px;z-index:50;line-height:38px;text-align:center;padding:0;">✕</button>
   <div style="max-width:620px;margin:0 auto">
-    <h2>Как пользоваться</h2>
-
-    <h4>Быстрый старт</h4>
-    <p>1. Взял лист → <b>Добавить фото</b> (можно несколько). Копятся в очереди — жми <b>Сканировать</b>.<br>
-    Или тапни в текстовое поле и выбери «Сканировать текст» в клавиатуре iOS — обведи нужные строки камерой. Повторные сканы не дублируются — заполняют пропуски.<br>
-    2. Проверь зелёную строку «Сумма Qty = Total coli ✓». Красные ? — тапни и исправь.<br>
-    3. <b>СТАРТ</b> → надевай AirPods и поехали по конусам.</p>
-
-    <h4>Как фотографировать</h4>
-    <ul>
-      <li>1-е фото: весь лист целиком, телефон параллельно бумаге, без тени.</li>
-      <li>Мелкий шрифт или много строк → 2-е фото крупно нижней половины. Перекрытие строк не страшно — дубли склеятся сами.</li>
-      <li>Резкость важнее количества. Фото сжимаются автоматически до 1400px.</li>
-    </ul>
-
-    <h4>В пути</h4>
-    <ul>
-      <li>Взял товар → 1 щелчок ножки или зелёная кнопка <b>ВЗЯЛ</b>.</li>
-      <li>Товара меньше → кнопка <b>Меньше</b>, введи факт. На бумаге перечеркни.</li>
-      <li>Не знаешь что брать → смотри на экран или эко-экран: там локация, количество и название. Кнопка <b>Артикул</b> продиктует номер.</li>
-      <li><b>3 щелчка</b> — пауза, ещё <b>3 щелчка</b> — дальше.</li>
-      <li><b>Сводка</b> — тап по кнопке вверху экрана: быстрая голосовая сводка сколько взято.</li>
-      <li><b>Итог</b> — тихая сверка с бумагой: озвучка и мик молчат, пока открыто. Крестик сверху — закрыть.</li>
-      <li>Safari закрылся → открой сайт → <b>▶ Продолжить</b> (прогресс хранится 12 часов).</li>
-      <li><b>Порядок обхода</b> → тап по крупным цифрам локации на карточке. Можно «Крупные первыми» (по убыванию количества) или перетащить вручную. Взятые позиции закреплены — прогресс не сбить.</li>
-    </ul>
-
-    <h4>Щелчки AirPods</h4>
-    <p>Управление — щелчками по ножке: <b>1 = ВЗЯЛ · 2 = Назад · 3 = Пауза/Продолжить</b>. Почти не ест батарею, звук в высоком качестве. Приложение само озвучивает каждую локацию и количество.<br>
-    Если щелчки перестали ловиться — сверни Safari и снова открой (прогресс цел). Работает в Safari, не из иконки на домашнем экране.</p>
-
-    <h4>Батарея</h4>
-    <ul>
-      <li>Эко-экран включён — на OLED чёрный фон почти не ест заряд.</li>
-      <li>Настройки → Универсальный доступ → Дисплей → <b>Понижение точки белого</b> (~80%).</li>
-      <li>Там же: <b>Быстрая команда</b> → «Понижение точки белого» → тройное нажатие боковой кнопки.</li>
-      <li>Яркость на минимум; повербанк под рукой.</li>
-    </ul>
-
-    <h4>Если что-то пошло не так</h4>
-    <ul>
-      <li>503/429 от Google → подожди и снова <b>Сканировать</b> — фото остались в очереди.</li>
-      <li>Щелчки не ловятся → сверни Safari и открой снова; проверь, что «Щелчки по ножке» включены в «Ещё».</li>
-      <li>Страница перезагрузилась → <b>▶ Продолжить</b> на главном экране.</li>
-      <li>Совсем зависло → перезагрузи страницу, прогресс цел.</li>
-    </ul>
-
-    <button class="btn btn-go" id="btnCloseHelp" style="margin-top:16px">Понятно</button>
+    <h2 data-i18n="helpTitle">Как пользоваться</h2>
+    <div data-i18n-html="helpBody"></div>
+    <button class="btn btn-go" id="btnCloseHelp" data-i18n="helpClose" style="margin-top:16px">Понятно</button>
   </div>
 </div>
 
@@ -470,9 +431,9 @@ body.work #moreBar{background:#0a0e13;}
 <div id="summaryModal" hidden>
   <button id="btnCloseSummaryX" style="position:fixed;top:max(12px,env(safe-area-inset-top));right:14px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:var(--txt);font-size:18px;z-index:46;line-height:38px;text-align:center;padding:0;">✕</button>
   <div style="max-width:600px;margin:0 auto">
-    <h2>📋 Текущий прогресс</h2>
+    <h2 data-i18n="progTitle">📋 Текущий прогресс</h2>
     <div id="summaryContent"></div>
-    <button class="btn btn-go" id="btnCloseSummary" style="margin-top:16px">▶ Продолжить работу</button>
+    <button class="btn btn-go" id="btnCloseSummary" data-i18n="continueWork" style="margin-top:16px">▶ Продолжить работу</button>
   </div>
 </div>
 
@@ -481,59 +442,59 @@ body.work #moreBar{background:#0a0e13;}
 <div id="layoutModal" hidden>
   <button id="btnCloseLayoutX" style="position:fixed;top:max(12px,env(safe-area-inset-top));right:14px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:var(--txt);font-size:18px;z-index:50;line-height:38px;text-align:center;padding:0;">✕</button>
   <div id="layoutHead">
-    <h2>Раскладка обхода</h2>
+    <h2 data-i18n="layoutTitle">Раскладка обхода</h2>
     <p class="lsub" id="layoutStats">В каком порядке озвучивать товары</p>
     <div class="seg seg-3" id="segLayout">
-      <button data-l="normal">Обычная</button>
-      <button data-l="qtydesc">Крупные</button>
-      <button data-l="custom">Вручную</button>
+      <button data-l="normal" data-i18n="segNormal">Обычная</button>
+      <button data-l="qtydesc" data-i18n="segLarge">Крупные</button>
+      <button data-l="custom" data-i18n="segManual">Вручную</button>
     </div>
-    <label class="inline-num" id="bigQtyRow" hidden><span>Крупные — от этого числа и больше, шт</span>
+    <label class="inline-num" id="bigQtyRow" hidden><span data-i18n="bigQtyLabel">Крупные — от этого числа и больше, шт</span>
       <input type="number" id="bigQtyInp" min="2" max="99" inputmode="numeric"></label>
     <p class="layout-desc" id="layoutDesc"></p>
-    <div id="layoutLockNote" hidden>Взятые позиции закреплены сверху и не двигаются — переставляются только оставшиеся. Прогресс не собьётся.</div>
+    <div id="layoutLockNote" data-i18n="lockNote" hidden>Взятые позиции закреплены сверху и не двигаются — переставляются только оставшиеся. Прогресс не собьётся.</div>
   </div>
   <div id="layoutListWrap"><div id="layoutList"></div></div>
   <div id="layoutApplyBar">
     <div class="row" style="max-width:620px;margin:0 auto">
-      <button class="btn" id="btnLayoutReset">↺ Сбросить</button>
+      <button class="btn" id="btnLayoutReset" data-i18n="reset">↺ Сбросить</button>
       <button class="btn btn-go" id="btnLayoutApply" style="flex:1;font-size:20px;padding:16px">▶ Начать</button>
     </div>
   </div>
 </div>
 
 <div id="eco" hidden>
-  <div class="em" id="ecoMic"></div>
   <div class="e1" id="ecoLoc">000-000</div>
   <div class="e2" id="ecoQty">× 0</div>
   <div class="ed" id="ecoDesc"></div>
-  <div class="e3">коснись экрана, чтобы вернуть</div>
+  <div class="eart" id="ecoArt"></div>
+  <div class="e3" id="ecoHint" data-i18n="ecoHint">коснись экрана, чтобы вернуть</div>
 </div>
 
 <!-- ================= ПАУЗА ================= -->
 <div id="pauseOverlay" hidden>
   <div class="pbars"><i></i><i></i></div>
-  <div class="pl">ПАУЗА</div>
+  <div class="pl" data-i18n="pauseWord">ПАУЗА</div>
   <div class="pp" id="pauseInfo"></div>
-  <button class="btn-dim" id="btnResume">▶ Продолжить</button>
+  <button class="btn-dim" id="btnResume" data-i18n="resumeBtn">▶ Продолжить</button>
 </div>
 
 <!-- ================= ЖУРНАЛ СМЕНЫ ================= -->
 <div id="logModal" hidden>
   <button id="logClose" style="position:fixed;top:max(12px,env(safe-area-inset-top));right:14px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:var(--txt);font-size:18px;z-index:50;line-height:38px;text-align:center;padding:0;">✕</button>
   <div style="max-width:560px;margin:0 auto">
-    <h2>📋 Журнал смены</h2>
+    <h2 data-i18n="jTitle">📋 Журнал смены</h2>
     <div class="log-meta">
-      <div class="m-name"><label>Имя</label><input type="text" id="logName" placeholder="Имя и фамилия"></div>
+      <div class="m-name"><label data-i18n="jName">Имя</label><input type="text" id="logName" data-i18n-ph="jNamePh" placeholder="Имя и фамилия"></div>
       <hr class="log-divider">
       <div class="m-grid">
-        <div class="m-cell"><label>Пришёл</label><input type="text" id="logFrom" inputmode="numeric" maxlength="5" placeholder="16:00"></div>
-        <div class="m-cell"><label>Ушёл</label><input type="text" id="logTo" inputmode="numeric" maxlength="5" placeholder="23:45"></div>
-        <div class="m-cell"><label>Начал</label><input type="text" id="logStart" inputmode="numeric" maxlength="5" placeholder="17:20"></div>
-        <div class="m-cell"><label>Перерыв</label><input type="text" id="logBreak" inputmode="numeric" maxlength="3" placeholder="40"><span class="unit">мин</span></div>
-        <div class="m-cell"><label>Дата</label><input type="text" id="logDate" readonly></div>
+        <div class="m-cell"><label data-i18n="jIn">Пришёл</label><input type="text" id="logFrom" inputmode="numeric" maxlength="5" placeholder="16:00"></div>
+        <div class="m-cell"><label data-i18n="jOut">Ушёл</label><input type="text" id="logTo" inputmode="numeric" maxlength="5" placeholder="23:45"></div>
+        <div class="m-cell"><label data-i18n="jStart">Начал</label><input type="text" id="logStart" inputmode="numeric" maxlength="5" placeholder="17:20"></div>
+        <div class="m-cell"><label data-i18n="jBreak">Перерыв</label><input type="text" id="logBreak" inputmode="numeric" maxlength="3" placeholder="36"><span class="unit" data-i18n="jMin">мин</span></div>
+        <div class="m-cell"><label data-i18n="jDate">Дата</label><input type="text" id="logDate" readonly></div>
       </div>
-      <div class="m-reason"><label>Причина</label><input type="text" id="logReason" placeholder="напр. не было заказов"></div>
+      <div class="m-reason"><label data-i18n="jReason">Причина</label><input type="text" id="logReason" data-i18n-ph="jReasonPh" placeholder="напр. не было заказов"></div>
     </div>
     <div class="log-total"><div class="lt-lab">Total amount<br>colli packed</div><div class="lt-num" id="logSummary">0</div></div>
     <div class="log-orders" id="logOrders">Заказов: 0</div>
@@ -542,17 +503,17 @@ body.work #moreBar{background:#0a0e13;}
       <div class="th"><span>Butik</span><span>Coli</span><span></span></div>
       <div id="logList"></div>
       <div class="log-add-row">
-        <input type="number" id="logStore" inputmode="numeric" placeholder="Butik №">
-        <input type="number" id="logColi" inputmode="numeric" placeholder="Коли">
+        <input type="number" id="logStore" inputmode="numeric" data-i18n-ph="jButikPh" placeholder="Butik №">
+        <input type="number" id="logColi" inputmode="numeric" data-i18n-ph="jColiPh" placeholder="Коли">
         <button class="addb" id="logAdd" title="Добавить">＋</button>
       </div>
     </div>
-    <button class="btn btn-small log-fromlist" id="logFromList">↩ Подставить из текущего листа</button>
+    <button class="btn btn-small log-fromlist" id="logFromList" data-i18n="jFromList">↩ Подставить из текущего листа</button>
     <div class="log-actions">
-      <button class="btn btn-small" id="logCopy">Скопировать</button>
-      <button class="btn btn-small" id="logClear">Очистить</button>
+      <button class="btn btn-small" id="logCopy" data-i18n="jCopy">Скопировать</button>
+      <button class="btn btn-small" id="logClear" data-i18n="jClear">Очистить</button>
     </div>
-    <p class="hint" style="margin-top:14px">После готового листа жми «Подставить из текущего листа» — № магазина и Total coli подставятся из скана, затем ＋. Сверху — общая сумма коли и число заказов для отчёта лидеру.</p>
+    <p class="hint" data-i18n-html="jHint" style="margin-top:14px"></p>
   </div>
 </div>
 
@@ -561,9 +522,269 @@ body.work #moreBar{background:#0a0e13;}
 
 /* ================= НАСТРОЙКИ (persist) ================= */
 const SET_KEY='picker_set', SES_KEY='picker_ses';
-const DEFAULTS={rate:1.1,repOn:true,repSec:8,pod:true,eco:true,ecoSec:20,sortMode:'normal',bigQty:10};
+const DEFAULTS={rate:1.1,repOn:true,repSec:8,pod:true,eco:true,ecoSec:20,sortMode:'normal',bigQty:10,lang:'ru'};
 let settings=loadSettings();
 if(settings.podMig===undefined){settings.pod=true;settings.podMig=true;saveSettings();}  // щелчки вкл по умолчанию (разово)
+
+/* ================= ЛОКАЛИЗАЦИЯ RU / EN / DA ================= */
+let lang=(settings.lang==='en'||settings.lang==='da')?settings.lang:'ru';
+const I18N={
+ru:{
+tagline:'Pick-by-voice · личный прототип',
+resumeTitle:'Есть незаконченный лист:', positionsShort:'позиций', nextShort:'след.',
+continue:'▶ Продолжить', delete:'Удалить',
+secScan:'Сканирование листа', addPhoto:'Добавить фото',
+photoHint:'Весь лист + нижняя часть при мелком шрифте',
+scan:'Сканировать', photosWord:'фото',
+aiConnected:'AI-распознавание: <b style="color:var(--go)">подключено ✓</b> — фото читает Gemini',
+aiNotSet:'AI не настроен. Нажми «AI-ключ» и вставь бесплатный ключ с <b>aistudio.google.com</b>.',
+rawPh:'Текст с фото — или вставь вручную',
+parseBtn:'Распознать лист',
+totalLabel:'Total coli с листа:', totalHint:'(заполнится само, если попало в скан)',
+help:'Помощь', aiKey:'AI-ключ', clear:'Очистить', shiftLog:'📋 Журнал смены', start:'СТАРТ',
+summary:'Сводка', picked:'взято', pcs:'шт',
+take:'ВЗЯЛ', back:'Назад', less:'⚠ Меньше', pause:'Пауза', review:'Итог', more:'⚙️ Ещё',
+podLabel:'Щелчки по ножке AirPods', podHint:'1 щелчок = ВЗЯЛ · 2 = Назад · 3 = Пауза / Продолжить.',
+speechSec:'Озвучка', rateLabel:'Скорость речи', repLabel:'Автоповтор позиции', repSecLabel:'Интервал повтора, сек',
+screenSec:'Экран', ecoLabel:'Эко-экран', ecoSecLabel:'Гаснет через, сек (мин. 5)',
+finishBtn:'Закончить и показать итог', editBtn:'✎ Назад к списку',
+workHint:'Щелчки AirPods: 1 = ВЗЯЛ · 2 = Назад · 3 = Пауза / Продолжить<br>Кнопки: ВЗЯЛ · Назад · Меньше · Итог<br>Тап × — исправить Qty · тап по цифрам локации — изменить порядок обхода',
+nextLabel:'→ далее:', lastPos:'последняя позиция',
+doneTitle:'Лист готов', backToWork:'← Вернуться к листу', sayAllBtn:'Озвучить итог', saveToLog:'📋 Записать в журнал', newList:'Новый лист',
+positions:'позиций', planLabel:'план', diffLabel:'разница', incompleteN:'неполных',
+thLoc:'Локация', thTook:'Взяли', thPlan:'По плану', thPlanShort:'План',
+partialWarn:'⚠️ {n} позиций — неполное кол-во. Перечеркни на бумаге.',
+progTitle:'📋 Текущий прогресс', continueWork:'▶ Продолжить работу', pickedColon:'Взято:',
+layoutTitle:'Раскладка обхода', layoutStatsDefault:'В каком порядке озвучивать товары',
+segNormal:'Обычная', segLarge:'Крупные', segManual:'Вручную',
+bigQtyLabel:'Крупные — от этого числа и больше, шт',
+descNormal:'По локациям, как на листе — обычный порядок обхода.',
+descQty:'Сначала крупные позиции ({th}+ шт) от большего к меньшему. Остальное ({th1} и меньше) — по локациям. Потяни строку — порядок станет ручным.',
+descManual:'Тяни строку справа (≡) или подними слева (⤒). Озвучка идёт сверху вниз.',
+lockNote:'Взятые позиции закреплены сверху и не двигаются — переставляются только оставшиеся. Прогресс не собьётся.',
+reset:'↺ Сбросить', begin:'▶ Начать', apply:'✓ Применить',
+layoutStats:'{n} позиций · крупных ({th}+): {big}',
+pauseWord:'ПАУЗА', positionWord:'позиция', resumeBtn:'▶ Продолжить',
+ecoHint:'коснись экрана, чтобы вернуть',
+jTitle:'📋 Журнал смены', jName:'Имя', jNamePh:'Имя и фамилия', jDate:'Дата',
+jIn:'Пришёл', jOut:'Ушёл', jStart:'Начал', jBreak:'Перерыв', jMin:'мин', jReason:'Причина', jReasonPh:'напр. не было заказов',
+ordersColon:'Заказов:', jButikPh:'Butik №', jColiPh:'Коли',
+jFromList:'↩ Подставить из текущего листа', jCopy:'Скопировать', jClear:'Очистить',
+jHint:'После готового листа жми «Подставить из текущего листа» — № магазина и Total coli подставятся из скана, затем ＋. Сверху — общая сумма коли и число заказов для отчёта лидеру.',
+jEmpty:'Пусто. Добавь butik и coli после готового листа.', restoreOrders:'↩ Вернуть {n} заказов',
+cpName:'Имя: ', cpDate:'Дата: ', cpShift:'Смена: ', cpStart:'Начал сбор: ', cpButikColi:'Butik   Coli', cpOrders:'Заказов: {n} · Всего коли: {s}', cpPerHour:'Coli/час ≈ {v}',
+bonusFill:'Заполни «Пришёл» и «Ушёл» — посчитаю coli/час.', bonusCheck:'Проверь время.',
+bandLow:'ниже бонуса (нужно 150+)', bandOn:'в бонусе (150–300)', bandMax:'максимум (300+) 🔥',
+coliPerH:'coli / час', coliPerHShort:'coli/ч', realPace:'Реальный пейс от начала сбора',
+bonusNote:'Считается как у лидера: (Ушёл − Пришёл − перерыв) в десятичной записи. Перерыв 36 мин = 0,60.',
+helpTitle:'Как пользоваться', helpClose:'Понятно', helpBody:'<h4>Быстрый старт</h4><p>1. Взял лист → <b>Добавить фото</b> (можно несколько). Жми <b>Сканировать</b>.<br>2. Проверь зелёную строку «Сумма Qty = Total coli ✓». Красные ? — тапни и исправь.<br>3. <b>СТАРТ</b> → надевай AirPods и поехали по конусам.</p><h4>Как фотографировать</h4><ul><li>1-е фото: весь лист целиком, телефон параллельно бумаге, без тени.</li><li>Мелкий шрифт → 2-е фото крупно нижней части. Дубли склеятся сами.</li><li>Резкость важнее количества. Фото сжимаются до 1400px.</li></ul><h4>В пути</h4><ul><li>Взял товар → 1 щелчок ножки AirPods или зелёная кнопка <b>ВЗЯЛ</b>.</li><li>Назад → 2 щелчка или кнопка <b>Назад</b>.</li><li>Товара меньше → кнопка <b>Меньше</b>, введи факт. На бумаге перечеркни.</li><li>Пауза / продолжить → 3 щелчка или кнопка <b>Пауза</b>.</li><li>Локацию, количество и название приложение озвучивает само и показывает на экране и эко-экране.</li><li><b>Итог</b> — тихая сверка с бумагой. Крестик сверху — закрыть.</li><li>Safari закрылся → открой сайт → <b>▶ Продолжить</b> (прогресс хранится 12 часов).</li><li><b>Порядок обхода</b> → тап по крупным цифрам локации. «Крупные» (по убыванию) или вручную. Взятые закреплены.</li></ul><h4>Язык</h4><p>Переключатель <b>RU / EN / DA</b> справа вверху на главном экране меняет язык интерфейса и озвучки.</p><h4>Батарея</h4><ul><li>Эко-экран на OLED почти не ест заряд.</li><li>Настройки → Универсальный доступ → Дисплей → <b>Понижение точки белого</b>.</li><li>Яркость на минимум; повербанк под рукой.</li></ul><h4>Если что-то пошло не так</h4><ul><li>503/429 от Google → подожди и снова <b>Сканировать</b>.</li><li>Щелчки не ловятся → сверни Safari и открой снова; проверь «Щелчки по ножке» в «Ещё».</li><li>Зависло → перезагрузи страницу, прогресс цел.</li></ul>',
+noLoc:'Не нашёл ни одной локации вида 003-002.',
+parsePos:'Позиций: {n} · Сумма Qty: {sum}', eqTotal:' = Total coli ✓',
+neTotal:' ≠ Total coli ({exp}), разница {d}', checkTotal:' — сверь с «Total coli» на листе',
+missQty:'{n} позиций без Qty. ', confQty:'{n} с расхождением. ', fixHint:'Нажми на число в Qty, чтобы исправить.',
+thLocShort:'Лок.', thQtyShort:'Кол', thArtDesc:'Артикул / Описание',
+dupRows:'⚠️ {n} строк с повторяющейся локацией. На чистом листе локации не повторяются — ИИ мог сдвинуть колонку. Сверь с бумагой и вычеркни лишние (✕).',
+qtyPrompt:'Qty для {loc}:', partialPrompt:'Сколько взял по факту?\n(по плану: {plan})',
+partialBad:'Введи число от 0 до {plan}.', partialOver:'Нельзя взять больше плана ({plan}).\nЕсли ошибка в листе — исправь Qty тапом на ×.',
+finishConfirm:'Не все позиции взяты ({n} осталось). Точно закончить?', allExcluded:'Все позиции вычеркнуты — нечего собирать.',
+aiKeyPrompt:'API-ключ Google AI Studio (вида AIza… или AQ…).\nПусто = удалить.',
+ocrCompress:'Сжимаю {n} фото…', ocrReading:'AI читает лист ({n} фото, {mb} МБ, один запрос)…',
+ocrNoKey:'Нет AI-ключа. Нажми «AI-ключ» и вставь ключ, потом «Сканировать».',
+ocrNoNet:'Нет связи с Google. Проверь интернет и нажми «Сканировать» ещё раз.',
+ocr503:'Google временно недоступен (503). Подожди ~30 сек и нажми «Сканировать».',
+ocr429:'Слишком много запросов (429). Подожди минуту и нажми «Сканировать».',
+ocr400:'Ключ не принят (400). Проверь «AI-ключ».', ocr403:'Доступ запрещён (403). Проверь «AI-ключ».',
+ocrErr:'Ошибка: {c}. Нажми «Сканировать» ещё раз.',
+audioFail:'Не удалось включить аудио-канал.',
+jNeed:'Укажи butik или коли.',
+jDup:'Заказ butik {st} на {co} coli уже в журнале.\n\nЭто ДРУГОЙ заказ под тем же номером (напр. chilled и dry на разных палетах)?\nОК — добавлю отдельной строкой. Отмена — не добавлять.',
+jSaveFail:'⚠ НЕ СОХРАНИЛОСЬ! Журнал в опасности — перепиши данные вручную.',
+jSaveFail2:'⚠ Не удалось сохранить журнал!',
+jDelConfirm:'Удалить заказ butik {st} ({co} coli)?',
+jClearConfirm:'Очистить ВЕСЬ журнал? ({n} заказов)\nПока журнал открыт, можно вернуть кнопкой «↩ Вернуть».',
+ttsLoc:'Локация {loc}.', ttsTake:'Взять {q}.', ttsNoQty:'Количество не распознано.',
+ttsZero:'Товара нет, пропускаем.', ttsPlan:' По плану {n}.',
+ttsListDone:'Лист готов. {n} позиций, {m} штук.', ttsIncomplete:' Неполных: {n}.', ttsCheckPaper:' Сверь с бумагой.',
+ttsMid:'Взято {a} из {b} позиций. Всего {c} штук.', ttsSummary:'Итог.', ttsShortened:', сокращено',
+ttsRestored:'Восстановлено: {q}.', ttsWrote:'Записал {q}.', ttsZeroNone:'Ноль, товара нет.', ttsEmptyDesc:'Описание пустое.'
+},
+en:{
+tagline:'Pick-by-voice · personal prototype',
+resumeTitle:'Unfinished list:', positionsShort:'positions', nextShort:'next:',
+continue:'▶ Continue', delete:'Delete',
+secScan:'Scan the list', addPhoto:'Add photo',
+photoHint:'Whole sheet + bottom part if the text is small',
+scan:'Scan', photosWord:'photos',
+aiConnected:'AI recognition: <b style="color:var(--go)">connected ✓</b> — Gemini reads the photos',
+aiNotSet:'AI not set up. Tap «AI key» and paste a free key from <b>aistudio.google.com</b>.',
+rawPh:'Text from the photo — or paste manually',
+parseBtn:'Parse the list',
+totalLabel:'Total coli from sheet:', totalHint:'(fills in automatically if scanned)',
+help:'Help', aiKey:'AI key', clear:'Clear', shiftLog:'📋 Shift log', start:'START',
+summary:'Summary', picked:'picked', pcs:'pcs',
+take:'PICKED', back:'Back', less:'⚠ Less', pause:'Pause', review:'Review', more:'⚙️ More',
+podLabel:'AirPods stem clicks', podHint:'1 click = PICKED · 2 = Back · 3 = Pause / Continue.',
+speechSec:'Speech', rateLabel:'Speech rate', repLabel:'Auto-repeat position', repSecLabel:'Repeat interval, sec',
+screenSec:'Screen', ecoLabel:'Eco screen', ecoSecLabel:'Dims after, sec (min 5)',
+finishBtn:'Finish and show summary', editBtn:'✎ Back to list',
+workHint:'AirPods clicks: 1 = PICKED · 2 = Back · 3 = Pause / Continue<br>Buttons: PICKED · Back · Less · Review<br>Tap × — fix Qty · tap the location digits — change pick order',
+nextLabel:'→ next:', lastPos:'last position',
+doneTitle:'List done', backToWork:'← Back to list', sayAllBtn:'Read summary aloud', saveToLog:'📋 Save to log', newList:'New list',
+positions:'positions', planLabel:'plan', diffLabel:'diff', incompleteN:'incomplete',
+thLoc:'Location', thTook:'Picked', thPlan:'Planned', thPlanShort:'Plan',
+partialWarn:'⚠️ {n} positions — incomplete amount. Cross them out on paper.',
+progTitle:'📋 Current progress', continueWork:'▶ Continue', pickedColon:'Picked:',
+layoutTitle:'Pick order', layoutStatsDefault:'In what order to announce items',
+segNormal:'Normal', segLarge:'Large first', segManual:'Manual',
+bigQtyLabel:'Large — from this number and up, pcs',
+descNormal:'By location, as on the sheet — normal pick order.',
+descQty:'Large items first ({th}+ pcs) from biggest to smallest. The rest ({th1} and fewer) — by location. Drag a row — order becomes manual.',
+descManual:'Drag a row by ≡ on the right or lift it with ⤒ on the left. Announced top to bottom.',
+lockNote:'Picked items are pinned on top and do not move — only the rest are reordered. Progress is safe.',
+reset:'↺ Reset', begin:'▶ Start', apply:'✓ Apply',
+layoutStats:'{n} positions · large ({th}+): {big}',
+pauseWord:'PAUSE', positionWord:'position', resumeBtn:'▶ Continue',
+ecoHint:'tap the screen to return',
+jTitle:'📋 Shift log', jName:'Name', jNamePh:'Full name', jDate:'Date',
+jIn:'In', jOut:'Out', jStart:'Started', jBreak:'Break', jMin:'min', jReason:'Reason', jReasonPh:'e.g. no orders',
+ordersColon:'Orders:', jButikPh:'Store no.', jColiPh:'Coli',
+jFromList:'↩ Fill from current list', jCopy:'Copy', jClear:'Clear',
+jHint:'After a finished list tap «Fill from current list» — store no. and Total coli are filled from the scan, then ＋. On top — total coli and number of orders for the team leader.',
+jEmpty:'Empty. Add butik and coli after a finished list.', restoreOrders:'↩ Restore {n} orders',
+cpName:'Name: ', cpDate:'Date: ', cpShift:'Shift: ', cpStart:'Pick start: ', cpButikColi:'Butik   Coli', cpOrders:'Orders: {n} · Total coli: {s}', cpPerHour:'Coli/hour ≈ {v}',
+bonusFill:'Fill «In» and «Out» — I will compute coli/hour.', bonusCheck:'Check the times.',
+bandLow:'below bonus (need 150+)', bandOn:'in bonus (150–300)', bandMax:'maximum (300+) 🔥',
+coliPerH:'coli / hour', coliPerHShort:'coli/h', realPace:'Real pace from pick start',
+bonusNote:'Computed like the leader sheet: (Out − In − break) in decimal. Break 36 min = 0.60.',
+helpTitle:'How to use', helpClose:'Got it', helpBody:'<h4>Quick start</h4><p>1. Got the list → <b>Add photo</b> (several is fine). Tap <b>Scan</b>.<br>2. Check the green line «Qty sum = Total coli ✓». Red ? — tap and fix.<br>3. <b>START</b> → put on AirPods and go along the cones.</p><h4>How to photograph</h4><ul><li>1st photo: the whole sheet, phone parallel to the paper, no shadow.</li><li>Small text → 2nd photo close-up of the bottom part. Duplicates merge automatically.</li><li>Sharpness matters more than count. Photos are compressed to 1400px.</li></ul><h4>On the way</h4><ul><li>Picked an item → 1 AirPods stem click or the green <b>PICKED</b> button.</li><li>Back → 2 clicks or the <b>Back</b> button.</li><li>Fewer items → the <b>Less</b> button, enter the real number. Cross it out on paper.</li><li>Pause / continue → 3 clicks or the <b>Pause</b> button.</li><li>The app speaks the location, amount and name and shows them on the screen and the eco screen.</li><li><b>Review</b> — a quiet check against the paper. The cross on top closes it.</li><li>Safari closed → open the site → <b>▶ Continue</b> (progress is kept for 12 hours).</li><li><b>Pick order</b> → tap the large location digits. «Large first» (descending) or manual. Picked items are pinned.</li></ul><h4>Language</h4><p>The <b>RU / EN / DA</b> switch at the top right of the home screen changes the interface and speech language.</p><h4>Battery</h4><ul><li>The eco screen barely uses charge on OLED.</li><li>Settings → Accessibility → Display → <b>Reduce White Point</b>.</li><li>Minimum brightness; keep a power bank handy.</li></ul><h4>If something goes wrong</h4><ul><li>503/429 from Google → wait and tap <b>Scan</b> again.</li><li>Clicks not registering → minimize Safari and open it again; check «AirPods stem clicks» in «More».</li><li>Frozen → reload the page, progress is safe.</li></ul>',
+noLoc:'No location like 003-002 found.',
+parsePos:'Positions: {n} · Qty sum: {sum}', eqTotal:' = Total coli ✓',
+neTotal:' ≠ Total coli ({exp}), diff {d}', checkTotal:' — check against «Total coli» on the sheet',
+missQty:'{n} positions without Qty. ', confQty:'{n} with a mismatch. ', fixHint:'Tap the Qty number to fix it.',
+thLocShort:'Loc.', thQtyShort:'Qty', thArtDesc:'Article / Description',
+dupRows:'⚠️ {n} rows with a repeated location. On a clean sheet locations are unique — the AI may have shifted a column. Check the paper and cross out extras (✕).',
+qtyPrompt:'Qty for {loc}:', partialPrompt:'How many did you actually take?\n(planned: {plan})',
+partialBad:'Enter a number from 0 to {plan}.', partialOver:'You cannot take more than planned ({plan}).\nIf the sheet is wrong — fix Qty by tapping ×.',
+finishConfirm:'Not all positions are picked ({n} left). Finish anyway?', allExcluded:'All positions are crossed out — nothing to pick.',
+aiKeyPrompt:'Google AI Studio API key (like AIza… or AQ…).\nEmpty = remove.',
+ocrCompress:'Compressing {n} photos…', ocrReading:'AI is reading the list ({n} photos, {mb} MB, one request)…',
+ocrNoKey:'No AI key. Tap «AI key» and paste a key, then «Scan».',
+ocrNoNet:'No connection to Google. Check the internet and tap «Scan» again.',
+ocr503:'Google is temporarily unavailable (503). Wait ~30 sec and tap «Scan».',
+ocr429:'Too many requests (429). Wait a minute and tap «Scan».',
+ocr400:'Key not accepted (400). Check «AI key».', ocr403:'Access denied (403). Check «AI key».',
+ocrErr:'Error: {c}. Tap «Scan» again.',
+audioFail:'Could not start the audio channel.',
+jNeed:'Enter a butik or coli.',
+jDup:'Order butik {st} for {co} coli is already in the log.\n\nIs this a DIFFERENT order under the same number (e.g. chilled and dry on different pallets)?\nOK — I will add a separate line. Cancel — do not add.',
+jSaveFail:'⚠ NOT SAVED! The log is at risk — write the data down manually.',
+jSaveFail2:'⚠ Could not save the log!',
+jDelConfirm:'Delete order butik {st} ({co} coli)?',
+jClearConfirm:'Clear the ENTIRE log? ({n} orders)\nWhile the log is open you can restore it with «↩ Restore».',
+ttsLoc:'Location {loc}.', ttsTake:'Take {q}.', ttsNoQty:'Quantity not recognized.',
+ttsZero:'No goods, skipping.', ttsPlan:' Planned {n}.',
+ttsListDone:'List done. {n} positions, {m} pieces.', ttsIncomplete:' Incomplete: {n}.', ttsCheckPaper:' Check against the paper.',
+ttsMid:'Picked {a} of {b} positions. {c} pieces total.', ttsSummary:'Summary.', ttsShortened:', reduced',
+ttsRestored:'Restored: {q}.', ttsWrote:'Recorded {q}.', ttsZeroNone:'Zero, no goods.', ttsEmptyDesc:'Description is empty.'
+},
+da:{
+tagline:'Pick-by-voice · personlig prototype',
+resumeTitle:'Uafsluttet liste:', positionsShort:'positioner', nextShort:'næste:',
+continue:'▶ Fortsæt', delete:'Slet',
+secScan:'Scan listen', addPhoto:'Tilføj foto',
+photoHint:'Hele listen + nederste del ved lille skrift',
+scan:'Scan', photosWord:'fotos',
+aiConnected:'AI-genkendelse: <b style="color:var(--go)">forbundet ✓</b> — Gemini læser fotos',
+aiNotSet:'AI ikke konfigureret. Tryk «AI-nøgle» og indsæt en gratis nøgle fra <b>aistudio.google.com</b>.',
+rawPh:'Tekst fra foto — eller indsæt manuelt',
+parseBtn:'Analysér listen',
+totalLabel:'Total coli fra listen:', totalHint:'(udfyldes automatisk hvis scannet)',
+help:'Hjælp', aiKey:'AI-nøgle', clear:'Ryd', shiftLog:'📋 Vagtlog', start:'START',
+summary:'Oversigt', picked:'taget', pcs:'stk',
+take:'TAGET', back:'Tilbage', less:'⚠ Færre', pause:'Pause', review:'Tjek', more:'⚙️ Mere',
+podLabel:'AirPods-klik', podHint:'1 klik = TAGET · 2 = Tilbage · 3 = Pause / Fortsæt.',
+speechSec:'Tale', rateLabel:'Talehastighed', repLabel:'Gentag position', repSecLabel:'Gentag-interval, sek',
+screenSec:'Skærm', ecoLabel:'Øko-skærm', ecoSecLabel:'Slukker efter, sek (min 5)',
+finishBtn:'Afslut og vis resultat', editBtn:'✎ Tilbage til listen',
+workHint:'AirPods-klik: 1 = TAGET · 2 = Tilbage · 3 = Pause / Fortsæt<br>Knapper: TAGET · Tilbage · Færre · Tjek<br>Tryk × — ret Qty · tryk på lokationstal — skift rækkefølge',
+nextLabel:'→ næste:', lastPos:'sidste position',
+doneTitle:'Listen er færdig', backToWork:'← Tilbage til listen', sayAllBtn:'Læs resultat højt', saveToLog:'📋 Gem i log', newList:'Ny liste',
+positions:'positioner', planLabel:'plan', diffLabel:'forskel', incompleteN:'ufuldstændige',
+thLoc:'Lokation', thTook:'Taget', thPlan:'Planlagt', thPlanShort:'Plan',
+partialWarn:'⚠️ {n} positioner — ufuldstændigt antal. Streg dem ud på papiret.',
+progTitle:'📋 Nuværende fremgang', continueWork:'▶ Fortsæt', pickedColon:'Taget:',
+layoutTitle:'Rækkefølge', layoutStatsDefault:'I hvilken rækkefølge varerne læses op',
+segNormal:'Normal', segLarge:'Store først', segManual:'Manuelt',
+bigQtyLabel:'Store — fra dette tal og op, stk',
+descNormal:'Efter lokation, som på listen — normal rækkefølge.',
+descQty:'Store varer først ({th}+ stk) fra størst til mindst. Resten ({th1} og færre) — efter lokation. Træk en række — rækkefølgen bliver manuel.',
+descManual:'Træk en række med ≡ til højre eller løft med ⤒ til venstre. Læses oppefra og ned.',
+lockNote:'Tagne varer er låst øverst og flyttes ikke — kun resten omrokeres. Fremgang bevares.',
+reset:'↺ Nulstil', begin:'▶ Start', apply:'✓ Anvend',
+layoutStats:'{n} positioner · store ({th}+): {big}',
+pauseWord:'PAUSE', positionWord:'position', resumeBtn:'▶ Fortsæt',
+ecoHint:'tryk på skærmen for at vende tilbage',
+jTitle:'📋 Vagtlog', jName:'Navn', jNamePh:'Fulde navn', jDate:'Dato',
+jIn:'Kom', jOut:'Gik', jStart:'Start', jBreak:'Pause', jMin:'min', jReason:'Årsag', jReasonPh:'f.eks. ingen ordrer',
+ordersColon:'Ordrer:', jButikPh:'Butik nr.', jColiPh:'Coli',
+jFromList:'↩ Udfyld fra listen', jCopy:'Kopiér', jClear:'Ryd',
+jHint:'Efter en færdig liste tryk «Udfyld fra listen» — butiksnr. og Total coli udfyldes fra scanningen, derefter ＋. Øverst — samlede coli og antal ordrer til lederen.',
+jEmpty:'Tom. Tilføj butik og coli efter en færdig liste.', restoreOrders:'↩ Gendan {n} ordrer',
+cpName:'Navn: ', cpDate:'Dato: ', cpShift:'Vagt: ', cpStart:'Plukstart: ', cpButikColi:'Butik   Coli', cpOrders:'Ordrer: {n} · Coli i alt: {s}', cpPerHour:'Coli/time ≈ {v}',
+bonusFill:'Udfyld «Kom» og «Gik» — jeg beregner coli/time.', bonusCheck:'Tjek tiderne.',
+bandLow:'under bonus (kræver 150+)', bandOn:'i bonus (150–300)', bandMax:'maksimum (300+) 🔥',
+coliPerH:'coli / time', coliPerHShort:'coli/t', realPace:'Reelt tempo fra start',
+bonusNote:'Beregnes som lederens skema: (Gik − Kom − pause) decimalt. Pause 36 min = 0,60.',
+helpTitle:'Sådan bruges den', helpClose:'Forstået', helpBody:'<h4>Hurtig start</h4><p>1. Fik listen → <b>Tilføj foto</b> (flere er fint). Tryk <b>Scan</b>.<br>2. Tjek den grønne linje «Qty-sum = Total coli ✓». Røde ? — tryk og ret.<br>3. <b>START</b> → tag AirPods på og kør langs keglerne.</p><h4>Sådan fotograferer du</h4><ul><li>1. foto: hele listen, telefonen parallelt med papiret, uden skygge.</li><li>Lille skrift → 2. foto tæt på nederste del. Dubletter samles automatisk.</li><li>Skarphed er vigtigere end antal. Fotos komprimeres til 1400px.</li></ul><h4>Undervejs</h4><ul><li>Taget en vare → 1 AirPods-klik eller den grønne <b>TAGET</b>-knap.</li><li>Tilbage → 2 klik eller <b>Tilbage</b>-knappen.</li><li>Færre varer → <b>Færre</b>-knappen, indtast det reelle antal. Streg ud på papiret.</li><li>Pause / fortsæt → 3 klik eller <b>Pause</b>-knappen.</li><li>Appen læser lokation, antal og navn op og viser dem på skærmen og øko-skærmen.</li><li><b>Tjek</b> — en stille kontrol mod papiret. Krydset øverst lukker.</li><li>Safari lukkede → åbn siden → <b>▶ Fortsæt</b> (fremgang gemmes i 12 timer).</li><li><b>Rækkefølge</b> → tryk på de store lokationstal. «Store først» (faldende) eller manuelt. Tagne varer er låst.</li></ul><h4>Sprog</h4><p><b>RU / EN / DA</b>-knappen øverst til højre på startskærmen skifter sprog for interface og tale.</p><h4>Batteri</h4><ul><li>Øko-skærmen bruger næsten ingen strøm på OLED.</li><li>Indstillinger → Tilgængelighed → Skærm → <b>Reducér hvidpunkt</b>.</li><li>Minimal lysstyrke; hav en powerbank klar.</li></ul><h4>Hvis noget går galt</h4><ul><li>503/429 fra Google → vent og tryk <b>Scan</b> igen.</li><li>Klik registreres ikke → minimer Safari og åbn igen; tjek «AirPods-klik» i «Mere».</li><li>Frosset → genindlæs siden, fremgang er sikker.</li></ul>',
+noLoc:'Ingen lokation som 003-002 fundet.',
+parsePos:'Positioner: {n} · Qty-sum: {sum}', eqTotal:' = Total coli ✓',
+neTotal:' ≠ Total coli ({exp}), forskel {d}', checkTotal:' — tjek mod «Total coli» på listen',
+missQty:'{n} positioner uden Qty. ', confQty:'{n} med uoverensstemmelse. ', fixHint:'Tryk på Qty-tallet for at rette.',
+thLocShort:'Lok.', thQtyShort:'Antal', thArtDesc:'Artikel / Beskrivelse',
+dupRows:'⚠️ {n} rækker med gentaget lokation. På en ren liste er lokationer unikke — AI kan have forskudt en kolonne. Tjek papiret og streg ekstra ud (✕).',
+qtyPrompt:'Qty for {loc}:', partialPrompt:'Hvor mange tog du faktisk?\n(planlagt: {plan})',
+partialBad:'Indtast et tal fra 0 til {plan}.', partialOver:'Du kan ikke tage mere end planlagt ({plan}).\nHvis listen er forkert — ret Qty ved at trykke ×.',
+finishConfirm:'Ikke alle positioner er taget ({n} tilbage). Afslut alligevel?', allExcluded:'Alle positioner er streget ud — intet at plukke.',
+aiKeyPrompt:'Google AI Studio API-nøgle (som AIza… eller AQ…).\nTom = fjern.',
+ocrCompress:'Komprimerer {n} fotos…', ocrReading:'AI læser listen ({n} fotos, {mb} MB, én forespørgsel)…',
+ocrNoKey:'Ingen AI-nøgle. Tryk «AI-nøgle» og indsæt en nøgle, derefter «Scan».',
+ocrNoNet:'Ingen forbindelse til Google. Tjek internettet og tryk «Scan» igen.',
+ocr503:'Google er midlertidigt utilgængelig (503). Vent ~30 sek og tryk «Scan».',
+ocr429:'For mange forespørgsler (429). Vent et minut og tryk «Scan».',
+ocr400:'Nøgle ikke accepteret (400). Tjek «AI-nøgle».', ocr403:'Adgang nægtet (403). Tjek «AI-nøgle».',
+ocrErr:'Fejl: {c}. Tryk «Scan» igen.',
+audioFail:'Kunne ikke starte lydkanalen.',
+jNeed:'Angiv butik eller coli.',
+jDup:'Ordre butik {st} på {co} coli er allerede i loggen.\n\nEr dette en ANDEN ordre under samme nummer (f.eks. chilled og dry på forskellige paller)?\nOK — tilføjer som ny linje. Annullér — tilføj ikke.',
+jSaveFail:'⚠ IKKE GEMT! Loggen er i fare — skriv data ned manuelt.',
+jSaveFail2:'⚠ Kunne ikke gemme loggen!',
+jDelConfirm:'Slet ordre butik {st} ({co} coli)?',
+jClearConfirm:'Ryd HELE loggen? ({n} ordrer)\nMens loggen er åben kan du gendanne med «↩ Gendan».',
+ttsLoc:'Lokation {loc}.', ttsTake:'Tag {q}.', ttsNoQty:'Antal ikke genkendt.',
+ttsZero:'Ingen vare, springer over.', ttsPlan:' Planlagt {n}.',
+ttsListDone:'Listen er færdig. {n} positioner, {m} stk.', ttsIncomplete:' Ufuldstændige: {n}.', ttsCheckPaper:' Tjek mod papiret.',
+ttsMid:'Taget {a} af {b} positioner. {c} stk i alt.', ttsSummary:'Resultat.', ttsShortened:', reduceret',
+ttsRestored:'Gendannet: {q}.', ttsWrote:'Registreret {q}.', ttsZeroNone:'Nul, ingen vare.', ttsEmptyDesc:'Beskrivelse er tom.'
+}
+};
+function t(k){var d=I18N[lang]||I18N.ru;return (d[k]!==undefined)?d[k]:(I18N.ru[k]!==undefined?I18N.ru[k]:k);}
+function tpl(k,o){var x=t(k);if(o)for(var pp in o)x=x.split('{'+pp+'}').join(o[pp]);return x;}
+function setLang(l){if(l!=='ru'&&l!=='en'&&l!=='da')l='ru';lang=l;settings.lang=l;saveSettings();applyLang();}
+function applyLang(){
+  try{document.documentElement.lang=lang;}catch(e){}
+  document.querySelectorAll('[data-i18n]').forEach(function(el){el.textContent=t(el.getAttribute('data-i18n'));});
+  document.querySelectorAll('[data-i18n-html]').forEach(function(el){el.innerHTML=t(el.getAttribute('data-i18n-html'));});
+  document.querySelectorAll('[data-i18n-ph]').forEach(function(el){el.setAttribute('placeholder',t(el.getAttribute('data-i18n-ph')));});
+  document.querySelectorAll('#langSel button').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-lang')===lang);});
+  try{pickVoice();}catch(e){}
+  try{updateAiState();}catch(e){}
+  try{renderQueue();}catch(e){}
+  try{if(items&&items.length&&$('scrSetup')&&!$('scrSetup').hidden)renderParse();}catch(e){}
+  try{if(inWork)render();}catch(e){}
+  try{if(!$('logModal').hidden)renderLog();}catch(e){}
+  try{if(!$('layoutModal').hidden)renderLayout();}catch(e){}
+  try{checkSavedSession();}catch(e){}
+}
 function loadSettings(){
   try{return Object.assign({},DEFAULTS,JSON.parse(localStorage.getItem(SET_KEY)||'{}'));}
   catch(e){return Object.assign({},DEFAULTS);}
@@ -646,7 +867,7 @@ function detectTotal(raw){
   return m?parseInt(m[1],10):null;
 }
 
-/* ================= ЧИСЛА → СЛОВА ================= */
+/* ================= ЧИСЛА → СЛОВА (RU / EN / DA) ================= */
 const DIGITS=['ноль','один','два','три','четыре','пять','шесть','семь','восемь','девять'];
 const QTY_W={1:'одну',2:'две',3:'три',4:'четыре',5:'пять',6:'шесть',7:'семь',
   8:'восемь',9:'девять',10:'десять',11:'одиннадцать',12:'двенадцать',
@@ -656,15 +877,27 @@ const ONES=['','один','два','три','четыре','пять','шест�
 const TEENS=['десять','одиннадцать','двенадцать','тринадцать','четырнадцать','пятнадцать','шестнадцать','семнадцать','восемнадцать','девятнадцать'];
 const TENS=['','','двадцать','тридцать','сорок','пятьдесят','шестьдесят','семьдесят','восемьдесят','девяносто'];
 function num2w(n){if(n<10)return ONES[n]||'ноль';if(n<20)return TEENS[n-10];return TENS[Math.floor(n/10)]+(n%10?' '+ONES[n%10]:'');}
+const NUM={
+  ru:{digits:DIGITS,w:num2w},
+  en:{digits:['zero','one','two','three','four','five','six','seven','eight','nine'],
+      teens:['ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'],
+      tens:['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'],
+      w:function(n){if(n<10)return this.digits[n];if(n<20)return this.teens[n-10];return this.tens[(n/10)|0]+(n%10?'-'+this.digits[n%10]:'');}},
+  da:{digits:['nul','en','to','tre','fire','fem','seks','syv','otte','ni'],
+      teens:['ti','elleve','tolv','tretten','fjorten','femten','seksten','sytten','atten','nitten'],
+      tens:['','','tyve','tredive','fyrre','halvtreds','tres','halvfjerds','firs','halvfems'],
+      w:function(n){if(n<10)return this.digits[n];if(n<20)return this.teens[n-10];var o=n%10,te=this.tens[(n/10)|0];return o?this.digits[o]+'og'+te:te;}}
+};
+function numL(){return NUM[lang]||NUM.ru;}
 function groupToSpeech(g){
-  const t=String(g).replace(/^0/,'');                                          // убрать ОДИН ведущий ноль: 002→02, 010→10, 030→30
-  if(t.length>=2&&t[0]==='0')return t.split('').map(d=>DIGITS[+d]).join(' ');   // «0X» (02,05) → ноль X цифрами
-  if(/^\d{2}$/.test(t))return num2w(parseInt(t,10));                            // 10..99 → десять, двадцать семь…
-  return t.split('').map(d=>DIGITS[+d]).join(' ');
+  const N=numL(),dig=N.digits;
+  const tt=String(g).replace(/^0/,'');                                         // убрать ОДИН ведущий ноль: 002→02, 010→10
+  if(tt.length>=2&&tt[0]==='0')return tt.split('').map(d=>dig[+d]).join(' ');   // «0X» → цифрами
+  if(/^\d{2}$/.test(tt))return N.w(parseInt(tt,10));                            // 10..99 словом
+  if(/^\d$/.test(tt))return dig[+tt];
+  return tt.split('').map(d=>dig[+d]).join(' ');
 }
-function locToSpeech(loc){
-  return loc.split('-').map(groupToSpeech).join(', ');
-}
+function locToSpeech(loc){return loc.split('-').map(groupToSpeech).join(', ');}
 function qtyToSpeech(n){return QTY_W[n]||String(n);}
 function shtuk(n){
   const a=n%10,b=n%100;
@@ -672,23 +905,27 @@ function shtuk(n){
   if(a>=2&&a<=4&&(b<12||b>14))return'штуки';
   return'штук';
 }
-function articleToSpeech(a){return a?a.replace(/(\d\d)(?=\d)/g,'$1 '):'артикул не распознан';}
+function qtyWord(n){return lang==='ru'?(qtyToSpeech(n)+' '+shtuk(n)):numL().w(n);}
+function articleToSpeech(a){return a?a.replace(/(\d\d)(?=\d)/g,'$1 '):'';}
 function itemPhrase(it){
   const eff=it.actualQty!=null?it.actualQty:it.qty;
-  if(eff==null)return 'Локация '+locToSpeech(it.loc)+'. Количество не распознано.';
-  if(eff===0) return 'Локация '+locToSpeech(it.loc)+'. Товара нет, пропускаем.';
-  let q='Взять '+qtyToSpeech(eff)+' '+shtuk(eff)+'.';
-  if(it.actualQty!=null)q+=' По плану '+it.qty+'.';
-  return 'Локация '+locToSpeech(it.loc)+'. '+q;
+  const loc=locToSpeech(it.loc);
+  if(eff==null)return tpl('ttsLoc',{loc:loc})+' '+t('ttsNoQty');
+  if(eff===0)return tpl('ttsLoc',{loc:loc})+' '+t('ttsZero');
+  let q=tpl('ttsTake',{q:qtyWord(eff)});
+  if(it.actualQty!=null)q+=tpl('ttsPlan',{n:it.qty});
+  return tpl('ttsLoc',{loc:loc})+' '+q;
 }
 
 /* ================= TTS (полудуплекс с микрофоном) ================= */
-let ruVoice=null, daVoice=null, ttsSpeaking=false, curUtter=null;
+let ruVoice=null, daVoice=null, enVoice=null, ttsSpeaking=false, curUtter=null;
 function pickVoice(){
   const vs=window.speechSynthesis?speechSynthesis.getVoices():[];
   ruVoice=vs.find(v=>/^ru/i.test(v.lang)&&/milena/i.test(v.name))||vs.find(v=>/^ru/i.test(v.lang))||null;
   daVoice=vs.find(v=>/^da/i.test(v.lang))||null;
+  enVoice=vs.find(v=>/^en/i.test(v.lang)&&/(samantha|daniel)/i.test(v.name))||vs.find(v=>/^en/i.test(v.lang))||null;
 }
+function ttsVoice(){return lang==='da'?{v:daVoice,c:'da-DK'}:lang==='en'?{v:enVoice,c:'en-US'}:{v:ruVoice,c:'ru-RU'};}
 if(window.speechSynthesis){speechSynthesis.onvoiceschanged=pickVoice;pickVoice();}
 
 function speak(text){
@@ -698,7 +935,7 @@ function speak(text){
   speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(text);
   curUtter=u;
-  u.lang='ru-RU';if(ruVoice)u.voice=ruVoice;
+  var vc=ttsVoice();u.lang=vc.c;if(vc.v)u.voice=vc.v;
   u.rate=parseFloat($('rate').value)||1.1;
   ttsSpeaking=true;
   const done=function(){
@@ -718,7 +955,7 @@ function speakSeq(arr){
   setTimeout(function(){
     arr.forEach(function(t){
       const u=new SpeechSynthesisUtterance(t);
-      u.lang='ru-RU';if(ruVoice)u.voice=ruVoice;
+      var vc=ttsVoice();u.lang=vc.c;if(vc.v)u.voice=vc.v;
       u.rate=parseFloat($('rate').value)||1.1;
       speechSynthesis.speak(u);
     });
@@ -740,7 +977,7 @@ function applyAudioSession(){updateAudio();}
 
 function speakDesc(){
   const it=items[idx];
-  if(!it||!it.desc){speak('Описание пустое.');return;}
+  if(!it||!it.desc){speak(t('ttsEmptyDesc'));return;}
   if(!window.speechSynthesis)return;
   speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(it.desc);
@@ -761,7 +998,7 @@ function render(){
   const it=items[idx];
   $('posTxt').textContent=(idx+1)+' / '+items.length;
   const sum=items.filter(i=>i.taken).reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
-  $('takenTxt').textContent='взято '+sum+' шт';
+  $('takenTxt').textContent=t('picked')+' '+sum+' '+t('pcs');
   const lp=String(it.loc).split('-');
   $('locBig').innerHTML='<span class="lg">'+(lp[0]||'')+'</span><span class="sep"></span><span class="lg">'+(lp[1]||'')+'</span>';
   if(renderedIdx!==idx){
@@ -775,18 +1012,18 @@ function render(){
   }else if(it.qty!=null){qb.classList.add('normal');qb.textContent='× '+it.qty;}
   else{qb.classList.add('unknown');qb.textContent='× ?';}
   $('descTxt').textContent=it.desc||'';
-  $('artTxt').textContent=it.article?('Артикул: '+it.article):'Артикул не распознан';
+  $('artTxt').textContent=it.article||'';
   const nx=items[idx+1];
-  $('nextTxt').textContent=nx?('→ далее: '+nx.loc):'последняя позиция';
+  $('nextTxt').textContent=nx?(t('nextLabel')+' '+nx.loc):t('lastPos');
   if(ecoShown){
     $('ecoLoc').textContent=it.loc;
     const eff=it.actualQty!=null?it.actualQty:it.qty;
     $('ecoQty').textContent='× '+(eff!=null?eff:'?');
     $('ecoDesc').textContent=it.desc||'';
+    $('ecoArt').textContent=it.article||'';
   }
 }
 function sayItem(){if(!paused){render();speak(itemPhrase(items[idx]));}}
-function doRepeat(){if(!inWork||paused)return;sayItem();scheduleRepeat();}
 
 function take(){
   if(paused||!inWork)return;
@@ -807,31 +1044,30 @@ function back(){
 function midSummary(){
   const done=items.filter(i=>i.taken);
   const sum=done.reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
-  speak('Взято '+done.length+' из '+items.length+' позиций. Всего '+sum+' штук.');
+  speak(tpl('ttsMid',{a:done.length,b:items.length,c:sum}));
 }
 function setPartialQty(){
   if(paused)return;
   const it=items[idx];
   const plan=it.qty;
-  const v=prompt('Сколько взял по факту?\n(по плану: '+(plan!=null?plan:'?')+')',
-    it.actualQty!=null?it.actualQty:'');
+  const v=prompt(tpl('partialPrompt',{plan:(plan!=null?plan:'?')}),it.actualQty!=null?it.actualQty:'');
   if(v===null)return;
   const n=parseInt(v,10);
-  if(isNaN(n)||n<0){alert('Введи число от 0 до '+(plan!=null?plan:'?')+'.');return;}
+  if(isNaN(n)||n<0){alert(tpl('partialBad',{plan:(plan!=null?plan:'?')}));return;}
   if(plan!=null&&n>plan){
-    alert('Нельзя взять больше плана ('+plan+').\nЕсли ошибка в листе — исправь Qty тапом на ×.');
+    alert(tpl('partialOver',{plan:plan}));
     return;
   }
   if(plan!=null&&n===plan){
     it.actualQty=null;render();saveSession();
-    speak('Восстановлено: '+qtyToSpeech(plan)+' '+shtuk(plan)+'.');return;
+    speak(tpl('ttsRestored',{q:qtyWord(plan)}));return;
   }
   it.actualQty=n;render();saveSession();
-  speak(n===0?'Ноль, товара нет.':'Записал '+qtyToSpeech(n)+' '+shtuk(n)+'.');
+  speak(n===0?t('ttsZeroNone'):tpl('ttsWrote',{q:qtyWord(n)}));
 }
 function finish(force){
   if(force!==true&&inWork&&items.some(function(i){return !i.taken;})){
-    if(!confirm('Не все позиции взяты ('+items.filter(i=>!i.taken).length+' осталось). Точно закончить?'))return;
+    if(!confirm(tpl('finishConfirm',{n:items.filter(i=>!i.taken).length})))return;
   }
   if(inWork)saveSession();   // к листу можно вернуться после итога
   inWork=false;paused=false;clearTimeout(repeatTimer);
@@ -843,11 +1079,10 @@ function finish(force){
   const sum=taken.reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
   const exp=parseInt($('expTotal').value,10);
   let check='';
-  if(!isNaN(exp))check=(sum===exp)?' = Total coli ✓':' (план: '+exp+', разница '+(exp-sum)+')';
-  $('doneSub').textContent=taken.length+' позиций · '+sum+' штук'+check
-    +(partial.length?' · '+partial.length+' неполных':'');
+  if(!isNaN(exp))check=(sum===exp)?t('eqTotal'):' ('+t('planLabel')+': '+exp+', '+t('diffLabel')+' '+(exp-sum)+')';
+  $('doneSub').textContent=taken.length+' '+t('positions')+' · '+sum+' '+t('pcs')+check+(partial.length?' · '+partial.length+' '+t('incompleteN'):'');
   const _doneView=items.slice().sort(byLoc);
-  let html='<table><tr><th>Локация</th><th>Взяли</th><th>По плану</th><th>✓</th></tr>';
+  let html='<table><tr><th>'+t('thLoc')+'</th><th>'+t('thTook')+'</th><th>'+t('thPlan')+'</th><th>✓</th></tr>';
   _doneView.forEach(function(it){
     const eff=it.actualQty!=null?it.actualQty:(it.qty!=null?it.qty:'-');
     const isP=it.taken&&it.actualQty!=null;
@@ -856,17 +1091,16 @@ function finish(force){
       +'<td>'+(it.taken?(isP?'⚠️':'✅'):'—')+'</td></tr>';
   });
   html+='</table>';
-  if(partial.length)html+='<p class="warn-line">⚠️ '+partial.length+' позиций — неполное кол-во. Перечеркни на бумаге.</p>';
+  if(partial.length)html+='<p class="warn-line">'+tpl('partialWarn',{n:partial.length})+'</p>';
   $('doneTable').innerHTML=html;
   beep(880,80);setTimeout(function(){beep(1320,120);},140);
-  speak('Лист готов. '+taken.length+' позиций, '+sum+' штук.'
-    +(partial.length?' Неполных: '+partial.length+'.':'')+' Сверь с бумагой.');
+  speak(tpl('ttsListDone',{n:taken.length,m:sum})+(partial.length?tpl('ttsIncomplete',{n:partial.length}):'')+t('ttsCheckPaper'));
 }
 function sayAll(){
-  const ph=['Итог.'];
+  const ph=[t('ttsSummary')];
   items.slice().sort(byLoc).filter(i=>i.taken).forEach(function(it){
     const eff=it.actualQty!=null?it.actualQty:it.qty;
-    ph.push(locToSpeech(it.loc)+' — '+(eff!=null?eff:'?')+(it.actualQty!=null?', сокращено':'')+'.');
+    ph.push(locToSpeech(it.loc)+' — '+(eff!=null?eff:'?')+(it.actualQty!=null?t('ttsShortened'):'')+'.');
   });
   speakSeq(ph);
 }
@@ -883,10 +1117,10 @@ function showInterimSummary(){
   const takenN=items.filter(i=>i.taken).length;
   const takenQ=items.filter(i=>i.taken).reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
   const partial=items.filter(i=>i.taken&&i.actualQty!=null).length;
-  let html='<p style="color:var(--dim);margin:0 0 12px">Взято: <b style="color:var(--txt)">'+
-    takenN+' / '+items.length+'</b> позиций · <b style="color:var(--txt)">'+takenQ+'</b> штук'+
-    (partial?' · <span style="color:var(--warn)">'+partial+' неполных</span>':'')+
-    '</p><table><tr><th>Локация</th><th>Взяли</th><th>План</th><th></th></tr>';
+  let html='<p style="color:var(--dim);margin:0 0 12px">'+t('pickedColon')+' <b style="color:var(--txt)">'+
+    takenN+' / '+items.length+'</b> '+t('positions')+' · <b style="color:var(--txt)">'+takenQ+'</b> '+t('pcs')+
+    (partial?' · <span style="color:var(--warn)">'+partial+' '+t('incompleteN')+'</span>':'')+
+    '</p><table><tr><th>'+t('thLoc')+'</th><th>'+t('thTook')+'</th><th>'+t('thPlanShort')+'</th><th></th></tr>';
   items.slice().sort(byLoc).forEach(function(it){
     let cls='sum-todo',status='○';
     const eff=it.taken?(it.actualQty!=null?it.actualQty:(it.qty!=null?it.qty:'-')):'—';
@@ -906,7 +1140,7 @@ function pauseWork(){
   curUtter=null;ttsSpeaking=false;
   hideEco();updateAudio();
   $('summaryModal').hidden=true;summaryHold=false;
-  $('pauseInfo').textContent='позиция '+(idx+1)+' / '+items.length+' · '+items[idx].loc;
+  $('pauseInfo').textContent=t('positionWord')+' '+(idx+1)+' / '+items.length+' · '+items[idx].loc;
   $('pauseOverlay').hidden=false;
 }
 function resumeWork(){
@@ -932,7 +1166,7 @@ function checkSavedSession(){
   if(!s||!s.items||!s.items.length)return;
   if(Date.now()-s.ts>12*3600*1000){clearSession();return;}   // старше 12ч — мусор
   const done=s.items.filter(i=>i.taken).length;
-  $('resumeInfo').textContent=done+' / '+s.items.length+' позиций · след. '+ (s.items[s.idx]?s.items[s.idx].loc:'—');
+  $('resumeInfo').textContent=done+' / '+s.items.length+' '+t('positionsShort')+' · '+t('nextShort')+' '+(s.items[s.idx]?s.items[s.idx].loc:'—');
   $('resumeBar').hidden=false;
   $('btnResumeSession').onclick=function(){
     items=s.items;idx=Math.min(s.idx,items.length-1);
@@ -1027,7 +1261,7 @@ async function podToggle(on){
         if(settings.pod&&inWork)pod.play().catch(function(){});
       });}
     try{await pod.play();}catch(e){
-      alert('Не удалось включить аудио-канал.');
+      alert(t('audioFail'));
       $('podChk').checked=false;settings.pod=false;saveSettings();updateModeUI();return;
     }
     registerPodHandlers();
@@ -1051,6 +1285,7 @@ function showEco(){
   const eff=items[idx].actualQty!=null?items[idx].actualQty:items[idx].qty;
   $('ecoQty').textContent='× '+(eff!=null?eff:'?');
   $('ecoDesc').textContent=items[idx].desc||'';
+  $('ecoArt').textContent=items[idx].article||'';
   $('eco').hidden=false;
 }
 function hideEco(){ecoShown=false;$('eco').hidden=true;}
@@ -1104,15 +1339,13 @@ function buildPrompt(n){
 }
 function aiKey(){try{return localStorage.getItem('aikey')||'';}catch(e){return'';}}
 function updateAiState(){
-  $('aiState').innerHTML=aiKey()
-    ?'AI-распознавание: <b style="color:var(--go)">подключено ✓</b> — фото читает Gemini'
-    :'AI не настроен. Нажми 🔑 и вставь бесплатный ключ с <b>aistudio.google.com</b>.';
+  $('aiState').innerHTML=aiKey()?t('aiConnected'):t('aiNotSet');
 }
 async function aiRecognizeAll(canvases,key){
   const parts=[{text:buildPrompt(canvases.length)}];
   for(const c of canvases)
     parts.push({inline_data:{mime_type:'image/jpeg',data:c.toDataURL('image/jpeg',0.78).split(',')[1]}});
-  let lastErr='все модели вернули ошибку';
+  let lastErr='all_models_failed';
   for(const model of AI_MODELS){
     const url='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key);
     let resp;
@@ -1153,7 +1386,7 @@ function renderQueue(){
   });
   const b=$('btnScanAI');
   b.hidden=!photoQ.length;
-  b.textContent='Сканировать ('+photoQ.length+' фото)';
+  b.textContent=t('scan')+' ('+photoQ.length+' '+t('photosWord')+')';
 }
 function clearQueue(){
   photoQ.forEach(function(ph){try{URL.revokeObjectURL(ph.url);}catch(e){}});
@@ -1169,27 +1402,27 @@ function addPhotos(files){
 async function runAI(){
   if(ocrBusy||!photoQ.length)return;
   const key=aiKey();
-  if(!key){showOcrErr('Нет AI-ключа. Нажми 🔑 и вставь ключ, потом «Сканировать».');return;}
+  if(!key){showOcrErr(t('ocrNoKey'));return;}
   ocrBusy=true;$('btnScanAI').disabled=true;$('btnPhoto').disabled=true;
   const st=$('ocrStatus');st.hidden=false;
   try{
-    st.textContent='Сжимаю '+photoQ.length+' фото…';
+    st.textContent=tpl('ocrCompress',{n:photoQ.length});
     const canvases=await Promise.all(photoQ.map(ph=>loadToCanvas(ph.file,1400)));
     let bytes=0;
     canvases.forEach(function(c){bytes+=Math.round(c.toDataURL('image/jpeg',0.78).length*0.75);});
-    st.textContent='AI читает лист ('+canvases.length+' фото, '+(bytes/1048576).toFixed(1)+' МБ, один запрос)…';
+    st.textContent=tpl('ocrReading',{n:canvases.length,mb:(bytes/1048576).toFixed(1)});
     const txt=await aiRecognizeAll(canvases,key);
     $('raw').value=txt;st.hidden=true;
     clearQueue();doParse();
   }catch(err){
     const c=err.message||'';
     let msg;
-    if(c==='no_network')msg='Нет связи с Google. Проверь интернет и нажми «Сканировать» ещё раз.';
-    else if(c==='503_unavailable')msg='Google временно недоступен (503). Подожди ~30 сек и нажми «Сканировать».';
-    else if(c==='429_ratelimit')msg='Слишком много запросов (429). Подожди минуту и нажми «Сканировать».';
-    else if(c==='400_badkey')msg='Ключ не принят (400). Проверь через 🔑.';
-    else if(c==='403_forbidden')msg='Доступ запрещён (403). Проверь через 🔑.';
-    else msg='Ошибка: '+c+'. Нажми «Сканировать» ещё раз.';
+    if(c==='no_network')msg=t('ocrNoNet');
+    else if(c==='503_unavailable')msg=t('ocr503');
+    else if(c==='429_ratelimit')msg=t('ocr429');
+    else if(c==='400_badkey')msg=t('ocr400');
+    else if(c==='403_forbidden')msg=t('ocr403');
+    else msg=tpl('ocrErr',{c:c});
     showOcrErr(msg);   // фото остаются в очереди
   }
   ocrBusy=false;$('btnScanAI').disabled=false;$('btnPhoto').disabled=false;
@@ -1208,7 +1441,7 @@ function doParse(){
 }
 function renderParse(){
   const out=$('parseOut');
-  if(!items.length){out.innerHTML='<p class="warn-line">Не нашёл ни одной локации вида 003-002.</p>';$('btnStart').hidden=true;return;}
+  if(!items.length){out.innerHTML='<p class="warn-line">'+t('noLoc')+'</p>';$('btnStart').hidden=true;return;}
   const locCount={};
   items.forEach(function(it){locCount[it.loc]=(locCount[it.loc]||0)+1;});
   const active=items.filter(function(i){return !i.excluded;});
@@ -1216,7 +1449,7 @@ function renderParse(){
   const miss=active.filter(function(i){return i.qty==null;}).length;
   const conf=active.filter(function(i){return i.conflict;}).length;
   const dup=active.filter(function(i){return locCount[i.loc]>1;}).length;
-  let html='<div class="pt-wrap"><div class="pt-head"><span>Лок.</span><span>Кол</span><span>Артикул / Описание</span><span></span></div>';
+  let html='<div class="pt-wrap"><div class="pt-head"><span>'+t('thLocShort')+'</span><span>'+t('thQtyShort')+'</span><span>'+t('thArtDesc')+'</span><span></span></div>';
   items.forEach(function(it,i){
     const cls=['pt-row'];
     if(it.qty==null||it.conflict)cls.push('bad');
@@ -1232,12 +1465,12 @@ function renderParse(){
   });
   html+='</div>';
   const exp=parseInt($('expTotal').value,10);
-  let line='Позиций: '+active.length+' · Сумма Qty: '+sum,cls='ok-line';
-  if(!isNaN(exp)){if(sum===exp)line+=' = Total coli ✓';else{line+=' ≠ Total coli ('+exp+'), разница '+(exp-sum);cls='warn-line';}}
-  else line+=' — сверь с «Total coli» на листе';
+  let line=tpl('parsePos',{n:active.length,sum:sum}),cls='ok-line';
+  if(!isNaN(exp)){if(sum===exp)line+=t('eqTotal');else{line+=tpl('neTotal',{exp:exp,d:(exp-sum)});cls='warn-line';}}
+  else line+=t('checkTotal');
   html+='<p class="'+cls+'">'+line+'</p>';
-  if(dup)html+='<p class="warn-line">⚠️ '+dup+' строк с повторяющейся локацией. На чистом листе локации не повторяются — ИИ мог сдвинуть колонку. Сверь с бумагой и вычеркни лишние (✕).</p>';
-  if(miss||conf)html+='<p class="warn-line">⚠️ '+(miss?miss+' без Qty. ':'')+(conf?conf+' с расхождением. ':'')+'Тапни число, чтобы исправить.</p>';
+  if(dup)html+='<p class="warn-line">'+tpl('dupRows',{n:dup})+'</p>';
+  if(miss||conf)html+='<p class="warn-line">⚠️ '+(miss?tpl('missQty',{n:miss}):'')+(conf?tpl('confQty',{n:conf}):'')+t('fixHint')+'</p>';
   out.innerHTML=html;
   out.querySelectorAll('.pt-qty').forEach(function(el){
     el.addEventListener('click',function(){editQty(parseInt(el.getAttribute('data-q'),10));});
@@ -1255,7 +1488,7 @@ function renderParse(){
 }
 function editQty(i){
   const it=items[i];if(!it)return;
-  const v=prompt('Qty для '+it.loc+':',it.qty!=null?it.qty:'');
+  const v=prompt(tpl('qtyPrompt',{loc:it.loc}),it.qty!=null?it.qty:'');
   if(v===null)return;const n=parseInt(v,10);
   if(!isNaN(n)&&n>=0){manualQty[it.loc]=n;it.qty=n;it.conflict=false;renderParse();}
 }
@@ -1298,7 +1531,7 @@ $('btnPhoto').addEventListener('click',function(){$('photoInput').click();});
 $('photoInput').addEventListener('change',function(e){addPhotos(e.target.files);e.target.value='';});
 $('btnScanAI').addEventListener('click',runAI);
 $('btnKey').addEventListener('click',function(){
-  const v=prompt('API-ключ Google AI Studio (вида AIza… или AQ…).\nПусто = удалить.',aiKey());
+  const v=prompt(t('aiKeyPrompt'),aiKey());
   if(v===null)return;
   try{v.trim()?localStorage.setItem('aikey',v.trim()):localStorage.removeItem('aikey');}catch(e){}
   updateAiState();
@@ -1316,8 +1549,6 @@ $('btnTake').addEventListener('click',take);
 $('btnPause').addEventListener('click',pauseWork);
 $('btnResume').addEventListener('click',resumeWork);
 $('btnBack').addEventListener('click',back);
-$('btnArt').addEventListener('click',function(){if(Date.now()>=uiShield)speak(articleToSpeech(items[idx]&&items[idx].article));});
-$('btnRepeat').addEventListener('click',function(){if(Date.now()>=uiShield)doRepeat();});
 $('btnPartial').addEventListener('click',function(){if(Date.now()>=uiShield)setPartialQty();});
 $('summaryTap').addEventListener('click',function(){if(Date.now()>=uiShield){beep(660,50);midSummary();}});
 $('moreBar').addEventListener('click',function(){
@@ -1343,7 +1574,7 @@ $('btnEdit').addEventListener('click',function(){
 $('qtyBig').addEventListener('click',function(){
   if(!items[idx]||Date.now()<uiShield)return;
   const it=items[idx];
-  const v=prompt('Qty для '+it.loc+':',it.qty!=null?it.qty:'');
+  const v=prompt(tpl('qtyPrompt',{loc:it.loc}),it.qty!=null?it.qty:'');
   if(v===null)return;const n=parseInt(v,10);
   if(!isNaN(n)&&n>=0){manualQty[it.loc]=n;it.qty=n;it.conflict=false;render();saveSession();}
 });
@@ -1378,34 +1609,34 @@ function updateBonus(){
   const el=$('logBonus');if(!el)return;
   const sum=logSum();
   const f=timeDec($('logFrom').value),t=timeDec($('logTo').value);
-  const bm=parseInt($('logBreak').value,10);const bd=isNaN(bm)?0:bm/100;
-  if(f==null||t==null){el.innerHTML='<span class="lb-dim">Заполни «Пришёл» и «Ушёл» — посчитаю coli/час и бонус.</span>';return;}
+  const bm=parseInt($('logBreak').value,10);const bd=isNaN(bm)?0:bm/60;   // их система: 36 мин = 0,60
+  if(f==null||t==null){el.innerHTML='<span class="lb-dim">'+t('bonusFill')+'</span>';return;}
   let hrs=t-f-bd;if(hrs<=0)hrs=(t+24)-f-bd;
-  if(hrs<=0){el.innerHTML='<span class="lb-dim">Проверь время.</span>';return;}
+  if(hrs<=0){el.innerHTML='<span class="lb-dim">'+t('bonusCheck')+'</span>';return;}
   const cph=sum/hrs;
-  let band,cls,bonus;
-  if(cph<150){band='ниже бонуса (нужно 150+)';cls='lb-low';bonus=0;}
-  else if(cph>=300){band='максимум 🔥';cls='lb-max';bonus=30;}
-  else{bonus=Math.round((cph-150)/150*30);band='в бонусе';cls='lb-on';}
-  let html='<div class="lb-row '+cls+'"><div><div class="lb-num">'+Math.round(cph)+'</div><div class="lb-lab">coli / час</div></div>'+
-    '<div class="lb-side"><div class="lb-band">'+band+'</div><div class="lb-kr">&#8776; +'+bonus+' кр/ч</div></div></div>';
+  let band,cls;
+  if(cph<150){band=t('bandLow');cls='lb-low';}
+  else if(cph>=300){band=t('bandMax');cls='lb-max';}
+  else{band=t('bandOn');cls='lb-on';}
+  let html='<div class="lb-row '+cls+'"><div><div class="lb-num">'+Math.round(cph)+'</div><div class="lb-lab">'+t('coliPerH')+'</div></div>'+
+    '<div class="lb-side"><div class="lb-band">'+band+'</div></div></div>';
   const st=timeDec($('logStart').value);
-  if(st!=null){let rh=t-st-bd;if(rh<=0)rh=(t+24)-st-bd;if(rh>0)html+='<div class="lb-real">Реальный пейс от начала сбора ('+escHtml($('logStart').value)+'): <b>'+Math.round(sum/rh)+'</b> coli/ч</div>';}
-  html+='<div class="lb-note">&#8776; оценка. Точная ставка между 150 и 300 может отличаться. На сводке лидера перерыв = 0,60 (60 мин).</div>';
+  if(st!=null){let rh=t-st-bd;if(rh<=0)rh=(t+24)-st-bd;if(rh>0)html+='<div class="lb-real">'+t('realPace')+' ('+escHtml($('logStart').value)+'): <b>'+Math.round(sum/rh)+'</b> '+t('coliPerHShort')+'</div>';}
+  html+='<div class="lb-note">'+t('bonusNote')+'</div>';
   el.innerHTML=html;
 }
 function renderLog(){
   $('logSummary').textContent=logSum();
-  $('logOrders').textContent='Заказов: '+shiftLog.length;
+  $('logOrders').textContent=t('ordersColon')+' '+shiftLog.length;
   updateBonus();
   const box=$('logList');
   if(!shiftLog.length){
-    let h='<div class="log-empty">Пусто. Добавь butik и coli после готового листа.';
-    if(lastClearedLog&&lastClearedLog.length)h+='<br><button class="btn btn-small log-restore" id="logRestore">↩ Вернуть '+lastClearedLog.length+' заказов</button>';
+    let h='<div class="log-empty">'+t('jEmpty');
+    if(lastClearedLog&&lastClearedLog.length)h+='<br><button class="btn btn-small log-restore" id="logRestore">'+tpl('restoreOrders',{n:lastClearedLog.length})+'</button>';
     h+='</div>';
     box.innerHTML=h;
     const rb=$('logRestore');
-    if(rb)rb.addEventListener('click',function(){shiftLog=lastClearedLog.slice();lastClearedLog=null;if(!saveLog())alert('⚠ Не удалось сохранить журнал!');renderLog();try{beep(760,60);}catch(e){}});
+    if(rb)rb.addEventListener('click',function(){shiftLog=lastClearedLog.slice();lastClearedLog=null;if(!saveLog())alert(t('jSaveFail2'));renderLog();try{beep(760,60);}catch(e){}});
     return;
   }
   let h='';
@@ -1417,9 +1648,9 @@ function renderLog(){
     b.addEventListener('click',function(){
       const i=parseInt(b.getAttribute('data-i'),10);
       const e=shiftLog[i];if(!e)return;
-      if(!confirm('Удалить заказ butik '+(e.store||'—')+' ('+(e.coli!=null?e.coli:'?')+' coli)?'))return;
+      if(!confirm(tpl('jDelConfirm',{st:(e.store||'—'),co:(e.coli!=null?e.coli:'?')})))return;
       shiftLog.splice(i,1);
-      if(!saveLog())alert('⚠ Не удалось сохранить журнал!');
+      if(!saveLog())alert(t('jSaveFail2'));
       renderLog();
     });
   });
@@ -1435,13 +1666,13 @@ function saveMeta(){try{localStorage.setItem(META_KEY,JSON.stringify({name:$('lo
 function logAddEntry(store,coli){
   store=String(store==null?'':store).trim();
   const co=parseInt(coli,10);
-  if(!store&&isNaN(co)){alert('Укажи butik или коли.');return false;}
+  if(!store&&isNaN(co)){alert(t('jNeed'));return false;}
   const dup=shiftLog.some(function(e){return String(e.store)===store&&(parseInt(e.coli,10)||null)===(isNaN(co)?null:co);});
   if(dup){
-    if(!confirm('Заказ butik '+(store||'—')+' на '+(isNaN(co)?'?':co)+' coli уже в журнале.\n\nЭто ДРУГОЙ заказ под тем же номером (напр. chilled и dry на разных палетах)?\nОК — добавлю отдельной строкой. Отмена — не добавлять.'))return false;
+    if(!confirm(tpl('jDup',{st:(store||'—'),co:(isNaN(co)?'?':co)})))return false;
   }
   shiftLog.push({store:store,coli:isNaN(co)?null:co,t:Date.now()});
-  if(!saveLog()){alert('⚠ НЕ СОХРАНИЛОСЬ! Журнал в опасности — перепиши данные вручную.');}
+  if(!saveLog()){alert(t('jSaveFail'));}
   renderLog();
   try{beep(660,50);setTimeout(function(){beep(990,70);},70);}catch(e){}
   return true;
@@ -1452,7 +1683,7 @@ function openLog(store,coli){
   $('logFrom').value=meta.from||'';
   $('logTo').value=meta.to||'';
   $('logStart').value=meta.start||'';
-  $('logBreak').value=meta.brk||'40';
+  $('logBreak').value=meta.brk||'36';
   $('logReason').value=meta.reason||'';
   $('logDate').value=todayStr();
   $('logStore').value=store!=null?store:'';
@@ -1484,24 +1715,24 @@ $('logFromList').addEventListener('click',function(){
 $('logCopy').addEventListener('click',function(){
   const sum=logSum();
   const lines=[];
-  if($('logName').value)lines.push('Имя: '+$('logName').value);
-  lines.push('Дата: '+$('logDate').value);
-  if($('logFrom').value||$('logTo').value)lines.push('Смена: '+($('logFrom').value||'?')+'–'+($('logTo').value||'?'));
-  if($('logStart').value)lines.push('Начал сбор: '+$('logStart').value+($('logReason').value?' ('+$('logReason').value+')':''));
-  lines.push('','Butik   Coli');
+  if($('logName').value)lines.push(t('cpName')+$('logName').value);
+  lines.push(t('cpDate')+$('logDate').value);
+  if($('logFrom').value||$('logTo').value)lines.push(t('cpShift')+($('logFrom').value||'?')+'–'+($('logTo').value||'?'));
+  if($('logStart').value)lines.push(t('cpStart')+$('logStart').value+($('logReason').value?' ('+$('logReason').value+')':''));
+  lines.push('',t('cpButikColi'));
   shiftLog.forEach(function(e){lines.push((e.store||'—')+'   '+(e.coli!=null?e.coli:'?'));});
-  lines.push('','Заказов: '+shiftLog.length+' · Всего коли: '+sum);
-  const f=timeDec($('logFrom').value),t=timeDec($('logTo').value),bm=parseInt($('logBreak').value,10),bd=isNaN(bm)?0:bm/100;
-  if(f!=null&&t!=null){let hrs=t-f-bd;if(hrs<=0)hrs=(t+24)-f-bd;if(hrs>0)lines.push('Coli/час ≈ '+Math.round(sum/hrs));}
+  lines.push('',tpl('cpOrders',{n:shiftLog.length,s:sum}));
+  const f=timeDec($('logFrom').value),tt=timeDec($('logTo').value),bm=parseInt($('logBreak').value,10),bd=isNaN(bm)?0:bm/60;
+  if(f!=null&&tt!=null){let hrs=tt-f-bd;if(hrs<=0)hrs=(tt+24)-f-bd;if(hrs>0)lines.push(tpl('cpPerHour',{v:Math.round(sum/hrs)}));}
   const txt=lines.join('\n');
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){try{beep(880,70);}catch(e){}},function(){});}
 });
 $('logClear').addEventListener('click',function(){
   if(!shiftLog.length)return;
-  if(!confirm('Очистить ВЕСЬ журнал? ('+shiftLog.length+' заказов)\nПока журнал открыт, можно вернуть кнопкой «↩ Вернуть».'))return;
+  if(!confirm(tpl('jClearConfirm',{n:shiftLog.length})))return;
   lastClearedLog=shiftLog.slice();
   shiftLog=[];
-  if(!saveLog())alert('⚠ Не удалось сохранить журнал!');
+  if(!saveLog())alert(t('jSaveFail2'));
   renderLog();
 });
 $('btnDoneLog').addEventListener('click',function(){
@@ -1571,7 +1802,7 @@ function openLayout(ctx){
     layoutFree=items.filter(function(i){return !i.taken;});
   }else{
     const act=items.filter(function(i){return !i.excluded;});
-    if(!act.length){alert('Все позиции вычеркнуты — нечего собирать.');return;}
+    if(!act.length){alert(t('allExcluded'));return;}
     layoutLocked=[];
     layoutFree=act;
   }
@@ -1580,7 +1811,7 @@ function openLayout(ctx){
   layoutBaseline=layoutFree.slice();      // запоминаем состояние для «Сбросить»
   layoutBaselineMode=layoutMode;
   layoutBaseQ=bigQty();
-  $('btnLayoutApply').textContent=ctx==='edit'?'✓ Применить':'▶ Начать';
+  $('btnLayoutApply').textContent=t(ctx==='edit'?'apply':'begin');
   $('layoutListWrap').scrollTop=0;
   renderLayout();
   $('layoutModal').hidden=false;
@@ -1597,15 +1828,12 @@ function renderLayout(){
   const th=bigQty();
   $('bigQtyRow').hidden=(layoutMode!=='qtydesc');
   if(document.activeElement!==$('bigQtyInp'))$('bigQtyInp').value=th;
-  const D={
-    normal:'По локациям, как на листе — обычный порядок обхода.',
-    qtydesc:'Сначала крупные позиции ('+th+'+ шт) от большего к меньшему. Остальное ('+(th-1)+' и меньше) — по локациям. Потяни строку — порядок станет ручным.',
-    custom:'Тяни строку справа (≡) или подними слева (⤒). Озвучка идёт сверху вниз.'
-  };
+  const D={normal:t('descNormal'),qtydesc:tpl('descQty',{th:th,th1:(th-1)}),custom:t('descManual')};
   $('layoutDesc').textContent=D[layoutMode]||'';
+  $('btnLayoutApply').textContent=t(layoutCtx==='edit'?'apply':'begin');
   const all=layoutLocked.concat(layoutFree);
   let bigN=0;all.forEach(function(it){if(it.qty!=null&&it.qty>=th)bigN++;});
-  $('layoutStats').textContent=all.length+' позиций · крупных ('+th+'+): '+bigN;
+  $('layoutStats').textContent=tpl('layoutStats',{n:all.length,th:th,big:bigN});
   let pos=0,html='';
   layoutLocked.forEach(function(it){
     pos++;
@@ -1770,9 +1998,13 @@ document.addEventListener('touchmove',function(e){
 },{passive:false});
 $('locBig').addEventListener('click',function(){if(Date.now()<uiShield)return;beep(660,50);openLayout('edit');});
 
+document.querySelectorAll('#langSel button').forEach(function(b){
+  b.addEventListener('click',function(){setLang(b.getAttribute('data-lang'));});
+});
 applySettingsToUI();
 updateAiState();
 checkSavedSession();
+applyLang();
 
 /* запрет зума: pinch двумя пальцами (iOS Safari). Double-tap гасит touch-action:manipulation */
 document.addEventListener('gesturestart',function(e){e.preventDefault();},{passive:false});
