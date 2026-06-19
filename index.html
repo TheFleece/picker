@@ -303,12 +303,12 @@ body.work #moreBar{background:#0a0e13;}
 </style>
 </head>
 <body>
-<div id="rotLock"><div class="rg">▯</div><div class="rt">Поверни телефон вертикально</div><div class="rt" style="font-size:14px;opacity:.6;font-weight:400">Hold telefonen lodret</div></div>
+<div id="rotLock"><div class="rg">▯</div><div class="rt" data-i18n="rotPortrait">Поверни телефон вертикально</div></div>
 
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
   <div class="hdr">
-    <div><h1>Picker</h1><p class="sub" style="margin-bottom:0">v3.11</p></div>
+    <div><h1>Picker</h1><p class="sub" style="margin-bottom:0">v3.12</p></div>
     <div class="lang" id="langSel">
       <button data-lang="ru">RU</button>
       <button data-lang="en">EN</button>
@@ -607,6 +607,7 @@ qtyPrompt:'Qty для {loc}:', partialPrompt:'Сколько взял по фа�
 partialBad:'Введи число от 0 до {plan}.', partialOver:'Нельзя взять больше плана ({plan}).\nЕсли ошибка в листе — исправь Qty тапом на ×.', partialBarLabel:'Взял:',
 finishConfirm:'Не все позиции взяты ({n} осталось). Точно закончить?', allExcluded:'Все позиции вычеркнуты — нечего собирать.',
 aiKeyPrompt:'API-ключ Google AI Studio (вида AIza… или AQ…).\nПусто = удалить.',
+rotPortrait:'Поверни телефон вертикально',
 ocrCompress:'Сжимаю {n} фото…', ocrReading:'AI читает лист ({n} фото, {mb} МБ, один запрос)…',
 ocrNoKey:'Нет AI-ключа. Нажми «AI-ключ» и вставь ключ, потом «Сканировать».',
 ocrNoNet:'Нет связи с Google. Проверь интернет и нажми «Сканировать» ещё раз.',
@@ -686,6 +687,7 @@ qtyPrompt:'Qty for {loc}:', partialPrompt:'How many did you actually take?\n(pla
 partialBad:'Enter a number from 0 to {plan}.', partialOver:'You cannot take more than planned ({plan}).\nIf the sheet is wrong — fix Qty by tapping ×.', partialBarLabel:'Picked:',
 finishConfirm:'Not all positions are picked ({n} left). Finish anyway?', allExcluded:'All positions are crossed out — nothing to pick.',
 aiKeyPrompt:'Google AI Studio API key (like AIza… or AQ…).\nEmpty = remove.',
+rotPortrait:'Turn the phone upright',
 ocrCompress:'Compressing {n} photos…', ocrReading:'AI is reading the list ({n} photos, {mb} MB, one request)…',
 ocrNoKey:'No AI key. Tap «AI key» and paste a key, then «Scan».',
 ocrNoNet:'No connection to Google. Check the internet and tap «Scan» again.',
@@ -765,6 +767,7 @@ qtyPrompt:'Qty for {loc}:', partialPrompt:'Hvor mange tog du faktisk?\n(planlagt
 partialBad:'Indtast et tal fra 0 til {plan}.', partialOver:'Du kan ikke tage mere end planlagt ({plan}).\nHvis listen er forkert — ret Qty ved at trykke ×.', partialBarLabel:'Taget:',
 finishConfirm:'Ikke alle positioner er taget ({n} tilbage). Afslut alligevel?', allExcluded:'Alle positioner er streget ud — intet at plukke.',
 aiKeyPrompt:'Google AI Studio API-nøgle (som AIza… eller AQ…).\nTom = fjern.',
+rotPortrait:'Hold telefonen lodret',
 ocrCompress:'Komprimerer {n} fotos…', ocrReading:'AI læser listen ({n} fotos, {mb} MB, én forespørgsel)…',
 ocrNoKey:'Ingen AI-nøgle. Tryk «AI-nøgle» og indsæt en nøgle, derefter «Scan».',
 ocrNoNet:'Ingen forbindelse til Google. Tjek internettet og tryk «Scan» igen.',
