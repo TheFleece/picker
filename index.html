@@ -43,6 +43,11 @@ body{margin:0;background:var(--bg);color:var(--txt);-webkit-user-select:none;use
 #scrSetup,#scrWork{min-height:calc(100svh - 30px);display:flex;flex-direction:column;}
 .grow{flex:1;}
 body.work{background:#000;}
+#rotLock{position:fixed;inset:0;z-index:9000;background:var(--bg);color:var(--txt);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:28px;}
+#rotLock .rg{font-size:64px;line-height:1;animation:rotwig 1.6s ease-in-out infinite;}
+#rotLock .rt{font-size:19px;font-weight:600;max-width:280px;}
+@keyframes rotwig{0%,100%{transform:rotate(0)}50%{transform:rotate(-90deg)}}
+@media (orientation:landscape) and (max-height:560px){#rotLock{display:flex;}}
 h1{font-size:20px;margin:4px 0 2px;}
 .sub{color:var(--dim);font-size:13px;margin:0 0 14px;}
 .hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
@@ -298,11 +303,12 @@ body.work #moreBar{background:#0a0e13;}
 </style>
 </head>
 <body>
+<div id="rotLock"><div class="rg">▯</div><div class="rt">Поверни телефон вертикально</div><div class="rt" style="font-size:14px;opacity:.6;font-weight:400">Hold telefonen lodret</div></div>
 
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
   <div class="hdr">
-    <div><h1>Picker</h1><p class="sub" style="margin-bottom:0">v3.10</p></div>
+    <div><h1>Picker</h1><p class="sub" style="margin-bottom:0">v3.11</p></div>
     <div class="lang" id="langSel">
       <button data-lang="ru">RU</button>
       <button data-lang="en">EN</button>
@@ -1213,9 +1219,14 @@ let wakeLock=null;
 async function keepAwake(){
   try{if('wakeLock'in navigator)wakeLock=await navigator.wakeLock.request('screen');}catch(e){}
 }
+function lockPortrait(){
+  try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('portrait').catch(function(){});}catch(e){}
+}
+lockPortrait();
 document.addEventListener('visibilitychange',function(){
-  if(document.visibilityState==='visible'&&inWork){
-    keepAwake();lastTouch=Date.now();
+  if(document.visibilityState!=='visible')return;
+  if(inWork||ocrBusy){keepAwake();lastTouch=Date.now();}   // ocrBusy: вернулись в Safari посреди скана
+  if(inWork){
     ensureAudio();updateAudio();
     if(settings.pod&&pod&&pod.paused){pod.play().catch(function(){});registerPodHandlers();}
   }
@@ -1434,6 +1445,7 @@ async function runAI(){
   const key=aiKey();
   if(!key){showOcrErr(t('ocrNoKey'));return;}
   ocrBusy=true;$('btnScanAI').disabled=true;$('btnPhoto').disabled=true;
+  keepAwake();   // экран не гаснет пока AI читает лист (главный экран, inWork=false)
   const st=$('ocrStatus');st.hidden=false;
   try{
     st.textContent=tpl('ocrCompress',{n:photoQ.length});
