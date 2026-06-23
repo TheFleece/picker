@@ -1,0 +1,10 @@
+# Public repository — publish ONLY the files explicitly allowed below.
+# Everything else (local notes, drafts, configs, tests) stays private by default.
+
+/*
+!/.gitignore
+!/LICENSE
+!/README.md
+!/index.html
+!/pitch.html
+!/assets/

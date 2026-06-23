@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Picker — the paper list, replaced</title>
+<meta name="description" content="A tool a picker built on the floor: hands out the next order in line, captures every shortfall, keeps the bonus count exact. Works on any phone. Let's run a four-week pilot.">
+<meta name="theme-color" content="#0b0f14">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* palette mirrors the actual app (index.html) so deck + app read as one product */
+  --bg:#0b0f14;
+  --bg-2:#0e141b;
+  --card:#141a22;
+  --card-2:#1b2430;
+  --line:#243040;
+  --line-2:#33445a;
+  --txt:#e8eef5;
+  --muted:#8fa1b3;
+  --faint:#62748a;
+  --go:#2dd46f;        /* primary action — the green "TAKEN" of the app */
+  --go-deep:#1f9d51;
+  --amber:#ffb020;     /* accent — the "Less"/shortfall data */
+  --bad:#ff5d5d;
+  --blue:#4aa3ff;
+  --r:18px;
+  --ease:cubic-bezier(.2,.7,.2,1);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;}
+body{
+  background:var(--bg);color:var(--txt);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  font-size:clamp(15px,1.4vw,18px);line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(1100px 620px at 80% -10%, rgba(45,212,111,.10), transparent 60%),
+    radial-gradient(900px 600px at 4% 0%, rgba(255,176,32,.06), transparent 55%);
+}
+h1,h2,h3,.brand,.eyebrow,.num,.stat-n{font-family:'Space Grotesk','Inter',system-ui,sans-serif}
+.num{font-variant-numeric:tabular-nums}
+a{color:inherit;text-decoration:none}
+
+/* ============ DECK ============ */
+.deck{position:fixed;inset:0;z-index:1}
+.slide{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  padding:clamp(46px,7vh,72px) clamp(18px,5vw,60px) clamp(82px,13vh,118px);
+  opacity:0;visibility:hidden;
+  transform:translateY(10px) scale(.992);
+  transition:opacity .5s var(--ease),transform .5s var(--ease),visibility .5s;
+  overflow-y:auto;
+}
+.slide.active{opacity:1;visibility:visible;transform:none;z-index:2}
+.inner{width:100%;max-width:1080px;margin:auto}
+
+/* staggered entrance */
+[data-anim]{opacity:0;transform:translateY(26px);
+  transition:opacity .6s var(--ease),transform .6s var(--ease)}
+.slide.active [data-anim]{opacity:1;transform:none;
+  transition-delay:calc(var(--i,0) * 80ms + 100ms)}
+
+.eyebrow{display:inline-flex;align-items:center;gap:9px;
+  font-size:clamp(11px,1.1vw,13px);font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--go)}
+.eyebrow::before{content:"";width:22px;height:2px;background:var(--go);border-radius:2px}
+.eyebrow.amber{color:var(--amber)}
+.eyebrow.amber::before{background:var(--amber)}
+h1{font-size:clamp(32px,6vw,62px);line-height:1.03;letter-spacing:-.025em;font-weight:700;margin:18px 0 0}
+h2{font-size:clamp(26px,4.4vw,46px);line-height:1.08;letter-spacing:-.02em;font-weight:700;margin:16px 0 0}
+.hl{color:var(--go)}
+.hl-a{color:var(--amber)}
+.lead{font-size:clamp(15px,1.7vw,20px);color:var(--muted);margin:18px 0 0;max-width:56ch}
+p.body{font-size:clamp(15px,1.6vw,19px);color:var(--muted);margin:16px 0 0;max-width:62ch}
+p.body b,.lead b{color:var(--txt);font-weight:600}
+.muted{color:var(--muted)}
+
+/* layout helpers */
+.split{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(28px,5vw,64px);align-items:center}
+@media(max-width:840px){
+  .split{grid-template-columns:1fr;gap:26px}
+  .stage{margin-top:4px}
+}
+
+/* ============ phone mockup (mirrors the app screens) ============ */
+.stage{display:grid;place-items:center;position:relative}
+.glow{position:absolute;width:62%;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle,rgba(45,212,111,.20),transparent 65%);filter:blur(12px)}
+.glow.amber{background:radial-gradient(circle,rgba(255,176,32,.22),transparent 65%)}
+.phone{position:relative;width:clamp(228px,62vw,272px);border-radius:42px;padding:12px;
+  background:linear-gradient(160deg,#222c38,#0d141b);
+  border:1px solid var(--line-2);
+  box-shadow:0 30px 70px -24px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.06)}
+.screen{border-radius:30px;background:#000;overflow:hidden;border:1px solid rgba(255,255,255,.05)}
+.scr-pad{padding:14px 16px 16px}
+.s-top{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--faint);font-weight:500;font-variant-numeric:tabular-nums}
+.s-loc{font-family:'Space Grotesk';font-weight:800;text-align:center;line-height:.92;letter-spacing:1px;
+  font-size:clamp(46px,13vw,58px);margin:14px 0 0;color:#fff;font-variant-numeric:tabular-nums}
+.s-sep{width:52px;height:5px;border-radius:3px;background:#2e3946;margin:9px auto}
+.s-qty{text-align:center;font-family:'Space Grotesk';font-weight:800;color:var(--go);font-size:clamp(30px,8vw,38px);line-height:1.05}
+.s-qty .orig{display:block;color:var(--faint);text-decoration:line-through;font-size:.62em;font-weight:700}
+.s-qty .act{display:block;color:var(--bad);font-size:1em}
+.s-desc{text-align:center;color:var(--muted);font-size:13.5px;margin-top:10px}
+.s-art{text-align:center;color:var(--faint);font-size:12px;margin-top:3px;font-variant-numeric:tabular-nums}
+.s-next{text-align:center;color:#46586c;font-size:12.5px;margin-top:9px;font-variant-numeric:tabular-nums}
+.s-take{margin-top:14px;background:var(--go);color:#06250f;font-weight:800;font-family:'Space Grotesk';
+  font-size:18px;border-radius:14px;padding:14px;display:flex;align-items:center;justify-content:center;gap:9px}
+.s-rows{display:flex;gap:8px;margin-top:8px}
+.s-rows .k{flex:1;background:#10161e;border:1px solid var(--line);border-radius:12px;
+  padding:11px 4px;text-align:center;font-size:13px;color:var(--muted);font-weight:600}
+.s-rows .k.warn{color:var(--amber);border-color:#3a2d12;background:#1c1407}
+.s-hint{margin-top:11px;text-align:center;font-size:10.5px;color:#3f5165;letter-spacing:.02em}
+/* "Less" amber bar */
+.s-pbar{display:flex;align-items:center;gap:8px;margin-top:12px;background:#1c1407;border:1px solid var(--amber);border-radius:13px;padding:9px 10px}
+.s-pbar .lab{color:var(--amber);font-size:13px;font-weight:800;flex:0 0 auto}
+.s-pbar .inp{flex:1;background:#000;border:1px solid var(--amber);border-radius:9px;color:#fff;font-size:20px;font-weight:800;text-align:center;padding:7px;font-variant-numeric:tabular-nums}
+.s-pbar .ok{flex:0 0 auto;width:44px;background:var(--go);border-radius:9px;color:#06250f;font-size:20px;font-weight:800;text-align:center;padding:8px 0}
+.s-pbar .x{flex:0 0 auto;width:40px;background:#141a22;border:1px solid var(--line);border-radius:9px;color:var(--muted);font-size:15px;text-align:center;padding:9px 0}
+/* journal screen */
+.s-jtitle{font-family:'Space Grotesk';font-weight:700;font-size:15px;margin-top:2px}
+.s-jmeta{color:var(--faint);font-size:11.5px;margin-top:2px}
+.s-jtot{font-family:'Space Grotesk';font-weight:800;color:var(--go);font-size:clamp(36px,10vw,46px);line-height:1;margin-top:12px}
+.s-jtotl{color:var(--muted);font-size:12px;margin-top:2px}
+.s-jpace{display:inline-block;margin-top:11px;background:rgba(255,176,32,.12);color:var(--amber);font-size:12px;font-weight:600;padding:5px 11px;border-radius:8px}
+.s-prog{margin-top:11px}
+.s-prog-track{height:7px;border-radius:4px;background:#1b2430;overflow:hidden}
+.s-prog-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--go),var(--amber))}
+.s-prog-l{margin-top:5px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between}
+.s-jtbl{margin-top:13px;border-top:1px solid var(--line)}
+.s-jrow{display:flex;justify-content:space-between;padding:8px 2px;border-bottom:1px solid var(--line);font-size:13px;font-variant-numeric:tabular-nums}
+.s-jrow span:first-child{color:var(--muted)}
+.s-jrow span:last-child{font-weight:700}
+.cap{margin-top:14px;text-align:center;font-size:12.5px;color:var(--faint)}
+.cap b{color:var(--muted);font-weight:600}
+
+/* ============ cards / grids ============ */
+.cards{display:grid;gap:14px;margin-top:clamp(22px,3.5vw,38px)}
+.cards.c3{grid-template-columns:repeat(3,1fr)}
+.cards.c2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:820px){.cards.c3{grid-template-columns:1fr}.cards.c2{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:clamp(18px,2.4vw,26px)}
+.card.bad-ic .ic{background:rgba(255,93,93,.12);color:var(--bad)}
+.card h3{font-size:clamp(16px,1.7vw,19px);font-weight:600;letter-spacing:-.01em;margin:0 0 7px}
+.card p{color:var(--muted);font-size:clamp(13.5px,1.4vw,15.5px);margin:0;line-height:1.55}
+.ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;margin-bottom:14px;
+  background:rgba(45,212,111,.12);color:var(--go)}
+.ic.amber{background:rgba(255,176,32,.14);color:var(--amber)}
+
+/* two-mode columns */
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
+@media(max-width:820px){.modes{grid-template-columns:1fr}}
+.mode{border:1px solid var(--line);border-radius:var(--r);padding:clamp(16px,2.2vw,22px);background:var(--card)}
+.mode .tag{display:inline-flex;align-items:center;gap:8px;font-family:'Space Grotesk';font-weight:600;font-size:14px}
+.mode.ear .tag{color:var(--go)} .mode.btn .tag{color:var(--blue)}
+.mode p{color:var(--muted);font-size:clamp(13.5px,1.4vw,15.5px);margin:9px 0 0;line-height:1.55}
+.mode p b{color:var(--txt);font-weight:600}
+.note{margin-top:16px;border-left:3px solid var(--amber);background:var(--card);
+  padding:14px 18px;border-radius:0 12px 12px 0;font-size:clamp(13.5px,1.4vw,16px)}
+.note b{color:var(--txt);font-weight:600}
+
+/* money / emphasis block */
+.money{margin-top:22px;border-radius:var(--r);padding:clamp(20px,3vw,30px);
+  background:linear-gradient(135deg,rgba(255,176,32,.10),rgba(255,176,32,.03));
+  border:1px solid rgba(255,176,32,.30);display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start}
+.money .ic{margin:0;flex:none}
+.money p{margin:0;color:var(--muted);font-size:clamp(14px,1.5vw,17px)}
+.money p b{color:var(--txt);font-weight:600}
+@media(max-width:560px){.money{grid-template-columns:1fr;gap:14px}}
+
+/* small-orders visual */
+.orders{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px;align-items:flex-end;justify-content:center}
+.ord{border-radius:12px;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:4px;padding:10px;text-align:center}
+.ord .n{font-family:'Space Grotesk';font-weight:700;font-size:clamp(18px,2.6vw,26px);font-variant-numeric:tabular-nums}
+.ord .l{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+.ord.big{width:128px;height:108px;border-color:rgba(45,212,111,.4)}
+.ord.big .l{color:var(--go)}
+.ord.small{width:92px;height:84px;border-color:rgba(255,176,32,.4);background:rgba(255,176,32,.05)}
+.ord.small .n{color:var(--amber)} .ord.small .l{color:var(--amber)}
+@media(max-width:560px){.ord.big{width:104px;height:92px}.ord.small{width:78px;height:72px}}
+
+/* recognizable "quotes" from the floor */
+.quotes{display:grid;gap:11px;margin-top:clamp(20px,3vw,30px);max-width:780px}
+.quote{display:flex;gap:13px;align-items:flex-start;background:var(--card);border:1px solid var(--line);
+  border-left:3px solid var(--amber);border-radius:0 12px 12px 0;padding:13px 17px;
+  font-size:clamp(14.5px,1.6vw,19px);font-style:italic;color:var(--txt);line-height:1.4}
+.quote svg{flex:none;color:var(--amber);margin-top:3px;opacity:.9}
+
+/* waves out-of-order visual */
+.waves{display:flex;flex-direction:column;gap:10px;margin-top:clamp(20px,3vw,28px);max-width:560px;text-align:left}
+.wave{display:flex;align-items:center;gap:13px;border:1px solid var(--line);border-radius:13px;padding:13px 16px;background:var(--card)}
+.wave .dot-w{width:10px;height:10px;border-radius:50%;flex:none;background:var(--muted)}
+.wave .wn{font-family:'Space Grotesk';font-weight:700;font-size:clamp(15px,1.7vw,18px);flex:none}
+.wave .ws{font-size:clamp(12.5px,1.4vw,15px);color:var(--muted)}
+.wave.late{border-color:rgba(255,93,93,.42)} .wave.late .dot-w{background:var(--bad)} .wave.late .wn{color:var(--bad)}
+.wave.doing{border-color:rgba(45,212,111,.42)} .wave.doing .dot-w{background:var(--go)} .wave.doing .wn{color:var(--go)}
+.wave.new{border-color:rgba(255,176,32,.42)} .wave.new .dot-w{background:var(--amber)} .wave.new .wn{color:var(--amber)}
+
+/* FIFO queue visual */
+.qwrap{width:100%;max-width:350px}
+.qhead{font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--faint);margin-bottom:9px;text-align:left}
+.queue{display:flex;flex-direction:column;gap:9px}
+.tix{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-radius:11px;
+  padding:12px 15px;background:var(--card);text-align:left}
+.tix .o{font-family:'Space Grotesk';font-weight:700;font-size:clamp(13.5px,1.5vw,16px)}
+.tix .s{font-size:clamp(11px,1.3vw,13px);color:var(--muted);font-weight:600;white-space:nowrap}
+.tix.next{border-color:var(--go);background:rgba(45,212,111,.09)}
+.tix.next .s{color:var(--go)}
+.tix.dim{opacity:.55}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:clamp(22px,3.5vw,34px)}
+@media(max-width:860px){.stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:440px){.stats{grid-template-columns:1fr}}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:clamp(18px,2.4vw,26px)}
+.stat-n{font-size:clamp(30px,4.4vw,46px);font-weight:700;line-height:1;letter-spacing:-.02em;color:var(--go)}
+.stat-n.amber{color:var(--amber)}
+.stat-l{margin-top:11px;font-size:clamp(12.5px,1.3vw,14.5px);color:var(--muted);line-height:1.45}
+
+/* pilot panels */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:clamp(20px,2.6vw,28px)}
+.panel h3{display:flex;align-items:center;gap:10px;font-size:clamp(16px,1.8vw,20px);font-weight:600;margin:0 0 16px}
+.panel h3 svg{color:var(--go)}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:13px}
+.list li{display:flex;gap:11px;font-size:clamp(13.5px,1.4vw,16px);align-items:flex-start;line-height:1.5;color:var(--muted)}
+.list li svg{flex:none;margin-top:3px;color:var(--go)}
+.list.measure li svg{color:var(--amber)}
+.list li b{color:var(--txt);font-weight:600}
+
+/* badges + cta */
+.badges{display:flex;flex-wrap:wrap;gap:9px;margin-top:26px}
+.badge{display:inline-flex;align-items:center;gap:8px;font-size:clamp(12px,1.2vw,13.5px);font-weight:500;color:var(--muted);
+  background:var(--card);border:1px solid var(--line);padding:8px 13px;border-radius:999px}
+.badge svg{color:var(--go);flex:none}
+.badge.amber svg{color:var(--amber)}
+.cta{display:inline-flex;align-items:center;gap:9px;margin-top:30px;cursor:pointer;
+  background:var(--go);color:#06250f;font-family:'Inter';font-size:clamp(15px,1.5vw,17px);font-weight:700;
+  padding:15px 26px;border-radius:13px;border:0;box-shadow:0 14px 30px -12px rgba(45,212,111,.6);
+  transition:transform .15s var(--ease),box-shadow .2s}
+.cta:hover{transform:translateY(-2px);box-shadow:0 20px 38px -12px rgba(45,212,111,.7)}
+.cta:focus-visible{outline:3px solid var(--go);outline-offset:3px}
+
+/* close slide */
+.center{text-align:center}
+.center .eyebrow{justify-content:center}
+.center .lead{margin-left:auto;margin-right:auto}
+.center .quotes,.center .waves{margin-left:auto;margin-right:auto}
+.foot-brand{display:flex;align-items:center;gap:10px;justify-content:center;margin-top:34px;color:var(--faint);font-size:13.5px}
+
+/* logo */
+.logo{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:none;
+  background:linear-gradient(150deg,var(--go),var(--go-deep));color:#06250f;
+  font-family:'Space Grotesk';font-weight:700;font-size:22px;
+  box-shadow:0 6px 18px -6px rgba(45,212,111,.6)}
+.logo.sm{width:26px;height:26px;font-size:15px;border-radius:8px}
+.title-brand{display:flex;align-items:center;gap:12px}
+.title-brand .nm{font-family:'Space Grotesk';font-weight:700;font-size:clamp(20px,2.4vw,26px);letter-spacing:-.01em}
+
+/* presenter hint */
+.hint{margin-top:30px;display:inline-flex;align-items:center;gap:14px;color:var(--faint);font-size:13px}
+.hint kbd{font-family:'Space Grotesk';background:var(--card);border:1px solid var(--line);border-bottom-width:2px;
+  border-radius:7px;padding:3px 8px;font-size:12px;color:var(--muted)}
+
+/* ============ HUD ============ */
+.progress-top{position:fixed;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,.05);z-index:30}
+.progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--go),var(--amber));
+  transition:width .45s var(--ease)}
+.hud{position:fixed;left:0;right:0;bottom:0;z-index:30;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px clamp(14px,3vw,28px);
+  padding-bottom:calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(to top,rgba(11,15,20,.92),rgba(11,15,20,0));
+  pointer-events:none}
+.hud > *{pointer-events:auto}
+.hud-brand{display:flex;align-items:center;gap:9px;font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--muted)}
+@media(max-width:560px){.hud-brand{display:none}}
+.dots{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:center}
+.dot{width:8px;height:8px;border-radius:50%;background:#2b3848;border:0;padding:0;cursor:pointer;transition:transform .2s var(--ease),background .2s}
+.dot:hover{background:#3d4e63}
+.dot.on{background:var(--go);transform:scale(1.35)}
+.dot:focus-visible{outline:2px solid var(--go);outline-offset:2px}
+.nav{display:flex;align-items:center;gap:10px}
+.counter{font-family:'Space Grotesk';font-variant-numeric:tabular-nums;font-size:13.5px;color:var(--muted);min-width:54px;text-align:right}
+.nbtn{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--txt);
+  display:grid;place-items:center;cursor:pointer;transition:transform .12s var(--ease),background .15s,border-color .15s,opacity .15s}
+.nbtn:hover{background:var(--card-2);border-color:var(--line-2)}
+.nbtn:active{transform:scale(.92)}
+.nbtn:disabled{opacity:.3;cursor:default}
+.nbtn:focus-visible{outline:3px solid var(--go);outline-offset:2px}
+
+/* ============ mobile tightening (presented on a phone) ============ */
+@media(max-width:560px){
+  .slide{padding:34px 16px 72px}
+  h1{font-size:31px;margin-top:14px}
+  .lead{font-size:15px;margin-top:14px}
+  p.body{font-size:15px;margin-top:13px}
+  .title-brand{margin-top:14px!important}
+  .phone{width:clamp(176px,54vw,212px);padding:10px;border-radius:34px}
+  .screen{border-radius:24px}
+  .scr-pad{padding:12px 13px 13px}
+  .s-top{font-size:10.5px}
+  .s-loc{font-size:clamp(38px,11.5vw,52px);letter-spacing:0;margin-top:10px}
+  .s-qty{font-size:clamp(26px,7.5vw,34px)}
+  .hint{display:none}
+  .cards,.stats{margin-top:16px;gap:10px}
+  .card{padding:16px}
+  .ic{width:38px;height:38px;margin-bottom:10px}
+  .card h3{margin-bottom:5px}
+  .panel{padding:18px}
+  .modes{margin-top:15px;gap:10px}
+  .badges{margin-top:18px}
+  .money{margin-top:18px}
+  .orders{margin-top:20px;gap:8px}
+  .quotes,.waves{margin-top:16px;gap:9px}
+  .quote{font-size:14px;padding:11px 14px}
+  .cap{margin-top:11px;font-size:11.5px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .slide{transition:opacity .25s ease;transform:none!important}
+  [data-anim]{transition:opacity .3s ease!important;transform:none!important;transition-delay:0ms!important}
+  .progress-fill{transition:width .2s ease}
+  .cta:hover,.nbtn:active{transform:none}
+}
+</style>
+</head>
+<body>
+
+<div class="progress-top"><div class="progress-fill" id="pfill"></div></div>
+
+<div class="deck" id="deck">
+
+  <!-- 0 · TITLE -->
+  <section class="slide" aria-label="Title">
+    <div class="inner split">
+      <div>
+        <span class="eyebrow" data-anim style="--i:0">Built on the floor · in daily use</span>
+        <div class="title-brand" data-anim style="--i:1;margin-top:18px">
+          <span class="logo">P</span><span class="nm">Picker</span>
+        </div>
+        <h1 data-anim style="--i:2">The paper list, <span class="hl">replaced.</span></h1>
+        <p class="lead" data-anim style="--i:3">I'm a picker on this floor. I built an app that does the picking list for me — and quietly fixes the things the shift leads complain about every day. It replaces paper, runs on any phone, and I use it every shift.</p>
+        <div class="hint" data-anim style="--i:4">
+          <span><kbd>←</kbd> <kbd>→</kbd> keys</span><span>· swipe ·</span><span>scroll to move</span>
+        </div>
+      </div>
+      <div class="stage" data-anim style="--i:2">
+        <div class="glow"></div>
+        <!-- WORK SCREEN (the real app) -->
+        <div class="phone"><div class="screen"><div class="scr-pad">
+          <div class="s-top"><span>Store 7445 · Wave 13</span><span class="num">8 / 41</span></div>
+          <div class="s-loc num">002<span style="color:#2e3946">·</span>005</div>
+          <div class="s-sep"></div>
+          <div class="s-qty num">12 stk</div>
+          <div class="s-desc">Arla Letmælk 1L</div>
+          <div class="s-art num">10171417</div>
+          <div class="s-next num">→ next: 002·008</div>
+          <div class="s-take"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> TAKEN</div>
+          <div class="s-rows"><div class="k">Back</div><div class="k warn">⚠ Less</div></div>
+          <div class="s-hint">1 click · taken &nbsp; 2 · back &nbsp; 3 · pause</div>
+        </div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1 · HOOK: you've heard this -->
+  <section class="slide" aria-label="You have heard this">
+    <div class="inner">
+      <span class="eyebrow" data-anim style="--i:0">You've heard this on the floor</span>
+      <h2 data-anim style="--i:1">None of this is new to you.</h2>
+      <div class="quotes">
+        <div class="quote" data-anim style="--i:2"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> "Why has nobody taken the small orders?"</div>
+        <div class="quote" data-anim style="--i:3"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> "Why is wave 11 still sitting here — the next wave already came?"</div>
+        <div class="quote" data-anim style="--i:4"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> "Did everyone write down the exact number of zeros?"</div>
+        <div class="quote" data-anim style="--i:5"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> "Did everyone log their hours, every order, and add up the total?"</div>
+        <div class="quote" data-anim style="--i:6"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> "Why are we still working off paper? It's so slow."</div>
+      </div>
+      <p class="body" data-anim style="--i:7">The first four I hear from the shift leader. The last one — from the people working right next to me. It all comes back to one thing: it's on paper. <b>Picker takes the paper out.</b></p>
+    </div>
+  </section>
+
+  <!-- 2 · BIG PROBLEM 1: small orders -->
+  <section class="slide" aria-label="Small orders">
+    <div class="inner center">
+      <span class="eyebrow amber" data-anim style="--i:0">The big problem · 1 of 2</span>
+      <h2 data-anim style="--i:1">Nobody wants the <span class="hl-a">small orders.</span></h2>
+      <p class="body" data-anim style="--i:2;margin-left:auto;margin-right:auto">Everyone grabs the big orders — around 300 items. The 5-, 10-, 30-item ones sit on the table while the next wave is already arriving. The shift leader keeps pointing at them, shift after shift.</p>
+      <div class="orders">
+        <div class="ord big" data-anim style="--i:3"><span class="n num">312</span><span class="l">taken</span></div>
+        <div class="ord big" data-anim style="--i:3"><span class="n num">287</span><span class="l">taken</span></div>
+        <div class="ord small" data-anim style="--i:4"><span class="n num">10</span><span class="l">waiting</span></div>
+        <div class="ord small" data-anim style="--i:5"><span class="n num">5</span><span class="l">waiting</span></div>
+        <div class="ord small" data-anim style="--i:6"><span class="n num">30</span><span class="l">waiting</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · BIG PROBLEM 2: waves out of order -->
+  <section class="slide" aria-label="Waves out of order">
+    <div class="inner center">
+      <span class="eyebrow amber" data-anim style="--i:0">The big problem · 2 of 2</span>
+      <h2 data-anim style="--i:1">The waves fall <span class="hl-a">out of order.</span></h2>
+      <p class="body" data-anim style="--i:2;margin-left:auto;margin-right:auto">Orders arrive in waves — 11, then 12, then 13. The next wave lands before the last one's done, and the shift leader can't watch fifteen people at once. So a fresh wave gets picked first while an earlier one sits half-finished on someone's forklift.</p>
+      <div class="waves">
+        <div class="wave late" data-anim style="--i:3"><span class="dot-w"></span><span class="wn">Wave 11</span><span class="ws">half-done — sitting on a forklift</span></div>
+        <div class="wave doing" data-anim style="--i:4"><span class="dot-w"></span><span class="wn">Wave 12</span><span class="ws">getting picked first</span></div>
+        <div class="wave new" data-anim style="--i:5"><span class="dot-w"></span><span class="wn">Wave 13</span><span class="ws">just landed</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · THE FIX: FIFO queue -->
+  <section class="slide" aria-label="FIFO queue">
+    <div class="inner split">
+      <div>
+        <span class="eyebrow" data-anim style="--i:0">The fix that matters most</span>
+        <h2 data-anim style="--i:1">The app gives out the <span class="hl">next order in line.</span></h2>
+        <p class="body" data-anim style="--i:2">First in line, first out — sent straight to the phone. No one can grab only the big orders, and no wave gets left behind. Everyone just gets the next order, in the right order — and the leader doesn't have to watch fifteen people at once.</p>
+        <div class="note" data-anim style="--i:3"><b>Honest about today:</b> right now I start a list by scanning the paper with the phone's camera — that's the early version I built for myself. The real fix is this queue: once the orders come straight from your system, the paper and the scanning are gone for good.</div>
+        <p class="body" data-anim style="--i:4;font-size:clamp(13px,1.3vw,15px)">You can also allow two or three skips for a little flexibility — that's your call.</p>
+      </div>
+      <div class="stage" data-anim style="--i:2">
+        <div class="qwrap">
+          <div class="qhead">Order queue → next free picker</div>
+          <div class="queue">
+            <div class="tix next" data-anim style="--i:3"><span class="o">Wave 11 · Store 7445</span><span class="s">→ NEXT, to you</span></div>
+            <div class="tix" data-anim style="--i:4"><span class="o">Wave 11 · Store 7710</span><span class="s">in line</span></div>
+            <div class="tix" data-anim style="--i:5"><span class="o">Wave 11 · Store 7723</span><span class="s">in line</span></div>
+            <div class="tix dim" data-anim style="--i:6"><span class="o">Wave 12 · Store 7818</span><span class="s">waits for 11</span></div>
+            <div class="tix dim" data-anim style="--i:7"><span class="o">Wave 12 · Store 7901</span><span class="s">waits for 11</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · SAME JOB, NO PAPER · earbud OR buttons -->
+  <section class="slide" aria-label="How it works">
+    <div class="inner split">
+      <div>
+        <span class="eyebrow" data-anim style="--i:0">How it works on the floor</span>
+        <h2 data-anim style="--i:1">Same job. <span class="hl">No paper.</span></h2>
+        <p class="body" data-anim style="--i:2">Nothing changes about how you pick. The phone simply takes the place of the paper list — it lies on the forklift, right where the list used to be. No one walks around staring at a screen; you just mark what you took, the same as on paper, only about twice as fast.</p>
+        <div class="modes">
+          <div class="mode ear" data-anim style="--i:3">
+            <span class="tag"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18v-6a6 6 0 0 1 12 0v6"/><rect x="3" y="14" width="4" height="7" rx="2"/><rect x="17" y="14" width="4" height="7" rx="2"/></svg> With one earbud</span>
+            <p>It <b>reads out each spot in your ear,</b> and one click means "taken". One earbud is allowed — another team here already picks by voice with a single earbud, so it breaks no rules.</p>
+          </div>
+          <div class="mode btn" data-anim style="--i:4">
+            <span class="tag"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg> No headphones</span>
+            <p>No earbud? <b>Just glance at the phone and tap what you took.</b> Nothing to listen to, nothing extra to carry.</p>
+          </div>
+        </div>
+        <div class="note" data-anim style="--i:5">Not everyone has earbuds — <b>that's fine.</b> The phone replaces the paper either way; the earbud is just a bonus. The screen even sleeps between picks to save battery.</div>
+      </div>
+      <div class="stage" data-anim style="--i:2">
+        <div class="glow"></div>
+        <div class="phone"><div class="screen"><div class="scr-pad">
+          <div class="s-top"><span>Store 7445 · Wave 13</span><span class="num">8 / 41</span></div>
+          <div class="s-loc num">002<span style="color:#2e3946">·</span>005</div>
+          <div class="s-sep"></div>
+          <div class="s-qty num">12 stk</div>
+          <div class="s-desc">Arla Letmælk 1L</div>
+          <div class="s-art num">10171417</div>
+          <div class="s-next num">→ next: 002·008</div>
+          <div class="s-take"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> TAKEN</div>
+          <div class="s-rows"><div class="k">Back</div><div class="k warn">⚠ Less</div></div>
+          <div class="s-hint">1 click · taken &nbsp; 2 · back &nbsp; 3 · pause</div>
+        </div></div></div>
+        <div class="cap"><b>The actual screen</b> — I can show it live on my phone.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · ZEROS / "Less" -->
+  <section class="slide" aria-label="Counting the zeros">
+    <div class="inner split">
+      <div>
+        <span class="eyebrow amber" data-anim style="--i:0">Counting the zeros</span>
+        <h2 data-anim style="--i:1">Took less? <span class="hl-a">One tap.</span></h2>
+        <p class="body" data-anim style="--i:2">Took 10 instead of 20? Shelf empty — a zero? <b>One tap, type the real number.</b> The app writes down the exact amount missing, right then.</p>
+        <p class="body" data-anim style="--i:3">That's the count the office needs to set next week's order — saved perfectly, every time, instead of guessed from a stack of paper.</p>
+        <div class="badges">
+          <span class="badge amber" data-anim style="--i:4"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Exact zeros, per order</span>
+          <span class="badge amber" data-anim style="--i:5"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Nothing ever missed</span>
+        </div>
+      </div>
+      <div class="stage" data-anim style="--i:2">
+        <div class="glow amber"></div>
+        <!-- LESS screen -->
+        <div class="phone"><div class="screen"><div class="scr-pad">
+          <div class="s-top"><span>Store 7445 · Wave 13</span><span class="num">8 / 41</span></div>
+          <div class="s-loc num">002<span style="color:#2e3946">·</span>005</div>
+          <div class="s-sep"></div>
+          <div class="s-qty num"><span class="orig">20 stk</span><span class="act">10 stk</span></div>
+          <div class="s-desc">Arla Letmælk 1L</div>
+          <div class="s-pbar"><span class="lab">Less</span><span class="inp num">10</span><span class="ok">✓</span><span class="x">✕</span></div>
+          <div class="s-take"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> TAKEN</div>
+          <div class="s-hint">type the real number → TAKEN</div>
+        </div></div></div>
+        <div class="cap"><b>Ordered 20, only 10 on the shelf</b> — recorded exactly.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · BONUS ACCURACY / shift log -->
+  <section class="slide" aria-label="The bonus count">
+    <div class="inner split">
+      <div>
+        <span class="eyebrow" data-anim style="--i:0">Clean numbers, in real time</span>
+        <h2 data-anim style="--i:1">Every order and count — <span class="hl">exact, live.</span></h2>
+        <p class="body" data-anim style="--i:2">Today everyone also fills a paper by hand — every order, every amount, then the total — and one slip makes the bonus wrong. The app records it all as you go and adds it up for you. The office sees exactly who picked what, live — nothing to type in later, nothing to lose.</p>
+        <p class="body" data-anim style="--i:3">It pushes the pickers, too: you watch your own total climb and see how close you are to the bonus — like a game, in real time. Seeing the progress makes you want to do more.</p>
+        <div class="note" data-anim style="--i:4"><b>Enterprise-safe:</b> everything stays inside your own system — nothing is ever sent to an outside service.</div>
+      </div>
+      <div class="stage" data-anim style="--i:2">
+        <div class="glow"></div>
+        <!-- JOURNAL screen -->
+        <div class="phone"><div class="screen"><div class="scr-pad">
+          <div class="s-jtitle">Shift log</div>
+          <div class="s-jmeta">Mykhailo · 19-06 · 16:00–23:45</div>
+          <div class="s-jtot num">1086</div>
+          <div class="s-jtotl">colli packed · 9 orders</div>
+          <div class="s-jpace num">≈ 152 colli/h · bonus zone</div>
+          <div class="s-prog"><div class="s-prog-track"><div class="s-prog-fill" style="width:64%"></div></div><div class="s-prog-l"><span>progress to next bonus step</span><span class="num">64%</span></div></div>
+          <div class="s-jtbl">
+            <div class="s-jrow"><span>Store 7445</span><span class="num">312</span></div>
+            <div class="s-jrow"><span>Store 7710</span><span class="num">198</span></div>
+            <div class="s-jrow"><span>Store 7723</span><span class="num">156</span></div>
+            <div class="s-jrow"><span>Store 7818</span><span class="num">90 · 2 zeros</span></div>
+          </div>
+        </div></div></div>
+        <div class="cap"><b>The shift log</b> — orders, totals, pace and zeros, summed for you.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · NEW PEOPLE -->
+  <section class="slide" aria-label="Onboarding new people">
+    <div class="inner">
+      <span class="eyebrow" data-anim style="--i:0">New people</span>
+      <h2 data-anim style="--i:1">A lower bar to get started.</h2>
+      <p class="body" data-anim style="--i:2">New people still need the warehouse explained — that part doesn't go away. But the app makes starting easier: the steps and the answers to the usual questions all live in one place, right on the phone. Shifts change all the time — day, evening, night — so new faces show up every week.</p>
+      <div class="cards c2">
+        <div class="card" data-anim style="--i:3">
+          <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/></svg></div>
+          <h3>Everything in one place</h3>
+          <p>The how-to and the answers new people always ask for sit inside the app — they don't have to track someone down every time.</p>
+        </div>
+        <div class="card" data-anim style="--i:4">
+          <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+          <h3>Fewer mistakes, fewer questions</h3>
+          <p>The screen shows what to do next and does the counting for them — so new people slip up less, ask less, and settle in faster.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 · PROOF -->
+  <section class="slide" aria-label="Proof">
+    <div class="inner">
+      <span class="eyebrow" data-anim style="--i:0">This isn't a slide</span>
+      <h2 data-anim style="--i:1">It's built, it's on my phone, and it already works.</h2>
+      <div class="stats">
+        <div class="stat" data-anim style="--i:2">
+          <div class="stat-n num">1086</div>
+          <div class="stat-l">items I picked in a day with the app — up from ~600–700 on paper (800 my first day, 1086 the next).</div>
+        </div>
+        <div class="stat" data-anim style="--i:3">
+          <div class="stat-n num">Daily</div>
+          <div class="stat-l">in real use on the floor every shift — not a prototype, not a demo.</div>
+        </div>
+        <div class="stat" data-anim style="--i:4">
+          <div class="stat-n num">3</div>
+          <div class="stat-l">languages it speaks — Danish, English and Ukrainian.</div>
+        </div>
+        <div class="stat" data-anim style="--i:5">
+          <div class="stat-n amber">Any</div>
+          <div class="stat-l">phone works — the earbud is a bonus, never required.</div>
+        </div>
+      </div>
+      <div class="note" data-anim style="--i:6">And colleagues are already asking for it — <b>one showed his friends, they came over, looked, and wanted the same.</b></div>
+    </div>
+  </section>
+
+  <!-- 10 · WHY NOW -->
+  <section class="slide" aria-label="Why now">
+    <div class="inner center">
+      <span class="eyebrow amber" data-anim style="--i:0">Why now</span>
+      <h2 data-anim style="--i:1">The department is new. <span class="hl-a">Set it right from the start.</span></h2>
+      <p class="lead" data-anim style="--i:2">The unit is only a few weeks old — the paper habits aren't set yet. Voice-pick equipment is expensive and a hassle to run. This is a ready, cheap next step, built by someone who actually works the floor.</p>
+      <p class="lead" data-anim style="--i:3">It's far cheaper to set the process right now than to retrain a settled team a year from now.</p>
+    </div>
+  </section>
+
+  <!-- 11 · THE PILOT -->
+  <section class="slide" aria-label="The pilot">
+    <div class="inner">
+      <span class="eyebrow" data-anim style="--i:0">Low risk · four weeks</span>
+      <h2 data-anim style="--i:1">Run it next to the paper for a month.</h2>
+      <p class="body" data-anim style="--i:2">Nothing gets switched off. Paper stays as the backup. If it doesn't help, we stop — and we've lost four weeks and almost nothing.</p>
+      <div class="cards c2">
+        <div class="panel" data-anim style="--i:3">
+          <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg> What I'd need</h3>
+          <ul class="list">
+            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>The orders and waves from your system,</b> so the app can hand out the next one in line.</span></li>
+            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>A few phones</b> — earbuds optional. Most people already have a phone on the truck.</span></li>
+            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Your call on the data</b> — it stays inside your system; you decide how it's handled.</span></li>
+          </ul>
+        </div>
+        <div class="panel" data-anim style="--i:4">
+          <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21H4a2 2 0 0 1-2-2V3"/><path d="m7 14 4-4 3 3 5-6"/></svg> What we'd measure</h3>
+          <ul class="list measure">
+            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg><span>How many <b>small orders get cleared</b> off the table.</span></li>
+            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg><span>Whether <b>waves finish in order,</b> with fewer left sitting.</span></li>
+            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg><span>How close the <b>zero count</b> is versus paper.</span></li>
+            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg><span>How much <b>each person picked,</b> captured cleanly for the bonus — plus office time saved.</span></li>
+          </ul>
+        </div>
+      </div>
+      <p class="body" data-anim style="--i:5;font-size:clamp(13px,1.3vw,15px)">I won't promise you numbers up front — I'll promise to measure them honestly.</p>
+    </div>
+  </section>
+
+  <!-- 12 · CLOSE -->
+  <section class="slide" aria-label="Close">
+    <div class="inner center">
+      <span class="eyebrow" data-anim style="--i:0">Two questions</span>
+      <h2 data-anim style="--i:1">Who decides this — and when can we start?</h2>
+      <p class="lead" data-anim style="--i:2">I've already built it and I use it every day. Give me a small yes — a four-week pilot — and let's see what it does for the floor.</p>
+      <a class="cta" data-anim style="--i:3" href="mailto:linnik.misha.2007@gmail.com?subject=Picker%20pilot">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="m4 6 8 6 8-6"/></svg>
+        Let's set up the pilot
+      </a>
+      <div class="foot-brand" data-anim style="--i:4">
+        <span class="logo sm">P</span> Picker — built and used on the floor by Mykhailo Lynnyk
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="hud">
+  <div class="hud-brand"><span class="logo sm">P</span> Picker</div>
+  <div class="dots" id="dots" role="tablist" aria-label="Slides"></div>
+  <div class="nav">
+    <span class="counter"><span id="curN">1</span> / <span id="totN">13</span></span>
+    <button class="nbtn" id="prevBtn" aria-label="Previous slide"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    <button class="nbtn" id="nextBtn" aria-label="Next slide"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var deck = document.getElementById('deck');
+  var slides = Array.prototype.slice.call(deck.querySelectorAll('.slide'));
+  var total = slides.length;
+  var cur = 0;
+
+  var pfill = document.getElementById('pfill');
+  var curN = document.getElementById('curN');
+  var totN = document.getElementById('totN');
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  var dotsWrap = document.getElementById('dots');
+
+  totN.textContent = total;
+
+  // build dots
+  var dots = [];
+  for (var i = 0; i < total; i++){
+    (function(idx){
+      var b = document.createElement('button');
+      b.className = 'dot';
+      b.setAttribute('role','tab');
+      b.setAttribute('aria-label','Go to slide ' + (idx+1));
+      b.addEventListener('click', function(){ goTo(idx); });
+      dotsWrap.appendChild(b);
+      dots.push(b);
+    })(i);
+  }
+
+  function update(){
+    pfill.style.width = (total < 2 ? 100 : (cur/(total-1))*100) + '%';
+    curN.textContent = cur + 1;
+    prevBtn.disabled = (cur === 0);
+    nextBtn.disabled = (cur === total - 1);
+    for (var i = 0; i < dots.length; i++){
+      dots[i].classList.toggle('on', i === cur);
+      dots[i].setAttribute('aria-selected', i === cur ? 'true' : 'false');
+    }
+  }
+
+  function goTo(i){
+    if (i < 0) i = 0;
+    if (i > total - 1) i = total - 1;
+    if (i === cur) return;
+    slides[cur].classList.remove('active');
+    cur = i;
+    var s = slides[cur];
+    s.classList.add('active');
+    s.scrollTop = 0;
+    update();
+  }
+  function next(){ goTo(cur + 1); }
+  function prev(){ goTo(cur - 1); }
+
+  prevBtn.addEventListener('click', prev);
+  nextBtn.addEventListener('click', next);
+
+  // keyboard
+  document.addEventListener('keydown', function(e){
+    var k = e.key;
+    if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || k === ' ' || k === 'Spacebar'){ e.preventDefault(); next(); }
+    else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp'){ e.preventDefault(); prev(); }
+    else if (k === 'Home'){ e.preventDefault(); goTo(0); }
+    else if (k === 'End'){ e.preventDefault(); goTo(total - 1); }
+  });
+
+  // wheel — debounced, respects in-slide scroll boundaries
+  var wheelLock = false;
+  deck.addEventListener('wheel', function(e){
+    var s = slides[cur];
+    var canScroll = s.scrollHeight > s.clientHeight + 2;
+    if (canScroll){
+      var atTop = s.scrollTop <= 0;
+      var atBottom = s.scrollTop + s.clientHeight >= s.scrollHeight - 2;
+      if ((e.deltaY > 0 && !atBottom) || (e.deltaY < 0 && !atTop)) return; // let it scroll
+    }
+    e.preventDefault();
+    if (wheelLock) return;
+    var d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    if (Math.abs(d) < 12) return;
+    if (d > 0) next(); else prev();
+    wheelLock = true;
+    setTimeout(function(){ wheelLock = false; }, 650);
+  }, { passive:false });
+
+  // touch — horizontal swipe always navigates; vertical only when slide can't scroll
+  var tx = 0, ty = 0, tScroll = false;
+  deck.addEventListener('touchstart', function(e){
+    var t = e.touches[0];
+    tx = t.clientX; ty = t.clientY;
+    var s = slides[cur];
+    tScroll = s.scrollHeight > s.clientHeight + 2;
+  }, { passive:true });
+  deck.addEventListener('touchend', function(e){
+    var t = e.changedTouches[0];
+    var dx = t.clientX - tx, dy = t.clientY - ty;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 45){
+      if (dx < 0) next(); else prev();
+    } else if (!tScroll && Math.abs(dy) > 50){
+      if (dy < 0) next(); else prev();
+    }
+  }, { passive:true });
+
+  // deep-link via #N (optional)
+  function fromHash(){
+    var m = (location.hash || '').match(/^#(\d+)$/);
+    if (m){ var n = parseInt(m[1],10) - 1; if (n >= 0 && n < total) cur = n; }
+  }
+  fromHash();
+
+  // init
+  slides[cur].classList.add('active');
+  update();
+})();
+</script>
+</body>
+</html>
