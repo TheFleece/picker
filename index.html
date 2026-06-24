@@ -308,7 +308,7 @@ body.work #moreBar{background:#0a0e13;}
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
   <div class="hdr">
-    <div><h1>Picker</h1><p class="sub" style="margin-bottom:0">v3.16</p></div>
+    <div><h1>Picker</h1><p class="sub" style="margin-bottom:0">v3.17</p></div>
     <div class="lang" id="langSel">
       <button data-lang="ru">RU</button>
       <button data-lang="en">EN</button>
@@ -335,6 +335,8 @@ body.work #moreBar{background:#0a0e13;}
       <button class="btn btn-go" id="btnScanAI" style="font-size:19px;padding:16px" hidden>Сканировать</button>
       <div id="ocrStatus" class="warn-line" hidden></div>
       <div class="hint" id="aiState" style="margin-top:10px"></div>
+      <button class="btn btn-small" id="btnCopyPrompt" data-i18n="copyPrompt" style="margin-top:10px">Копировать промт</button>
+      <p class="tip" data-i18n="copyPromptHint">Запасной вариант при 429: вставь промт + фото в любую ИИ (можно в этот чат), ответ — в поле ниже, затем «Распознать лист».</p>
     </div>
   </div>
   <input type="file" id="photoInput" accept="image/*" multiple hidden>
@@ -562,6 +564,8 @@ rawPh:'Текст с фото — или вставь вручную',
 parseBtn:'Распознать лист',
 totalLabel:'Total coli с листа:', totalHint:'(заполнится само, если попало в скан)',
 help:'Помощь', aiKey:'AI-ключ', clear:'Очистить', shiftLog:'📋 Журнал смены', start:'СТАРТ',
+copyPrompt:'Копировать промт', copied:'Скопировано ✓',
+copyPromptHint:'Запасной вариант при 429: вставь промт + фото в любую ИИ (можно в этот чат), ответ — в поле ниже, затем «Распознать лист».',
 summary:'Сводка', picked:'взято', pcs:'шт',
 take:'ВЗЯЛ', back:'Назад', less:'⚠ Меньше', pause:'Пауза', review:'Итог', more:'⚙️ Ещё',
 podLabel:'Щелчки по ножке AirPods', podHint:'1 щелчок = ВЗЯЛ · 2 = Назад · 3 = Пауза / Продолжить.',
@@ -643,6 +647,8 @@ rawPh:'Text from the photo — or paste manually',
 parseBtn:'Parse the list',
 totalLabel:'Total coli from sheet:', totalHint:'(fills in automatically if scanned)',
 help:'Help', aiKey:'AI key', clear:'Clear', shiftLog:'📋 Shift log', start:'START',
+copyPrompt:'Copy prompt', copied:'Copied ✓',
+copyPromptHint:'Backup when 429 hits: paste the prompt + photo into any AI (this chat works too), put the reply in the field below, then «Parse list».',
 summary:'Summary', picked:'picked', pcs:'pcs',
 take:'PICKED', back:'Back', less:'⚠ Less', pause:'Pause', review:'Review', more:'⚙️ More',
 podLabel:'AirPods stem clicks', podHint:'1 click = PICKED · 2 = Back · 3 = Pause / Continue.',
@@ -724,6 +730,8 @@ rawPh:'Tekst fra foto — eller indsæt manuelt',
 parseBtn:'Analysér listen',
 totalLabel:'Total coli fra listen:', totalHint:'(udfyldes automatisk hvis scannet)',
 help:'Hjælp', aiKey:'AI-nøgle', clear:'Ryd', shiftLog:'📋 Vagtlog', start:'START',
+copyPrompt:'Kopiér prompt', copied:'Kopieret ✓',
+copyPromptHint:'Backup ved 429: indsæt prompten + foto i en hvilken som helst AI (også denne chat), svaret i feltet nedenfor, derefter «Parse liste».',
 summary:'Oversigt', picked:'taget', pcs:'stk',
 take:'TAGET', back:'Tilbage', less:'⚠ Færre', pause:'Pause', review:'Tjek', more:'⚙️ Mere',
 podLabel:'AirPods-klik', podHint:'1 klik = TAGET · 2 = Tilbage · 3 = Pause / Fortsæt.',
@@ -1389,9 +1397,7 @@ function ocrPenalty(txt){
   }
   return pen;
 }
-function buildPrompt(n){
-  const multi=n>1?'You are given '+n+' photos of the SAME picking list (they may overlap). Transcribe every printed row in order; if the exact same row appears in two photos, output it only once. Do not reconcile or fix differences - transcribe what is printed.\n\n':'';
-  return multi+
+const OCR_BODY=
 'You are a STRICT TRANSCRIBER of a warehouse picking list. Copy EXACTLY what is printed. You may NOT interpret, infer, complete, correct, renumber, deduplicate, or invent anything.\n\n'+
 'The table has 4 columns: Location, Qty, Article, Description. Output ONE line per visible row, top to bottom, in the exact printed order:\n'+
 'LOCATION QTY ARTICLE DESCRIPTION\n\n'+
@@ -1410,6 +1416,16 @@ function buildPrompt(n){
 'If a "Total coli" total number is visible, add a line exactly: Total coli: N\n'+
 'If a "Store Number" is visible, add a line exactly: Store: N\n'+
 'Output NOTHING except the row lines (and the optional Total coli and Store lines). No headers, no column titles, no markdown, no notes.';
+function buildPrompt(n){
+  const multi=n>1?'You are given '+n+' photos of the SAME picking list (they may overlap). Transcribe every printed row in order; if the exact same row appears in two photos, output it only once. Do not reconcile or fix differences - transcribe what is printed.\n\n':'';
+  return multi+OCR_BODY;
+}
+// Промт для ручного фолбэка (кнопка «Копировать промт»): вставить в любой ИИ-чат один раз,
+// дальше просто слать фото — ИИ будет отдавать готовый к вставке текст в формате приложения.
+function chatPrompt(){
+  return 'TASK: transcribe Netto warehouse picking lists from photos.\n'+
+'Apply the rules below to the photo(s) in THIS message AND to every photo I send later in this same conversation. From now on, whenever I send one or more photos, reply with ONLY the transcription in the exact format below — no greeting, no preamble, no explanation, no markdown fences. If I send several photos of the SAME list, merge them and output each printed row once.\n\n'+
+OCR_BODY;
 }
 function aiKeys(){
   try{return (localStorage.getItem('aikey')||'').split(/[\s,;]+/).map(function(s){return s.trim();}).filter(Boolean);}
@@ -1424,33 +1440,40 @@ async function aiRecognizeAll(canvases,keys){
   for(const c of canvases)
     parts.push({inline_data:{mime_type:'image/jpeg',data:c.toDataURL('image/jpeg',AI_JPEG_Q).split(',')[1]}});
   const body=JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0}});
-  let lastErr='all_models_failed',rateLimited=false,best=null;
-  // Перебор: каждый ключ × каждая модель. 429/5xx — не падаем, идём к следующей
-  // комбинации (лимиты free-tier у Gemini раздельные по моделям и по ключам).
-  for(const key of keys){
-    for(const model of AI_MODELS){
-      const url='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key);
-      let resp;
-      try{resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:body});}
-      catch(e){throw new Error('no_network');}
-      if(resp.status===429){lastErr='429_ratelimit';rateLimited=true;continue;}
-      if(resp.status===503||resp.status===502){lastErr='503_unavailable';continue;}
-      if(resp.status===400){lastErr='400_badkey';continue;}
-      if(resp.status===403){lastErr='403_forbidden';continue;}
-      if(resp.status===404){lastErr='404_'+model;continue;}
-      if(!resp.ok){lastErr='http_'+resp.status;continue;}
-      const data=await resp.json();
-      const rp=(((data.candidates||[])[0]||{}).content||{}).parts||[];
-      const txt=rp.map(p=>p.text||'').join('\n').replace(/```[a-z]*\n?/gi,'').trim();
-      if(!txt){lastErr='empty_response';continue;}
-      const pen=ocrPenalty(txt);
-      if(pen===0)return txt;                            // 0 дублей И сумма Qty == Total coli — берём сразу
-      if(!best||pen<best.pen)best={txt:txt,pen:pen};    // битый: запомнить наименее битый и пробовать др. модель/ключ
-      lastErr='lowquality_'+pen;
+  const sleep=function(ms){return new Promise(function(r){setTimeout(r,ms);});};
+  let lastErr='all_models_failed',best=null;
+  // До 2 проходов. Внутри прохода — каждый ключ × каждая модель (лимиты free-tier у Gemini
+  // раздельные по моделям и по ключам). Если ВЕСЬ проход упёрся в 429 — ждём и повторяем
+  // (поминутная квота RPM может освободиться). Любой реальный ответ возвращаем сразу.
+  for(let pass=0;pass<2;pass++){
+    let rateLimited=false;
+    for(const key of keys){
+      for(const model of AI_MODELS){
+        const url='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key);
+        let resp;
+        try{resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:body});}
+        catch(e){throw new Error('no_network');}
+        if(resp.status===429){lastErr='429_ratelimit';rateLimited=true;continue;}
+        if(resp.status===503||resp.status===502){lastErr='503_unavailable';continue;}
+        if(resp.status===400){lastErr='400_badkey';continue;}
+        if(resp.status===403){lastErr='403_forbidden';continue;}
+        if(resp.status===404){lastErr='404_'+model;continue;}
+        if(!resp.ok){lastErr='http_'+resp.status;continue;}
+        const data=await resp.json();
+        const rp=(((data.candidates||[])[0]||{}).content||{}).parts||[];
+        const txt=rp.map(p=>p.text||'').join('\n').replace(/```[a-z]*\n?/gi,'').trim();
+        if(!txt){lastErr='empty_response';continue;}
+        const pen=ocrPenalty(txt);
+        if(pen===0)return txt;                            // 0 дублей И сумма Qty == Total coli — берём сразу
+        if(!best||pen<best.pen)best={txt:txt,pen:pen};    // битый: запомнить наименее битый и пробовать др. модель/ключ
+        lastErr='lowquality_'+pen;
+      }
     }
+    if(best)return best.txt;          // получили хоть какой-то ответ — отдаём (приложение покажет ⚠ при битом)
+    if(!rateLimited)throw new Error(lastErr);   // упали не из-за лимита — повтор бессмыслен
+    if(pass===0)await sleep(4000);    // весь проход = 429: подождать, RPM мог освободиться
   }
-  if(best)return best.txt;          // все варианты неидеальны — отдать наименее битый (приложение покажет ⚠ и пользователь сверит)
-  throw new Error(rateLimited?'429_ratelimit':lastErr);   // если хоть где упёрлись в лимит — показать «подожди минуту»
+  throw new Error('429_ratelimit');   // оба прохода уперлись в лимит — «подожди минуту» / используй фолбэк-промт
 }
 let ocrBusy=false;
 function showOcrErr(msg){$('ocrStatus').hidden=false;$('ocrStatus').textContent=msg;}
@@ -1626,6 +1649,23 @@ $('btnKey').addEventListener('click',function(){
   if(v===null)return;
   try{v.trim()?localStorage.setItem('aikey',v.trim()):localStorage.removeItem('aikey');}catch(e){}
   updateAiState();
+});
+function fallbackCopy(txt){
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=txt;ta.setAttribute('readonly','');
+    ta.style.position='fixed';ta.style.top='-1000px';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,txt.length);
+    document.execCommand('copy');document.body.removeChild(ta);return true;
+  }catch(e){window.prompt(t('copyPrompt'),txt);return false;}
+}
+$('btnCopyPrompt').addEventListener('click',function(){
+  const txt=chatPrompt();
+  const b=$('btnCopyPrompt');
+  function ok(){try{beep(880,70);}catch(e){}b.textContent=t('copied');setTimeout(function(){b.textContent=t('copyPrompt');},1400);}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(ok,function(){if(fallbackCopy(txt))ok();});
+  }else if(fallbackCopy(txt))ok();
 });
 $('btnClear').addEventListener('click',function(){
   $('raw').value='';$('parseOut').innerHTML='';$('expTotal').value='';
