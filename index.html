@@ -308,7 +308,7 @@ body.work #moreBar{background:#0a0e13;}
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
   <div class="hdr">
-    <div><h1>Picker</h1><p class="sub" style="margin-bottom:0">v3.15</p></div>
+    <div><h1>Picker</h1><p class="sub" style="margin-bottom:0">v3.16</p></div>
     <div class="lang" id="langSel">
       <button data-lang="ru">RU</button>
       <button data-lang="en">EN</button>
@@ -604,6 +604,7 @@ neTotal:' ≠ Total coli ({exp}), разница {d}', checkTotal:' — свер
 missQty:'{n} позиций без Qty. ', confQty:'{n} с расхождением. ', fixHint:'Нажми на число в Qty, чтобы исправить.',
 thLocShort:'Лок.', thQtyShort:'Кол', thArtDesc:'Артикул / Описание',
 dupRows:'⚠️ {n} строк с повторяющейся локацией. На чистом листе локации не повторяются — ИИ мог сдвинуть колонку. Сверь с бумагой и вычеркни лишние (✕).',
+dupArt:'⚠️ {n} строк с одинаковым артикулом — часто это лишняя/фантомная строка от ИИ. Сверь с бумагой и вычеркни лишнее (✕).',
 qtyPrompt:'Qty для {loc}:', partialPrompt:'Сколько взял по факту?\n(по плану: {plan})',
 partialBad:'Введи число от 0 до {plan}.', partialOver:'Нельзя взять больше плана ({plan}).\nЕсли ошибка в листе — исправь Qty тапом на ×.', partialBarLabel:'Взял:',
 finishConfirm:'Не все позиции взяты ({n} осталось). Точно закончить?', allExcluded:'Все позиции вычеркнуты — нечего собирать.',
@@ -684,6 +685,7 @@ neTotal:' ≠ Total coli ({exp}), diff {d}', checkTotal:' — check against «To
 missQty:'{n} positions without Qty. ', confQty:'{n} with a mismatch. ', fixHint:'Tap the Qty number to fix it.',
 thLocShort:'Loc.', thQtyShort:'Qty', thArtDesc:'Article / Description',
 dupRows:'⚠️ {n} rows with a repeated location. On a clean sheet locations are unique — the AI may have shifted a column. Check the paper and cross out extras (✕).',
+dupArt:'⚠️ {n} rows share an article number — often an extra/phantom AI row. Check the paper and cross out extras (✕).',
 qtyPrompt:'Qty for {loc}:', partialPrompt:'How many did you actually take?\n(planned: {plan})',
 partialBad:'Enter a number from 0 to {plan}.', partialOver:'You cannot take more than planned ({plan}).\nIf the sheet is wrong — fix Qty by tapping ×.', partialBarLabel:'Picked:',
 finishConfirm:'Not all positions are picked ({n} left). Finish anyway?', allExcluded:'All positions are crossed out — nothing to pick.',
@@ -764,6 +766,7 @@ neTotal:' ≠ Total coli ({exp}), forskel {d}', checkTotal:' — tjek mod «Tota
 missQty:'{n} positioner uden Qty. ', confQty:'{n} med uoverensstemmelse. ', fixHint:'Tryk på Qty-tallet for at rette.',
 thLocShort:'Lok.', thQtyShort:'Antal', thArtDesc:'Artikel / Beskrivelse',
 dupRows:'⚠️ {n} rækker med gentaget lokation. På en ren liste er lokationer unikke — AI kan have forskudt en kolonne. Tjek papiret og streg ekstra ud (✕).',
+dupArt:'⚠️ {n} rækker deler et varenummer — ofte en ekstra/fantom AI-række. Tjek papiret og streg ekstra ud (✕).',
 qtyPrompt:'Qty for {loc}:', partialPrompt:'Hvor mange tog du faktisk?\n(planlagt: {plan})',
 partialBad:'Indtast et tal fra 0 til {plan}.', partialOver:'Du kan ikke tage mere end planlagt ({plan}).\nHvis listen er forkert — ret Qty ved at trykke ×.', partialBarLabel:'Taget:',
 finishConfirm:'Ikke alle positioner er taget ({n} tilbage). Afslut alligevel?', allExcluded:'Alle positioner er streget ud — intet at plukke.',
@@ -1367,13 +1370,21 @@ function locDupCount(txt){
   (txt.match(/\b\d{3}-\d{3}\b/g)||[]).forEach(function(l){if(seen[l])dups++;else seen[l]=1;});
   return dups;
 }
+// Дубли артикулов на чистом листе крайне редки — обычно это фантомная/лишняя строка от ИИ.
+function artDupCount(items){
+  const seen=Object.create(null);let d=0;
+  items.forEach(function(it){if(it.article){if(seen[it.article])d++;else seen[it.article]=1;}});
+  return d;
+}
 // Композитный штраф качества OCR: 0 = идеально. Дубли локаций (сдвиг колонок) — тяжело;
-// расхождение суммы Qty с «Total coli» ловит фантомные/лишние строки на пропусках номеров.
+// дубли артикулов — фантомные строки; расхождение суммы Qty с «Total coli» — лишние/битые строки.
+// ВАЖНО: чистый сдвиг колонки артикул/описание при верных Qty этим НЕ ловится (см. roadmap: БД вместо OCR).
 function ocrPenalty(txt){
-  let pen=locDupCount(txt)*100;
+  const items=parseList(txt);
+  let pen=locDupCount(txt)*100 + artDupCount(items)*10;
   const total=detectTotal(txt);
   if(total!=null){
-    const sum=parseList(txt).reduce(function(s,i){return s+(i.qty||0);},0);
+    const sum=items.reduce(function(s,i){return s+(i.qty||0);},0);
     pen+=Math.abs(total-sum);
   }
   return pen;
@@ -1525,11 +1536,14 @@ function renderParse(){
   const miss=active.filter(function(i){return i.qty==null;}).length;
   const conf=active.filter(function(i){return i.conflict;}).length;
   const dup=active.filter(function(i){return locCount[i.loc]>1;}).length;
+  const artCount={};
+  active.forEach(function(it){if(it.article)artCount[it.article]=(artCount[it.article]||0)+1;});
+  const artDup=active.filter(function(i){return i.article&&artCount[i.article]>1;}).length;
   let html='<div class="pt-wrap"><div class="pt-head"><span>'+t('thLocShort')+'</span><span>'+t('thQtyShort')+'</span><span>'+t('thArtDesc')+'</span><span></span></div>';
   items.forEach(function(it,i){
     const cls=['pt-row'];
     if(it.qty==null||it.conflict)cls.push('bad');
-    if(locCount[it.loc]>1&&!it.excluded)cls.push('dup');
+    if((locCount[it.loc]>1||(it.article&&artCount[it.article]>1))&&!it.excluded)cls.push('dup');
     if(it.excluded)cls.push('excluded');
     html+='<div class="'+cls.join(' ')+'">'
       +'<span class="pt-loc">'+it.loc+'</span>'
@@ -1546,6 +1560,7 @@ function renderParse(){
   else line+=t('checkTotal');
   html+='<p class="'+cls+'">'+line+'</p>';
   if(dup)html+='<p class="warn-line">'+tpl('dupRows',{n:dup})+'</p>';
+  if(artDup)html+='<p class="warn-line">'+tpl('dupArt',{n:artDup})+'</p>';
   if(miss||conf)html+='<p class="warn-line">⚠️ '+(miss?tpl('missQty',{n:miss}):'')+(conf?tpl('confQty',{n:conf}):'')+t('fixHint')+'</p>';
   out.innerHTML=html;
   out.querySelectorAll('.pt-qty').forEach(function(el){
