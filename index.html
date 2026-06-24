@@ -308,7 +308,7 @@ body.work #moreBar{background:#0a0e13;}
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
   <div class="hdr">
-    <div><h1>Picker</h1><p class="sub" style="margin-bottom:0">v3.12</p></div>
+    <div><h1>Picker</h1><p class="sub" style="margin-bottom:0">v3.13</p></div>
     <div class="lang" id="langSel">
       <button data-lang="ru">RU</button>
       <button data-lang="en">EN</button>
@@ -607,7 +607,7 @@ dupRows:'⚠️ {n} строк с повторяющейся локацией. �
 qtyPrompt:'Qty для {loc}:', partialPrompt:'Сколько взял по факту?\n(по плану: {plan})',
 partialBad:'Введи число от 0 до {plan}.', partialOver:'Нельзя взять больше плана ({plan}).\nЕсли ошибка в листе — исправь Qty тапом на ×.', partialBarLabel:'Взял:',
 finishConfirm:'Не все позиции взяты ({n} осталось). Точно закончить?', allExcluded:'Все позиции вычеркнуты — нечего собирать.',
-aiKeyPrompt:'API-ключ Google AI Studio (вида AIza… или AQ…).\nПусто = удалить.',
+aiKeyPrompt:'API-ключ Google AI Studio (вида AIza… или AQ…).\nМожно несколько через запятую — чередуются при лимите 429.\nПусто = удалить.',
 rotPortrait:'Поверни телефон вертикально',
 ocrCompress:'Сжимаю {n} фото…', ocrReading:'AI читает лист ({n} фото, {mb} МБ, один запрос)…',
 ocrNoKey:'Нет AI-ключа. Нажми «AI-ключ» и вставь ключ, потом «Сканировать».',
@@ -687,7 +687,7 @@ dupRows:'⚠️ {n} rows with a repeated location. On a clean sheet locations ar
 qtyPrompt:'Qty for {loc}:', partialPrompt:'How many did you actually take?\n(planned: {plan})',
 partialBad:'Enter a number from 0 to {plan}.', partialOver:'You cannot take more than planned ({plan}).\nIf the sheet is wrong — fix Qty by tapping ×.', partialBarLabel:'Picked:',
 finishConfirm:'Not all positions are picked ({n} left). Finish anyway?', allExcluded:'All positions are crossed out — nothing to pick.',
-aiKeyPrompt:'Google AI Studio API key (like AIza… or AQ…).\nEmpty = remove.',
+aiKeyPrompt:'Google AI Studio API key (like AIza… or AQ…).\nSeveral keys separated by comma rotate on a 429 limit.\nEmpty = remove.',
 rotPortrait:'Turn the phone upright',
 ocrCompress:'Compressing {n} photos…', ocrReading:'AI is reading the list ({n} photos, {mb} MB, one request)…',
 ocrNoKey:'No AI key. Tap «AI key» and paste a key, then «Scan».',
@@ -767,7 +767,7 @@ dupRows:'⚠️ {n} rækker med gentaget lokation. På en ren liste er lokatione
 qtyPrompt:'Qty for {loc}:', partialPrompt:'Hvor mange tog du faktisk?\n(planlagt: {plan})',
 partialBad:'Indtast et tal fra 0 til {plan}.', partialOver:'Du kan ikke tage mere end planlagt ({plan}).\nHvis listen er forkert — ret Qty ved at trykke ×.', partialBarLabel:'Taget:',
 finishConfirm:'Ikke alle positioner er taget ({n} tilbage). Afslut alligevel?', allExcluded:'Alle positioner er streget ud — intet at plukke.',
-aiKeyPrompt:'Google AI Studio API-nøgle (som AIza… eller AQ…).\nTom = fjern.',
+aiKeyPrompt:'Google AI Studio API-nøgle (som AIza… eller AQ…).\nFlere nøgler adskilt med komma skifter ved en 429-grænse.\nTom = fjern.',
 rotPortrait:'Hold telefonen lodret',
 ocrCompress:'Komprimerer {n} fotos…', ocrReading:'AI læser listen ({n} fotos, {mb} MB, én forespørgsel)…',
 ocrNoKey:'Ingen AI-nøgle. Tryk «AI-nøgle» og indsæt en nøgle, derefter «Scan».',
@@ -1382,34 +1382,42 @@ function buildPrompt(n){
 'If a "Store Number" is visible, add a line exactly: Store: N\n'+
 'Output NOTHING except the row lines (and the optional Total coli and Store lines). No headers, no column titles, no markdown, no notes.';
 }
-function aiKey(){try{return localStorage.getItem('aikey')||'';}catch(e){return'';}}
-function updateAiState(){
-  $('aiState').innerHTML=aiKey()?t('aiConnected'):t('aiNotSet');
+function aiKeys(){
+  try{return (localStorage.getItem('aikey')||'').split(/[\s,;]+/).map(function(s){return s.trim();}).filter(Boolean);}
+  catch(e){return[];}
 }
-async function aiRecognizeAll(canvases,key){
+function aiKey(){return aiKeys()[0]||'';}   // первый ключ — для статуса/дефолта prompt
+function updateAiState(){
+  $('aiState').innerHTML=aiKeys().length?t('aiConnected'):t('aiNotSet');
+}
+async function aiRecognizeAll(canvases,keys){
   const parts=[{text:buildPrompt(canvases.length)}];
   for(const c of canvases)
     parts.push({inline_data:{mime_type:'image/jpeg',data:c.toDataURL('image/jpeg',0.78).split(',')[1]}});
-  let lastErr='all_models_failed';
-  for(const model of AI_MODELS){
-    const url='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key);
-    let resp;
-    try{resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0}})});}
-    catch(e){throw new Error('no_network');}
-    if(resp.status===503||resp.status===502){lastErr='503_unavailable';continue;}
-    if(resp.status===429)throw new Error('429_ratelimit');
-    if(resp.status===400)throw new Error('400_badkey');
-    if(resp.status===403)throw new Error('403_forbidden');
-    if(resp.status===404){lastErr='404_'+model;continue;}
-    if(!resp.ok)throw new Error('http_'+resp.status);
-    const data=await resp.json();
-    const rp=(((data.candidates||[])[0]||{}).content||{}).parts||[];
-    const txt=rp.map(p=>p.text||'').join('\n').replace(/```[a-z]*\n?/gi,'').trim();
-    if(txt)return txt;
-    lastErr='empty_response';
+  const body=JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0}});
+  let lastErr='all_models_failed',rateLimited=false;
+  // Перебор: каждый ключ × каждая модель. 429/5xx — не падаем, идём к следующей
+  // комбинации (лимиты free-tier у Gemini раздельные по моделям и по ключам).
+  for(const key of keys){
+    for(const model of AI_MODELS){
+      const url='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key);
+      let resp;
+      try{resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:body});}
+      catch(e){throw new Error('no_network');}
+      if(resp.status===429){lastErr='429_ratelimit';rateLimited=true;continue;}
+      if(resp.status===503||resp.status===502){lastErr='503_unavailable';continue;}
+      if(resp.status===400){lastErr='400_badkey';continue;}
+      if(resp.status===403){lastErr='403_forbidden';continue;}
+      if(resp.status===404){lastErr='404_'+model;continue;}
+      if(!resp.ok){lastErr='http_'+resp.status;continue;}
+      const data=await resp.json();
+      const rp=(((data.candidates||[])[0]||{}).content||{}).parts||[];
+      const txt=rp.map(p=>p.text||'').join('\n').replace(/```[a-z]*\n?/gi,'').trim();
+      if(txt)return txt;
+      lastErr='empty_response';
+    }
   }
-  throw new Error(lastErr);
+  throw new Error(rateLimited?'429_ratelimit':lastErr);   // если хоть где упёрлись в лимит — показать «подожди минуту»
 }
 let ocrBusy=false;
 function showOcrErr(msg){$('ocrStatus').hidden=false;$('ocrStatus').textContent=msg;}
@@ -1446,8 +1454,8 @@ function addPhotos(files){
 }
 async function runAI(){
   if(ocrBusy||!photoQ.length)return;
-  const key=aiKey();
-  if(!key){showOcrErr(t('ocrNoKey'));return;}
+  const keys=aiKeys();
+  if(!keys.length){showOcrErr(t('ocrNoKey'));return;}
   ocrBusy=true;$('btnScanAI').disabled=true;$('btnPhoto').disabled=true;
   keepAwake();   // экран не гаснет пока AI читает лист (главный экран, inWork=false)
   const st=$('ocrStatus');st.hidden=false;
@@ -1457,7 +1465,7 @@ async function runAI(){
     let bytes=0;
     canvases.forEach(function(c){bytes+=Math.round(c.toDataURL('image/jpeg',0.78).length*0.75);});
     st.textContent=tpl('ocrReading',{n:canvases.length,mb:(bytes/1048576).toFixed(1)});
-    const txt=await aiRecognizeAll(canvases,key);
+    const txt=await aiRecognizeAll(canvases,keys);
     $('raw').value=txt;st.hidden=true;
     clearQueue();doParse();
   }catch(err){
@@ -1577,7 +1585,7 @@ $('btnPhoto').addEventListener('click',function(){$('photoInput').click();});
 $('photoInput').addEventListener('change',function(e){addPhotos(e.target.files);e.target.value='';});
 $('btnScanAI').addEventListener('click',runAI);
 $('btnKey').addEventListener('click',function(){
-  const v=prompt(t('aiKeyPrompt'),aiKey());
+  const v=prompt(t('aiKeyPrompt'),aiKeys().join(', '));
   if(v===null)return;
   try{v.trim()?localStorage.setItem('aikey',v.trim()):localStorage.removeItem('aikey');}catch(e){}
   updateAiState();
