@@ -308,7 +308,7 @@ body.work #moreBar{background:#0a0e13;}
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
   <div class="hdr">
-    <div><h1>Picker</h1><p class="sub" style="margin-bottom:0">v3.13</p></div>
+    <div><h1>Picker</h1><p class="sub" style="margin-bottom:0">v3.14</p></div>
     <div class="lang" id="langSel">
       <button data-lang="ru">RU</button>
       <button data-lang="en">EN</button>
@@ -1360,6 +1360,13 @@ function loadToCanvas(file,maxSide){
 /* ================= AI (Gemini) — все фото одним запросом ================= */
 // Ключ только в localStorage этого телефона. В код/GitHub НЕ вставлять.
 const AI_MODELS=['gemini-2.5-flash','gemini-2.0-flash','gemini-2.0-flash-lite','gemini-1.5-flash-latest'];
+const AI_MAXSIDE=1600, AI_JPEG_Q=0.82;   // выше разрешение/качество → видны линии строк и цифры артикулов (меньше рассинхрона)
+// Дубли локаций на чистом листе невозможны — это подпись сдвига колонок у ИИ. Используем как метрику качества.
+function locDupCount(txt){
+  const seen=Object.create(null);let dups=0;
+  (txt.match(/\b\d{3}-\d{3}\b/g)||[]).forEach(function(l){if(seen[l])dups++;else seen[l]=1;});
+  return dups;
+}
 function buildPrompt(n){
   const multi=n>1?'You are given '+n+' photos of the SAME picking list (they may overlap). Transcribe every printed row in order; if the exact same row appears in two photos, output it only once. Do not reconcile or fix differences - transcribe what is printed.\n\n':'';
   return multi+
@@ -1393,9 +1400,9 @@ function updateAiState(){
 async function aiRecognizeAll(canvases,keys){
   const parts=[{text:buildPrompt(canvases.length)}];
   for(const c of canvases)
-    parts.push({inline_data:{mime_type:'image/jpeg',data:c.toDataURL('image/jpeg',0.78).split(',')[1]}});
+    parts.push({inline_data:{mime_type:'image/jpeg',data:c.toDataURL('image/jpeg',AI_JPEG_Q).split(',')[1]}});
   const body=JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0}});
-  let lastErr='all_models_failed',rateLimited=false;
+  let lastErr='all_models_failed',rateLimited=false,best=null;
   // Перебор: каждый ключ × каждая модель. 429/5xx — не падаем, идём к следующей
   // комбинации (лимиты free-tier у Gemini раздельные по моделям и по ключам).
   for(const key of keys){
@@ -1413,10 +1420,14 @@ async function aiRecognizeAll(canvases,keys){
       const data=await resp.json();
       const rp=(((data.candidates||[])[0]||{}).content||{}).parts||[];
       const txt=rp.map(p=>p.text||'').join('\n').replace(/```[a-z]*\n?/gi,'').trim();
-      if(txt)return txt;
-      lastErr='empty_response';
+      if(!txt){lastErr='empty_response';continue;}
+      const dups=locDupCount(txt);
+      if(dups===0)return txt;                              // чистая транскрипция (без дублей локаций) — берём сразу
+      if(!best||dups<best.dups)best={txt:txt,dups:dups};   // битый: запомнить наименее битый и пробовать дальше
+      lastErr='desync_'+dups;
     }
   }
+  if(best)return best.txt;          // все варианты с дублями — отдать наименее битый (приложение покажет ⚠ и пользователь сверит)
   throw new Error(rateLimited?'429_ratelimit':lastErr);   // если хоть где упёрлись в лимит — показать «подожди минуту»
 }
 let ocrBusy=false;
@@ -1461,9 +1472,9 @@ async function runAI(){
   const st=$('ocrStatus');st.hidden=false;
   try{
     st.textContent=tpl('ocrCompress',{n:photoQ.length});
-    const canvases=await Promise.all(photoQ.map(ph=>loadToCanvas(ph.file,1400)));
+    const canvases=await Promise.all(photoQ.map(ph=>loadToCanvas(ph.file,AI_MAXSIDE)));
     let bytes=0;
-    canvases.forEach(function(c){bytes+=Math.round(c.toDataURL('image/jpeg',0.78).length*0.75);});
+    canvases.forEach(function(c){bytes+=Math.round(c.toDataURL('image/jpeg',AI_JPEG_Q).length*0.75);});
     st.textContent=tpl('ocrReading',{n:canvases.length,mb:(bytes/1048576).toFixed(1)});
     const txt=await aiRecognizeAll(canvases,keys);
     $('raw').value=txt;st.hidden=true;
