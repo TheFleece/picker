@@ -52,14 +52,14 @@ a{color:inherit;text-decoration:none}
 .slide{
   position:absolute;inset:0;
   display:flex;align-items:center;justify-content:center;
-  padding:clamp(46px,7vh,72px) clamp(18px,5vw,60px) clamp(82px,13vh,118px);
+  padding:clamp(24px,4vh,44px) clamp(16px,3vw,44px) clamp(66px,8.5vh,82px);
   opacity:0;visibility:hidden;
   transform:translateY(10px) scale(.992);
   transition:opacity .5s var(--ease),transform .5s var(--ease),visibility .5s;
   overflow-y:auto;
 }
 .slide.active{opacity:1;visibility:visible;transform:none;z-index:2}
-.inner{width:100%;max-width:1080px;margin:auto}
+.inner{width:100%;max-width:1320px;margin:auto}
 
 /* staggered entrance */
 [data-anim]{opacity:0;transform:translateY(26px);
@@ -76,8 +76,8 @@ h1{font-size:clamp(32px,6vw,62px);line-height:1.03;letter-spacing:-.025em;font-w
 h2{font-size:clamp(26px,4.4vw,46px);line-height:1.08;letter-spacing:-.02em;font-weight:700;margin:16px 0 0}
 .hl{color:var(--go)}
 .hl-a{color:var(--amber)}
-.lead{font-size:clamp(15px,1.7vw,20px);color:var(--muted);margin:18px 0 0;max-width:56ch}
-p.body{font-size:clamp(15px,1.6vw,19px);color:var(--muted);margin:16px 0 0;max-width:62ch}
+.lead{font-size:clamp(15px,1.8vw,22px);color:var(--muted);margin:14px 0 0;max-width:60ch}
+p.body{font-size:clamp(15px,1.7vw,20px);color:var(--muted);margin:13px 0 0;max-width:66ch}
 p.body b,.lead b{color:var(--txt);font-weight:600}
 .muted{color:var(--muted)}
 
@@ -100,8 +100,8 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
 .screen{border-radius:30px;background:#000;overflow:hidden;border:1px solid rgba(255,255,255,.05)}
 .scr-pad{padding:14px 16px 16px}
 .s-top{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--faint);font-weight:500;font-variant-numeric:tabular-nums}
-.s-loc{font-family:'Space Grotesk';font-weight:800;text-align:center;line-height:.92;letter-spacing:1px;
-  font-size:clamp(46px,13vw,58px);margin:14px 0 0;color:#fff;font-variant-numeric:tabular-nums}
+.s-loc{font-family:'Space Grotesk';font-weight:800;text-align:center;line-height:.92;letter-spacing:.5px;
+  font-size:clamp(34px,9.5vw,46px);margin:14px 0 0;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
 .s-sep{width:52px;height:5px;border-radius:3px;background:#2e3946;margin:9px auto}
 .s-qty{text-align:center;font-family:'Space Grotesk';font-weight:800;color:var(--go);font-size:clamp(30px,8vw,38px);line-height:1.05}
 .s-qty .orig{display:block;color:var(--faint);text-decoration:line-through;font-size:.62em;font-weight:700}
@@ -140,7 +140,7 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
 .cap b{color:var(--muted);font-weight:600}
 
 /* ============ cards / grids ============ */
-.cards{display:grid;gap:14px;margin-top:clamp(22px,3.5vw,38px)}
+.cards{display:grid;gap:14px;margin-top:clamp(14px,2.2vw,26px)}
 .cards.c3{grid-template-columns:repeat(3,1fr)}
 .cards.c2{grid-template-columns:repeat(2,1fr)}
 @media(max-width:820px){.cards.c3{grid-template-columns:1fr}.cards.c2{grid-template-columns:1fr}}
@@ -153,16 +153,44 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
 .ic.amber{background:rgba(255,176,32,.14);color:var(--amber)}
 
 /* two-mode columns */
-.modes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:15px}
 @media(max-width:820px){.modes{grid-template-columns:1fr}}
 .mode{border:1px solid var(--line);border-radius:var(--r);padding:clamp(16px,2.2vw,22px);background:var(--card)}
 .mode .tag{display:inline-flex;align-items:center;gap:8px;font-family:'Space Grotesk';font-weight:600;font-size:14px}
 .mode.ear .tag{color:var(--go)} .mode.btn .tag{color:var(--blue)}
 .mode p{color:var(--muted);font-size:clamp(13.5px,1.4vw,15.5px);margin:9px 0 0;line-height:1.55}
 .mode p b{color:var(--txt);font-weight:600}
-.note{margin-top:16px;border-left:3px solid var(--amber);background:var(--card);
-  padding:14px 18px;border-radius:0 12px 12px 0;font-size:clamp(13.5px,1.4vw,16px)}
+.note{margin-top:13px;border-left:3px solid var(--amber);background:var(--card);
+  padding:13px 17px;border-radius:0 12px 12px 0;font-size:clamp(13.5px,1.4vw,16px)}
 .note b{color:var(--txt);font-weight:600}
+
+/* recurring "mine vs a bought system" comparison line, woven through the deck */
+.vsnote{margin-top:13px;display:flex;gap:11px;align-items:flex-start;
+  border:1px solid var(--line);border-left:3px solid var(--go);
+  background:linear-gradient(160deg,rgba(45,212,111,.06),transparent);
+  border-radius:0 12px 12px 0;padding:12px 16px;
+  font-size:clamp(13px,1.35vw,15.5px);color:var(--muted);line-height:1.5}
+.vsnote svg{flex:none;color:var(--go);margin-top:2px}
+.vsnote b{color:var(--txt);font-weight:600}
+
+/* scale / Salling Group reach */
+.scale{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;margin-top:clamp(14px,2.2vw,24px)}
+.scale .step{display:inline-flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);
+  border-radius:999px;padding:10px 16px;font-size:clamp(12.5px,1.3vw,15px);font-weight:600;color:var(--txt)}
+.scale .step svg{flex:none;color:var(--go)}
+.scale .step.first{border-color:rgba(45,212,111,.45)}
+.scale .arr{color:var(--faint);flex:none}
+@media(max-width:560px){.scale{gap:8px}.scale .step{padding:8px 13px}}
+
+/* pilot "how it works" steps */
+.steps{display:grid;grid-template-columns:repeat(2,1fr);gap:13px;margin-top:clamp(14px,2.2vw,24px)}
+@media(max-width:820px){.steps{grid-template-columns:1fr}}
+.step-card{display:flex;gap:14px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:clamp(14px,2vw,20px)}
+.step-card .no{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
+  font-family:'Space Grotesk';font-weight:700;font-size:16px;background:rgba(45,212,111,.14);color:var(--go)}
+.step-card h3{font-size:clamp(15px,1.6vw,18px);font-weight:600;margin:0 0 5px;letter-spacing:-.01em}
+.step-card p{color:var(--muted);font-size:clamp(13px,1.35vw,15.5px);margin:0;line-height:1.5}
+.step-card p b{color:var(--txt);font-weight:600}
 
 /* money / emphasis block */
 .money{margin-top:22px;border-radius:var(--r);padding:clamp(20px,3vw,30px);
@@ -173,8 +201,24 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
 .money p b{color:var(--txt);font-weight:600}
 @media(max-width:560px){.money{grid-template-columns:1fr;gap:14px}}
 
+/* head-to-head comparison (Picker vs the voice system) */
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:clamp(12px,2vw,22px)}
+@media(max-width:760px){.vs{grid-template-columns:1fr}}
+.vcol{border:1px solid var(--line);border-radius:var(--r);padding:clamp(16px,2.2vw,22px);background:var(--card)}
+.vcol.win{border-color:rgba(45,212,111,.45);background:linear-gradient(160deg,rgba(45,212,111,.06),transparent)}
+.vcol .vh{display:flex;align-items:center;gap:9px;font-family:'Space Grotesk';font-weight:700;
+  font-size:clamp(15px,1.7vw,18px);padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:13px}
+.vcol.win .vh{color:var(--go)} .vcol.old .vh{color:var(--muted)}
+.vcol .vh svg{flex:none}
+.vlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px}
+.vlist li{display:flex;gap:10px;align-items:flex-start;font-size:clamp(13px,1.35vw,15.5px);line-height:1.45;color:var(--muted)}
+.vlist li svg{flex:none;margin-top:2px}
+.vcol.win .vlist li svg{color:var(--go)} .vcol.old .vlist li svg{color:var(--faint)}
+.vcol.win .vlist li b{color:var(--txt);font-weight:600}
+@media(max-width:560px){.vs{margin-top:16px;gap:10px}.vcol{padding:16px}}
+
 /* small-orders visual */
-.orders{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px;align-items:flex-end;justify-content:center}
+.orders{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;align-items:flex-end;justify-content:center}
 .ord{border-radius:12px;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:4px;padding:10px;text-align:center}
 .ord .n{font-family:'Space Grotesk';font-weight:700;font-size:clamp(18px,2.6vw,26px);font-variant-numeric:tabular-nums}
@@ -186,7 +230,7 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
 @media(max-width:560px){.ord.big{width:104px;height:92px}.ord.small{width:78px;height:72px}}
 
 /* recognizable "quotes" from the floor */
-.quotes{display:grid;gap:11px;margin-top:clamp(20px,3vw,30px);max-width:780px}
+.quotes{display:grid;gap:11px;margin-top:clamp(12px,2vw,20px);max-width:820px}
 .quote{display:flex;gap:13px;align-items:flex-start;background:var(--card);border:1px solid var(--line);
   border-left:3px solid var(--amber);border-radius:0 12px 12px 0;padding:13px 17px;
   font-size:clamp(14.5px,1.6vw,19px);font-style:italic;color:var(--txt);line-height:1.4}
@@ -215,7 +259,7 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
 .tix.dim{opacity:.55}
 
 /* stats */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:clamp(22px,3.5vw,34px)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:clamp(14px,2.2vw,24px)}
 @media(max-width:860px){.stats{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:440px){.stats{grid-template-columns:1fr}}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:clamp(18px,2.4vw,26px)}
@@ -305,7 +349,7 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
   .screen{border-radius:24px}
   .scr-pad{padding:12px 13px 13px}
   .s-top{font-size:10.5px}
-  .s-loc{font-size:clamp(38px,11.5vw,52px);letter-spacing:0;margin-top:10px}
+  .s-loc{font-size:clamp(30px,8.5vw,40px);letter-spacing:0;margin-top:10px}
   .s-qty{font-size:clamp(26px,7.5vw,34px)}
   .hint{display:none}
   .cards,.stats{margin-top:16px;gap:10px}
@@ -344,8 +388,8 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
         <div class="title-brand" data-anim style="--i:1;margin-top:18px">
           <span class="logo">P</span><span class="nm">Picker</span>
         </div>
-        <h1 data-anim style="--i:2">The paper list, <span class="hl">replaced.</span></h1>
-        <p class="lead" data-anim style="--i:3">I'm a picker on this floor. I built an app that does the picking list for me — and quietly fixes the things the shift leads complain about every day. It replaces paper, runs on any phone, and I use it every shift.</p>
+        <h1 data-anim style="--i:2">I work here. <span class="hl">I built the app for this floor.</span></h1>
+        <p class="lead" data-anim style="--i:3">I'm a picker on this floor — and in my own time I built an app that does the picking list for me, and quietly fixes what the shift leaders complain about every day. It replaces paper, runs on any phone, and I use it every shift.</p>
         <div class="hint" data-anim style="--i:4">
           <span><kbd>←</kbd> <kbd>→</kbd> keys</span><span>· swipe ·</span><span>scroll to move</span>
         </div>
@@ -369,7 +413,67 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
     </div>
   </section>
 
-  <!-- 1 · HOOK: you've heard this -->
+  <!-- 1 · THE FIRST QUESTION: why mine, not the system you already have? -->
+  <section class="slide" aria-label="Why mine and not your ready system">
+    <div class="inner">
+      <span class="eyebrow amber" data-anim style="--i:0">The first question I got</span>
+      <h2 data-anim style="--i:1">“We already have a system.” <span class="hl-a">So why mine?</span></h2>
+      <p class="body" data-anim style="--i:2">That was the first thing I heard when I walked into the office — and it's fair. You do have ready gear; I know some of it sits unused, gathering dust somewhere in the warehouse. Here's the honest reason it isn't running on this floor — and why mine can start today.</p>
+      <div class="cards c3">
+        <div class="card" data-anim style="--i:3">
+          <div class="ic amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></div>
+          <h3>It needs a settled floor</h3>
+          <p>A voice system only works when every product sits in a fixed spot with a code on the shelf. This unit is new — things still move every week — so it can't go in yet.</p>
+        </div>
+        <div class="card" data-anim style="--i:4">
+          <div class="ic amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><rect x="2" y="14" width="5" height="7" rx="2"/><rect x="17" y="14" width="5" height="7" rx="2"/></svg></div>
+          <h3>It needs gear and setup</h3>
+          <p>Switching it on means re-slotting shelves, printing codes, handing out and configuring headsets, and training everyone — time and money before the first pick. That's why it's still sitting in the box.</p>
+        </div>
+        <div class="card" data-anim style="--i:5">
+          <div class="ic amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+          <h3>Nobody owns the data</h3>
+          <p>It was set up long ago and largely left alone — even the office isn't sure how its data is handled or where it ends up. You can't improve what you can't see.</p>
+        </div>
+      </div>
+      <div class="note" data-anim style="--i:6">This isn't a knock on those systems — <b>they're great for a big, settled warehouse.</b> They're just not ready for this floor. <b>Mine is — today, on phones you already have, built by someone who works right here.</b></div>
+    </div>
+  </section>
+
+  <!-- 2 · HEAD-TO-HEAD: a ready-made system vs Picker -->
+  <section class="slide" aria-label="A ready-made system versus Picker">
+    <div class="inner">
+      <span class="eyebrow" data-anim style="--i:0">Side by side</span>
+      <h2 data-anim style="--i:1">Same job — <span class="hl">two very different costs.</span></h2>
+      <div class="vs">
+        <div class="vcol old" data-anim style="--i:2">
+          <div class="vh"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.27 6.96 8.73 5.05 8.73-5.05"/><path d="M12 22.08V12"/></svg> A bought-in system</div>
+          <ul class="vlist">
+            <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg><span>Needs a fully settled, fixed-shelf warehouse first</span></li>
+            <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg><span>Special gear for every picker — buy, hand out, set up</span></li>
+            <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg><span>An outside licence, contract and consultants</span></li>
+            <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg><span>Built generic — your floor bends to fit the software</span></li>
+            <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg><span>Voice only — nothing on a screen to glance at</span></li>
+            <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg><span>Its data sits in an outside system you don't control</span></li>
+          </ul>
+        </div>
+        <div class="vcol win" data-anim style="--i:3">
+          <div class="vh"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg> Picker — mine</div>
+          <ul class="vlist">
+            <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Works today,</b> while the floor is still settling</span></li>
+            <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>Runs on the <b>phone already on the truck</b></span></li>
+            <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Built inside Netto</b> — no contract, no licence</span></li>
+            <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Built around how you work</b> — by someone on this floor</span></li>
+            <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>The <b>whole order on screen</b> — spot, count, what's next</span></li>
+            <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>All data <b>stays in Netto — and you own it</b></span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="note" data-anim style="--i:4">Industry figures: bought-in systems run <b>thousands per picker</b> plus licence and setup, take <b>three to six months,</b> and <b>more than half</b> hit serious delays or only partly work. Picker reuses the phones you already carry — and the four-week trial costs you nothing.</div>
+    </div>
+  </section>
+
+  <!-- 3 · HOOK: you've heard this -->
   <section class="slide" aria-label="You have heard this">
     <div class="inner">
       <span class="eyebrow" data-anim style="--i:0">You've heard this on the floor</span>
@@ -385,7 +489,7 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
     </div>
   </section>
 
-  <!-- 2 · BIG PROBLEM 1: small orders -->
+  <!-- 4 · BIG PROBLEM 1: small orders -->
   <section class="slide" aria-label="Small orders">
     <div class="inner center">
       <span class="eyebrow amber" data-anim style="--i:0">The big problem · 1 of 2</span>
@@ -401,7 +505,7 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
     </div>
   </section>
 
-  <!-- 3 · BIG PROBLEM 2: waves out of order -->
+  <!-- 5 · BIG PROBLEM 2: waves out of order -->
   <section class="slide" aria-label="Waves out of order">
     <div class="inner center">
       <span class="eyebrow amber" data-anim style="--i:0">The big problem · 2 of 2</span>
@@ -415,7 +519,7 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
     </div>
   </section>
 
-  <!-- 4 · THE FIX: FIFO queue -->
+  <!-- 6 · THE FIX: FIFO queue -->
   <section class="slide" aria-label="FIFO queue">
     <div class="inner split">
       <div>
@@ -424,6 +528,7 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
         <p class="body" data-anim style="--i:2">First in line, first out — sent straight to the phone. No one can grab only the big orders, and no wave gets left behind. Everyone just gets the next order, in the right order — and the leader doesn't have to watch fifteen people at once.</p>
         <div class="note" data-anim style="--i:3"><b>Honest about today:</b> right now I start a list by scanning the paper with the phone's camera — that's the early version I built for myself. The real fix is this queue: once the orders come straight from your system, the paper and the scanning are gone for good.</div>
         <p class="body" data-anim style="--i:4;font-size:clamp(13px,1.3vw,15px)">You can also allow two or three skips for a little flexibility — that's your call.</p>
+        <div class="vsnote" data-anim style="--i:5"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4M7 4 3 8M7 4l4 4"/><path d="M17 8v12M17 20l4-4M17 20l-4-4"/></svg><span><b>Mine vs a bought-in system:</b> this fix needs no new gear and no shelf codes — getting the same from a bought system means full integration and months of setup.</span></div>
       </div>
       <div class="stage" data-anim style="--i:2">
         <div class="qwrap">
@@ -440,13 +545,13 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
     </div>
   </section>
 
-  <!-- 5 · SAME JOB, NO PAPER · earbud OR buttons -->
+  <!-- 7 · SAME JOB, NO PAPER · earbud OR buttons -->
   <section class="slide" aria-label="How it works">
     <div class="inner split">
       <div>
         <span class="eyebrow" data-anim style="--i:0">How it works on the floor</span>
         <h2 data-anim style="--i:1">Same job. <span class="hl">No paper.</span></h2>
-        <p class="body" data-anim style="--i:2">Nothing changes about how you pick. The phone simply takes the place of the paper list — it lies on the forklift, right where the list used to be. No one walks around staring at a screen; you just mark what you took, the same as on paper, only about twice as fast.</p>
+        <p class="body" data-anim style="--i:2">Nothing changes about how you pick. The phone replaces the paper list on the forklift — nobody walks around staring at a screen; you just mark what you took, the same as on paper, only about twice as fast.</p>
         <div class="modes">
           <div class="mode ear" data-anim style="--i:3">
             <span class="tag"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18v-6a6 6 0 0 1 12 0v6"/><rect x="3" y="14" width="4" height="7" rx="2"/><rect x="17" y="14" width="4" height="7" rx="2"/></svg> With one earbud</span>
@@ -457,7 +562,7 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
             <p>No earbud? <b>Just glance at the phone and tap what you took.</b> Nothing to listen to, nothing extra to carry.</p>
           </div>
         </div>
-        <div class="note" data-anim style="--i:5">Not everyone has earbuds — <b>that's fine.</b> The phone replaces the paper either way; the earbud is just a bonus. The screen even sleeps between picks to save battery.</div>
+        <div class="vsnote" data-anim style="--i:5"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4M7 4 3 8M7 4l4 4"/><path d="M17 8v12M17 20l4-4M17 20l-4-4"/></svg><span><b>Mine vs voice gear:</b> their headsets only talk — you can't see the order, and you repeat a check code until it hears you. Mine shows the whole order at a glance, in one place, with no special equipment and nothing to set up on the shelves.</span></div>
       </div>
       <div class="stage" data-anim style="--i:2">
         <div class="glow"></div>
@@ -478,7 +583,7 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
     </div>
   </section>
 
-  <!-- 6 · ZEROS / "Less" -->
+  <!-- 8 · ZEROS / "Less" -->
   <section class="slide" aria-label="Counting the zeros">
     <div class="inner split">
       <div>
@@ -490,6 +595,7 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
           <span class="badge amber" data-anim style="--i:4"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Exact zeros, per order</span>
           <span class="badge amber" data-anim style="--i:5"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Nothing ever missed</span>
         </div>
+        <div class="vsnote" data-anim style="--i:6"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4M7 4 3 8M7 4l4 4"/><path d="M17 8v12M17 20l4-4M17 20l-4-4"/></svg><span><b>Mine vs paper or a bought system:</b> the exact shortfall is caught the moment it happens, in one tap — no paper to add up later, no guessing what was missing.</span></div>
       </div>
       <div class="stage" data-anim style="--i:2">
         <div class="glow amber"></div>
@@ -509,7 +615,7 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
     </div>
   </section>
 
-  <!-- 7 · BONUS ACCURACY / shift log -->
+  <!-- 9 · BONUS ACCURACY / shift log -->
   <section class="slide" aria-label="The bonus count">
     <div class="inner split">
       <div>
@@ -517,7 +623,7 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
         <h2 data-anim style="--i:1">Every order and count — <span class="hl">exact, live.</span></h2>
         <p class="body" data-anim style="--i:2">Today everyone also fills a paper by hand — every order, every amount, then the total — and one slip makes the bonus wrong. The app records it all as you go and adds it up for you. The office sees exactly who picked what, live — nothing to type in later, nothing to lose.</p>
         <p class="body" data-anim style="--i:3">It pushes the pickers, too: you watch your own total climb and see how close you are to the bonus — like a game, in real time. Seeing the progress makes you want to do more.</p>
-        <div class="note" data-anim style="--i:4"><b>Enterprise-safe:</b> everything stays inside your own system — nothing is ever sent to an outside service.</div>
+        <div class="vsnote" data-anim style="--i:4"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4M7 4 3 8M7 4l4 4"/><path d="M17 8v12M17 20l4-4M17 20l-4-4"/></svg><span><b>Mine vs a bought-in system:</b> their numbers sit in an outside system the office often can't even see. Mine shows it live and keeps every number inside Netto — yours to read and analyse, nothing sent outside.</span></div>
       </div>
       <div class="stage" data-anim style="--i:2">
         <div class="glow"></div>
@@ -541,7 +647,7 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
     </div>
   </section>
 
-  <!-- 8 · NEW PEOPLE -->
+  <!-- 10 · NEW PEOPLE -->
   <section class="slide" aria-label="Onboarding new people">
     <div class="inner">
       <span class="eyebrow" data-anim style="--i:0">New people</span>
@@ -559,10 +665,11 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
           <p>The screen shows what to do next and does the counting for them — so new people slip up less, ask less, and settle in faster.</p>
         </div>
       </div>
+      <div class="vsnote" data-anim style="--i:5"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4M7 4 3 8M7 4l4 4"/><path d="M17 8v12M17 20l4-4M17 20l-4-4"/></svg><span><b>Mine vs voice gear:</b> voice systems struggle with accents, other languages and warehouse noise — new people fight just to be understood. Mine is visual and speaks Danish, English and Ukrainian, so anyone gets going faster.</span></div>
     </div>
   </section>
 
-  <!-- 9 · PROOF -->
+  <!-- 11 · PROOF -->
   <section class="slide" aria-label="Proof">
     <div class="inner">
       <span class="eyebrow" data-anim style="--i:0">This isn't a slide</span>
@@ -585,33 +692,85 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
           <div class="stat-l">phone works — the earbud is a bonus, never required.</div>
         </div>
       </div>
-      <div class="note" data-anim style="--i:6">And colleagues are already asking for it — <b>one showed his friends, they came over, looked, and wanted the same.</b></div>
+      <div class="note" data-anim style="--i:6">I even put it in the hands of a colleague from the next unit — <b>where they already pick by voice with headsets.</b> He tried it on my phone and said mine is simply better: <b>the whole order is right there on the screen, it's faster, and there's no fighting the headset to be heard.</b></div>
+      <div class="note" data-anim style="--i:7">And my own colleagues keep asking for it — <b>one showed his friends, they came over, looked, and wanted the same.</b></div>
     </div>
   </section>
 
-  <!-- 10 · WHY NOW -->
-  <section class="slide" aria-label="Why now">
+  <!-- 12 · ROADMAP: more it can do, incl. voice, once it goes native -->
+  <section class="slide" aria-label="What more it can do">
+    <div class="inner">
+      <span class="eyebrow" data-anim style="--i:0">Where it can go next</span>
+      <h2 data-anim style="--i:1">Even voice — and more — <span class="hl">when you want it.</span></h2>
+      <p class="body" data-anim style="--i:2">Today it's a web app: nothing to install, runs on any phone — perfect for trying it out. To add the bigger features we move it into a full app (most of the same work carries over). That's when it can do everything a voice system does — and more, built your way:</p>
+      <div class="cards c3">
+        <div class="card" data-anim style="--i:3">
+          <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><rect x="2" y="14" width="5" height="7" rx="2"/><rect x="17" y="14" width="5" height="7" rx="2"/></svg></div>
+          <h3>Voice, hands-free</h3>
+          <p>Pick by voice for anyone with earbuds — I already run it on my own AirPods. Always optional: voice for some, a quick tap for the rest.</p>
+        </div>
+        <div class="card" data-anim style="--i:4">
+          <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z"/></svg></div>
+          <h3>Your languages and voices</h3>
+          <p>Not one fixed robot voice. Pick the languages and voices that fit your crew — Danish, English, Ukrainian and more.</p>
+        </div>
+        <div class="card" data-anim style="--i:5">
+          <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+          <h3>Clearer, on any device</h3>
+          <p>Tuned for a real warehouse crew — better with accents and noise — and it can run on Android too, so everyone's covered, even offline.</p>
+        </div>
+      </div>
+      <div class="vsnote" data-anim style="--i:6"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4M7 4 3 8M7 4l4 4"/><path d="M17 8v12M17 20l4-4M17 20l-4-4"/></svg><span><b>Mine vs a bought-in system:</b> they sell one fixed setup. Mine is yours to shape — which languages, which voices, who works by voice and who just taps.</span></div>
+    </div>
+  </section>
+
+  <!-- 13 · WHY NOW + SCALE -->
+  <section class="slide" aria-label="Why now and how far it can go">
     <div class="inner center">
-      <span class="eyebrow amber" data-anim style="--i:0">Why now</span>
-      <h2 data-anim style="--i:1">The department is new. <span class="hl-a">Set it right from the start.</span></h2>
-      <p class="lead" data-anim style="--i:2">The unit is only a few weeks old — the paper habits aren't set yet. Voice-pick equipment is expensive and a hassle to run. This is a ready, cheap next step, built by someone who actually works the floor.</p>
-      <p class="lead" data-anim style="--i:3">It's far cheaper to set the process right now than to retrain a settled team a year from now.</p>
+      <span class="eyebrow amber" data-anim style="--i:0">Why now — and how far it can go</span>
+      <h2 data-anim style="--i:1">Start on this new floor — <span class="hl-a">and it can grow across the group.</span></h2>
+      <p class="lead" data-anim style="--i:2">The unit is only a few weeks old — nothing's locked in yet. A bought-in system needs order before it can run; <b>mine works in the mess</b> and helps you bring order while you build the floor. Setting the process right now is far cheaper than retraining a settled team a year from now.</p>
+      <p class="lead" data-anim style="--i:3">And it doesn't stop here. Netto is part of a big group — many stores and several warehouses. What we shape for your department — <b>your process, your data, your system</b> — can roll out to other floors later. Built once, with you, owned by Netto.</p>
+      <div class="scale" data-anim style="--i:4">
+        <span class="step first"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg> This floor</span>
+        <svg class="arr" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        <span class="step"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg> Other Netto units</span>
+        <svg class="arr" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        <span class="step"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/></svg> Salling Group warehouses</span>
+      </div>
     </div>
   </section>
 
-  <!-- 11 · THE PILOT -->
+  <!-- 14 · PILOT — how it works / what I'm asking for -->
+  <section class="slide" aria-label="How the pilot works">
+    <div class="inner">
+      <span class="eyebrow" data-anim style="--i:0">If you say yes — here's the plan</span>
+      <h2 data-anim style="--i:1">What I'm asking for, and <span class="hl">how we'd start.</span></h2>
+      <p class="body" data-anim style="--i:2">A "pilot" just means we try it on this one floor for four weeks, next to paper, before anyone commits to anything. Here's exactly how it would work:</p>
+      <div class="steps">
+        <div class="step-card" data-anim style="--i:3"><span class="no num">1</span><div><h3>A small yes</h3><p>You agree to a <b>four-week trial</b> on this floor. No contract, no spend — just a green light to try.</p></div></div>
+        <div class="step-card" data-anim style="--i:4"><span class="no num">2</span><div><h3>We connect your orders</h3><p>We build a simple <b>order database</b> so your orders drop straight into the app, in the right order — no more scanning paper.</p></div></div>
+        <div class="step-card" data-anim style="--i:5"><span class="no num">3</span><div><h3>People pick as usual</h3><p>Phones on the trucks. The app quietly records <b>who took what, every zero, every total</b> — automatically.</p></div></div>
+        <div class="step-card" data-anim style="--i:6"><span class="no num">4</span><div><h3>Your data comes back</h3><p>Who picked what, shift logs and shortfalls flow <b>back to your office, in your own system</b> — yours to read and analyse.</p></div></div>
+      </div>
+      <div class="note" data-anim style="--i:7">After four weeks we look at it together — <b>you decide what to keep, change or add.</b> We build it with you, around how your department really works.</div>
+    </div>
+  </section>
+
+  <!-- 15 · THE PILOT — low risk + what we measure -->
   <section class="slide" aria-label="The pilot">
     <div class="inner">
       <span class="eyebrow" data-anim style="--i:0">Low risk · four weeks</span>
-      <h2 data-anim style="--i:1">Run it next to the paper for a month.</h2>
-      <p class="body" data-anim style="--i:2">Nothing gets switched off. Paper stays as the backup. If it doesn't help, we stop — and we've lost four weeks and almost nothing.</p>
+      <h2 data-anim style="--i:1">No risk to you — <span class="hl">and we'll prove it with numbers.</span></h2>
+      <p class="body" data-anim style="--i:2">Nothing gets switched off, and nothing is owed. Here's why it's safe to try — and exactly what we'd watch to know whether it's working.</p>
       <div class="cards c2">
         <div class="panel" data-anim style="--i:3">
-          <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg> What I'd need</h3>
+          <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg> Why it's safe to try</h3>
           <ul class="list">
-            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>The orders and waves from your system,</b> so the app can hand out the next one in line.</span></li>
-            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>A few phones</b> — earbuds optional. Most people already have a phone on the truck.</span></li>
-            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Your call on the data</b> — it stays inside your system; you decide how it's handled.</span></li>
+            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Paper stays as the backup</b> — nothing gets switched off.</span></li>
+            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Your ready gear stays an option</b> for later — this closes no doors.</span></li>
+            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>No contract, no spend</b> — I built it in my own time; the trial is free.</span></li>
+            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Stop anytime</b> — if it doesn't help, we stop and you've lost nothing.</span></li>
           </ul>
         </div>
         <div class="panel" data-anim style="--i:4">
@@ -621,6 +780,7 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
             <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg><span>Whether <b>waves finish in order,</b> with fewer left sitting.</span></li>
             <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg><span>How close the <b>zero count</b> is versus paper.</span></li>
             <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg><span>How much <b>each person picked,</b> captured cleanly for the bonus — plus office time saved.</span></li>
+            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg><span>How well it <b>copes while the floor is still moving</b> — the test the voice kit can't pass yet.</span></li>
           </ul>
         </div>
       </div>
@@ -628,12 +788,12 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
     </div>
   </section>
 
-  <!-- 12 · CLOSE -->
+  <!-- 16 · CLOSE -->
   <section class="slide" aria-label="Close">
     <div class="inner center">
       <span class="eyebrow" data-anim style="--i:0">Two questions</span>
       <h2 data-anim style="--i:1">Who decides this — and when can we start?</h2>
-      <p class="lead" data-anim style="--i:2">I've already built it and I use it every day. Give me a small yes — a four-week pilot — and let's see what it does for the floor.</p>
+      <p class="lead" data-anim style="--i:2">I've already built it, I use it every shift, and a colleague who picks by voice already prefers it. All I'm asking for is a small yes — a four-week trial that costs nothing. Let's build the right tool for this floor, together.</p>
       <a class="cta" data-anim style="--i:3" href="mailto:linnik.misha.2007@gmail.com?subject=Picker%20pilot">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="m4 6 8 6 8-6"/></svg>
         Let's set up the pilot
@@ -650,7 +810,7 @@ p.body b,.lead b{color:var(--txt);font-weight:600}
   <div class="hud-brand"><span class="logo sm">P</span> Picker</div>
   <div class="dots" id="dots" role="tablist" aria-label="Slides"></div>
   <div class="nav">
-    <span class="counter"><span id="curN">1</span> / <span id="totN">13</span></span>
+    <span class="counter"><span id="curN">1</span> / <span id="totN">17</span></span>
     <button class="nbtn" id="prevBtn" aria-label="Previous slide"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
     <button class="nbtn" id="nextBtn" aria-label="Next slide"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
   </div>
