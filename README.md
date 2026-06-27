@@ -5,6 +5,7 @@
 > Hands-free, paper-free order picking that runs on any phone.
 
 [![Live app](https://img.shields.io/badge/▶_Live_app-2dd46f?style=for-the-badge&labelColor=0b0f14)](https://thefleece.github.io/picker/)
+[![Demo](https://img.shields.io/badge/Team_demo-4aa3ff?style=for-the-badge&labelColor=0b0f14)](https://thefleece.github.io/picker/demo.html)
 [![Pitch deck](https://img.shields.io/badge/Pitch_deck-ffb020?style=for-the-badge&labelColor=0b0f14)](https://thefleece.github.io/picker/pitch.html)
 [![Status](https://img.shields.io/badge/status-in_daily_use-2dd46f?style=for-the-badge&labelColor=0b0f14)](https://thefleece.github.io/picker/)
 [![License](https://img.shields.io/badge/license-all_rights_reserved-ff5d5d?style=for-the-badge&labelColor=0b0f14)](LICENSE)
@@ -21,6 +22,7 @@ paper list.
 | | |
 |---|---|
 | ▶️ **Live app** | https://thefleece.github.io/picker/ |
+| 👥 **Team demo** | https://thefleece.github.io/picker/demo.html |
 | 📊 **Pitch / overview** | https://thefleece.github.io/picker/pitch.html |
 | ✉️ **Contact** | linnik.misha.2007@gmail.com |
 
@@ -40,6 +42,16 @@ paper list.
 | 📱 **No headphones** | The phone lies where the paper used to. Glance at it and tap what you took. |
 
 **Controls:** `1 click = taken` · `2 = back` · `3 = pause` — or the on-screen buttons.
+
+## Team demo
+
+A separate, click-through [**team demo**](https://thefleece.github.io/picker/demo.html)
+shows how it works once orders come straight from the warehouse system instead of
+paper: orders arrive as a **FIFO queue** (you get the next one in line, never just
+the big ones), each shortfall is captured in one tap, a live shift log totals every
+order, and an **office view** shows the same data the office would see — all of it
+staying inside the company. It runs on any phone, offline, with no camera, no
+external service and nothing to install.
 
 ## Languages
 

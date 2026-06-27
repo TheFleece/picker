@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+  PICKER — Enterprise demo (DB-feed vision, no OCR / no API / no voice)
+  ====================================================================
+  A safe, self-contained demonstration of how Picker works once orders
+  come straight from the company system instead of paper.
+
+  • Orders arrive from the warehouse system as a FIFO queue. The picker
+    is handed the NEXT order in line — no cherry-picking the big ones.
+  • Each spot: one tap = TAKEN. Took less than planned? One tap, type
+    the real number — the exact shortfall is captured on the spot.
+  • A live shift log totals every order and zero, and shows progress
+    to the next bonus step.
+  • An office view shows the same data the way the office would see it —
+    live pickers, wave status, shortfalls. All data stays inside Netto.
+
+  Enterprise-safe: no camera, no external API, no keys, no microphone,
+  no installation. Runs on any phone, offline. Sample data only.
+
+  The headline order is the real SPOT CHILLED list — Wave 2, Store 7810,
+  18 lines, 105 colli.
+-->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Picker Demo">
+<meta name="theme-color" content="#0b0f14">
+<title>Picker — demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0f14;--bg-2:#0e141b;--card:#141a22;--card-2:#1b2430;
+  --line:#243040;--line-2:#33445a;
+  --txt:#e8eef5;--muted:#8fa1b3;--faint:#62748a;
+  --go:#2dd46f;--go-deep:#1f9d51;--go-press:#24b35d;
+  --amber:#ffb020;--bad:#ff5d5d;--blue:#4aa3ff;
+  --r:16px;--ease:cubic-bezier(.2,.7,.2,1);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+html,body{margin:0;overscroll-behavior:none;background:var(--bg);}
+input,textarea{-webkit-user-select:text;user-select:text;}
+body{
+  color:var(--txt);-webkit-user-select:none;user-select:none;
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;
+  min-height:100svh;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(1100px 620px at 85% -12%, rgba(45,212,111,.09), transparent 60%),
+    radial-gradient(900px 600px at 2% 0%, rgba(255,176,32,.05), transparent 55%);
+}
+h1,h2,h3,.brand-nm,.num,.big,.eyebrow{font-family:'Space Grotesk','Inter',system-ui,sans-serif;}
+.num{font-variant-numeric:tabular-nums;}
+a{color:var(--muted);}
+
+.wrap{position:relative;z-index:1;max-width:720px;margin:0 auto;
+  padding:14px 16px calc(28px + env(safe-area-inset-bottom));}
+.screen{display:none;animation:fade .35s var(--ease);}
+.screen.on{display:block;}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ---------- header ---------- */
+.top{display:flex;align-items:center;gap:11px;margin-bottom:16px;}
+.logo{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:none;
+  background:linear-gradient(150deg,var(--go),var(--go-deep));color:#06250f;
+  font-family:'Space Grotesk';font-weight:700;font-size:22px;
+  box-shadow:0 6px 18px -6px rgba(45,212,111,.55);}
+.logo.sm{width:26px;height:26px;font-size:15px;border-radius:8px;}
+.brand-nm{font-family:'Space Grotesk';font-weight:700;font-size:19px;letter-spacing:-.01em;}
+.top .who{flex:1;min-width:0;}
+.top .who .nm{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.top .who .conn{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-top:1px;}
+.dotlive{width:7px;height:7px;border-radius:50%;background:var(--go);box-shadow:0 0 0 3px rgba(45,212,111,.18);
+  animation:blink 2.4s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.lang{display:flex;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:none;}
+.lang button{padding:7px 9px;background:none;border:none;color:var(--faint);font-size:12px;font-weight:700;letter-spacing:.4px;font-family:inherit;}
+.lang button.on{background:#1d2a3a;color:var(--txt);}
+.lang button+button{border-left:1px solid var(--line);}
+
+.demobadge{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--amber);background:rgba(255,176,32,.10);
+  border:1px solid rgba(255,176,32,.28);border-radius:999px;padding:5px 11px;}
+
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:600;
+  letter-spacing:.13em;text-transform:uppercase;color:var(--go);}
+.eyebrow::before{content:"";width:18px;height:2px;background:var(--go);border-radius:2px;}
+.eyebrow.amber{color:var(--amber);}.eyebrow.amber::before{background:var(--amber);}
+
+h2.scr{font-size:23px;line-height:1.12;letter-spacing:-.015em;margin:11px 0 4px;font-weight:700;}
+.sub{color:var(--muted);font-size:14px;margin:0 0 16px;}
+
+.btn{display:block;width:100%;border:1px solid var(--line);border-radius:14px;
+  padding:15px;font-size:16px;font-weight:600;color:var(--txt);background:var(--card);
+  margin-top:10px;font-family:inherit;transition:transform .08s ease,background .15s;cursor:pointer;}
+.btn:active{transform:scale(.975);}
+.btn:disabled{opacity:.34;}
+.btn-go{background:var(--go);color:#06250f;border:none;font-size:20px;padding:18px;font-family:'Space Grotesk';font-weight:700;}
+.btn-go:active{background:var(--go-press);}
+.btn-amber{background:#251809;border-color:var(--amber);color:var(--amber);}
+.btn-ghost{background:transparent;}
+.btn-small{padding:11px;font-size:14px;font-weight:500;color:var(--muted);}
+.row{display:flex;gap:10px;}.row .btn{flex:1;margin-top:10px;}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;}
+.card+.card{margin-top:12px;}
+
+/* ---------- login ---------- */
+.field{margin-top:14px;}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;}
+.field input{width:100%;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;color:var(--txt);
+  font-size:16px;padding:13px;font-family:inherit;}
+.field input:focus{outline:none;border-color:var(--go);}
+.kv{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px;padding:9px 0;border-bottom:1px solid var(--line);}
+.kv:last-child{border-bottom:0;}
+.kv .k{color:var(--muted);}.kv .v{font-weight:600;}
+.loginhero{text-align:center;padding:6px 0 2px;}
+.loginhero .logo{margin:0 auto 14px;width:54px;height:54px;font-size:30px;border-radius:15px;}
+.loginhero h1{font-size:30px;margin:0;letter-spacing:-.02em;}
+.loginhero .tag{color:var(--muted);font-size:14.5px;margin:8px auto 0;max-width:30ch;}
+
+/* ---------- queue ---------- */
+.qhead{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--faint);margin:4px 2px 10px;}
+.tix{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:14px;
+  padding:13px 15px;background:var(--card);margin-bottom:9px;}
+.tix .tn{flex:none;width:42px;height:42px;border-radius:11px;background:var(--bg-2);border:1px solid var(--line);
+  display:grid;place-items:center;font-family:'Space Grotesk';font-weight:700;font-size:13px;color:var(--muted);line-height:1;text-align:center;}
+.tix .tn small{display:block;font-size:8.5px;letter-spacing:.06em;color:var(--faint);font-weight:600;}
+.tix .ti{flex:1;min-width:0;}
+.tix .ti .o{font-family:'Space Grotesk';font-weight:700;font-size:15px;}
+.tix .ti .m{font-size:12.5px;color:var(--muted);margin-top:2px;}
+.tix .ts{flex:none;font-size:11.5px;font-weight:600;color:var(--muted);text-align:right;white-space:nowrap;}
+.tix.next{border-color:var(--go);background:rgba(45,212,111,.07);}
+.tix.next .tn{background:rgba(45,212,111,.14);border-color:transparent;color:var(--go);}
+.tix.next .ts{color:var(--go);}
+.tix.dim{opacity:.5;}
+.smallflag{display:inline-block;font-size:10px;font-weight:700;color:var(--amber);background:rgba(255,176,32,.12);
+  border:1px solid rgba(255,176,32,.25);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:1px;}
+.feednote{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-left:3px solid var(--go);
+  background:linear-gradient(160deg,rgba(45,212,111,.05),transparent);border-radius:0 12px 12px 0;
+  padding:11px 14px;font-size:13px;color:var(--muted);line-height:1.45;margin:2px 0 16px;}
+.feednote b{color:var(--txt);font-weight:600;}
+
+/* ---------- work ---------- */
+body.working{background:#000;}
+.workbar{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);
+  font-variant-numeric:tabular-nums;margin-bottom:12px;}
+.workbar .mid{color:var(--go);font-weight:600;}
+.wcard{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px 18px 22px;text-align:center;}
+.locbig{font-family:'Space Grotesk';font-weight:700;font-size:clamp(40px,13vw,58px);line-height:.95;letter-spacing:.5px;
+  color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.locbig .locsep{font-style:normal;color:#2e3946;margin:0 .06em;}
+.wsep{width:54px;height:5px;border-radius:3px;background:#2e3946;margin:14px auto;}
+.qtybig{font-family:'Space Grotesk';font-weight:700;color:var(--go);font-size:clamp(34px,10vw,44px);line-height:1.02;}
+.qtybig .u{font-size:.5em;color:var(--muted);font-weight:600;margin-left:.15em;}
+.qtybig .orig{display:block;color:var(--faint);text-decoration:line-through;font-size:.6em;font-weight:700;}
+.qtybig .act{display:block;color:var(--bad);}
+.wdesc{color:var(--muted);font-size:15px;margin-top:12px;line-height:1.35;}
+.wart{color:var(--faint);font-size:13px;margin-top:4px;font-variant-numeric:tabular-nums;}
+.wnext{color:#46586c;font-size:13px;margin-top:10px;font-variant-numeric:tabular-nums;}
+.pbar{display:none;align-items:center;gap:10px;margin-top:12px;background:#251809;border:1px solid var(--amber);border-radius:14px;padding:10px 12px;}
+.pbar.on{display:flex;}
+.pbar .lab{color:var(--amber);font-size:15px;font-weight:700;flex:none;}
+.pbar input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--amber);border-radius:10px;color:#fff;
+  font-size:24px;font-weight:800;text-align:center;padding:9px;font-variant-numeric:tabular-nums;}
+.pbar .ok{flex:none;width:56px;background:var(--go);border:none;border-radius:10px;color:#06250f;font-size:24px;font-weight:800;padding:10px 0;cursor:pointer;}
+.pbar .x{flex:none;width:48px;background:#1a2230;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:17px;padding:11px 0;cursor:pointer;}
+.whint{text-align:center;font-size:12px;color:#3f5165;margin-top:12px;line-height:1.4;}
+
+/* ---------- done ---------- */
+.doneic{text-align:center;font-size:54px;margin:6px 0 2px;}
+.bigstat{text-align:center;}
+.bigstat .n{font-family:'Space Grotesk';font-weight:700;font-size:52px;color:var(--go);line-height:1;}
+.bigstat .l{color:var(--muted);font-size:13px;margin-top:6px;}
+
+/* ---------- shift log ---------- */
+.jtot{font-family:'Space Grotesk';font-weight:700;color:var(--go);font-size:54px;line-height:1;}
+.jtotl{color:var(--muted);font-size:13px;margin-top:3px;}
+.jpace{display:inline-block;margin-top:12px;background:rgba(255,176,32,.12);color:var(--amber);
+  font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:8px;}
+.prog{margin-top:14px;}
+.prog .track{height:9px;border-radius:5px;background:#1b2430;overflow:hidden;}
+.prog .fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--go),var(--amber));transition:width .5s var(--ease);}
+.prog .pl{margin-top:6px;font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between;}
+.jrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--line);font-size:14px;}
+.jrow:last-child{border-bottom:0;}
+.jrow .jl{color:var(--muted);}
+.jrow .jl b{color:var(--txt);font-weight:600;}
+.jrow .jv{font-weight:700;font-variant-numeric:tabular-nums;}
+.jrow .zero{color:var(--amber);font-size:12px;font-weight:600;}
+
+/* ---------- office ---------- */
+.pkbar{margin:11px 0;}
+.pkbar .pkh{display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px;}
+.pkbar .pkh .me{color:var(--go);font-weight:700;}
+.pkbar .pkh .v{font-weight:700;font-variant-numeric:tabular-nums;}
+.pkbar .track{height:10px;border-radius:5px;background:#1b2430;overflow:hidden;}
+.pkbar .fill{height:100%;border-radius:5px;background:var(--blue);}
+.pkbar.me .fill{background:linear-gradient(90deg,var(--go),var(--go-deep));}
+.wave{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);}
+.wave:last-child{border-bottom:0;}
+.wave .wd{width:10px;height:10px;border-radius:50%;flex:none;background:var(--muted);}
+.wave.done .wd{background:var(--go);}.wave.doing .wd{background:var(--amber);}.wave.wait .wd{background:#3a4757;}
+.wave .wn{font-family:'Space Grotesk';font-weight:700;font-size:15px;flex:1;}
+.wave .wst{font-size:12.5px;color:var(--muted);}
+.wave.done .wst{color:var(--go);}.wave.doing .wst{color:var(--amber);}
+.shortrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+.shortrow:last-child{border-bottom:0;}
+.shortrow .sd{color:var(--muted);min-width:0;}
+.shortrow .sd b{color:var(--txt);font-weight:600;}
+.shortrow .sq{flex:none;font-variant-numeric:tabular-nums;font-weight:700;}
+.shortrow .sq .from{color:var(--faint);text-decoration:line-through;font-weight:600;margin-right:5px;}
+.shortrow .sq .to{color:var(--bad);}
+.empty{color:var(--faint);font-size:13.5px;text-align:center;padding:14px 0;}
+.lock{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--muted);margin-top:14px;
+  border:1px solid var(--line);border-radius:12px;padding:11px 13px;line-height:1.4;}
+.lock svg{flex:none;color:var(--go);margin-top:1px;}
+
+.sectitle{font-family:'Space Grotesk';font-weight:600;font-size:14px;color:var(--txt);margin:0 0 4px;display:flex;align-items:center;gap:8px;}
+.sectitle svg{color:var(--go);}
+.foot{text-align:center;color:var(--faint);font-size:12px;margin-top:22px;line-height:1.5;}
+
+/* paused overlay */
+#paused{position:fixed;inset:0;z-index:80;background:rgba(5,8,11,.96);display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:30px;}
+#paused.on{display:flex;}
+#paused .pi{font-size:44px;}
+#paused h2{font-size:24px;margin:0;}
+#paused p{color:var(--muted);margin:0;}
+
+@media (max-width:420px){
+  .wrap{padding:12px 13px calc(24px + env(safe-area-inset-bottom));}
+  h2.scr{font-size:21px;}
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<div id="paused">
+  <div class="pi">⏸️</div>
+  <h2 id="pausedT">Paused</h2>
+  <p id="pausedP">Tap to resume</p>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   DATA — simulated feed from the company warehouse system
+   ============================================================ */
+
+// The real SPOT CHILLED list (Wave 2, Store 7810): 18 lines, 105 colli.
+const REAL_ITEMS = [
+  {loc:"001-001", qty:7,  art:"10171417",    desc:"GRØNNELUND SKÆREOST 45+ ML VV"},
+  {loc:"001-002", qty:5,  art:"10390244",    desc:"FLENSTED OLES KARTOFFELSALAT 4"},
+  {loc:"001-003", qty:21, art:"10748022",    desc:"ACTIMEL KIDS STRAWBERRY-BANANA"},
+  {loc:"001-004", qty:1,  art:"11051116",    desc:"LØGISMOSE GRÆSK INSP SOL/ARONI"},
+  {loc:"001-005", qty:13, art:"11163393",    desc:"STEFF HOULBERG GRILLPØLSER 800"},
+  {loc:"001-006", qty:15, art:"93067800001", desc:"ACTIMEL JORDBÆR 8X100G"},
+  {loc:"001-007", qty:1,  art:"10681960",    desc:"INNOCENT ANANAS & JORDBÆR JUIC"},
+  {loc:"001-008", qty:1,  art:"87883101",    desc:"INNOCENT ÆBLE JUICE 900ML"},
+  {loc:"002-001", qty:3,  art:"11224379",    desc:"JENSENS SPARERIBS 500 G SOUS V"},
+  {loc:"002-002", qty:1,  art:"10137149",    desc:"LØGISMOSE ØKO SKYR MAN/PAS M/G"},
+  {loc:"002-003", qty:1,  art:"10274995",    desc:"POLAR SEAFOOD REJER I LAGE M 3"},
+  {loc:"002-005", qty:4,  art:"11278464",    desc:"ALLANS GULD SKIVEOST ML 45+ 20"},
+  {loc:"002-006", qty:1,  art:"11278465",    desc:"ALLANS GULD SKIVEOST HAVARTI 5"},
+  {loc:"002-007", qty:15, art:"31262101",    desc:"ACTIMEL SKOVBÆR 8X100G"},
+  {loc:"002-008", qty:10, art:"70673502",    desc:"STF FRANKFURTER 875G (LX6)"},
+  {loc:"002-009", qty:3,  art:"92503681",    desc:"CHEASY SKÆREOST 30+ HAVARTI 30"},
+  {loc:"002-010", qty:2,  art:"92836801",    desc:"LØGISMOSE SKYR JORDBÆR/RABARBE"},
+  {loc:"002-011", qty:1,  art:"11110142",    desc:"BORNHOLMS A.MEJERI GRILLCHEESE"}
+];
+
+// Smaller orders + a future wave, to show FIFO hands out small orders too.
+const ORD_7732 = [
+  {loc:"001-003", qty:4, art:"10748022", desc:"ACTIMEL KIDS STRAWBERRY-BANANA"},
+  {loc:"001-005", qty:6, art:"11163393", desc:"STEFF HOULBERG GRILLPØLSER 800"},
+  {loc:"002-007", qty:5, art:"31262101", desc:"ACTIMEL SKOVBÆR 8X100G"},
+  {loc:"002-008", qty:3, art:"70673502", desc:"STF FRANKFURTER 875G (LX6)"}
+];
+const ORD_7901 = [
+  {loc:"001-001", qty:2, art:"10171417", desc:"GRØNNELUND SKÆREOST 45+ ML VV"},
+  {loc:"002-005", qty:3, art:"11278464", desc:"ALLANS GULD SKIVEOST ML 45+ 20"},
+  {loc:"002-009", qty:1, art:"92503681", desc:"CHEASY SKÆREOST 30+ HAVARTI 30"}
+];
+const ORD_7704_W3 = [
+  {loc:"001-002", qty:8,  art:"10390244",    desc:"FLENSTED OLES KARTOFFELSALAT 4"},
+  {loc:"001-006", qty:12, art:"93067800001", desc:"ACTIMEL JORDBÆR 8X100G"},
+  {loc:"002-001", qty:5,  art:"11224379",    desc:"JENSENS SPARERIBS 500 G SOUS V"},
+  {loc:"002-010", qty:4,  art:"92836801",    desc:"LØGISMOSE SKYR JORDBÆR/RABARBE"}
+];
+
+const sum = a => a.reduce((s,x)=>s+x.qty,0);
+
+// FIFO queue exactly as it would arrive from the system.
+const QUEUE_SEED = [
+  {id:"o7810", wave:2, store:"7810", dept:"SPOT CHILLED", items:REAL_ITEMS},
+  {id:"o7732", wave:2, store:"7732", dept:"SPOT CHILLED", items:ORD_7732},
+  {id:"o7901", wave:2, store:"7901", dept:"SPOT CHILLED", items:ORD_7901},
+  {id:"o7704", wave:3, store:"7704", dept:"SPOT CHILLED", items:ORD_7704_W3}
+];
+
+// Orders already finished earlier in the shift (seed the log with realistic numbers).
+const DONE_SEED = [
+  {wave:1, store:"7704", colli:312, planned:312, orders:1, shortfalls:[]},
+  {wave:1, store:"7458", colli:163, planned:168, orders:1,
+   shortfalls:[{loc:"001-005", desc:"STEFF HOULBERG GRILLPØLSER 800", planned:14, actual:9, store:"7458"}]}
+];
+
+// Other pickers on the floor (static, for the office board).
+const TEAMMATES = [{name:"Anders", colli:243},{name:"Sofia", colli:176}];
+
+const BONUS_TARGET = 1000;  // colli to the next bonus step
+const PACE = 150;           // representative live pace, colli/h
+
+/* ============================================================
+   I18N — English / Dansk / Українська
+   ============================================================ */
+const I18N = {
+  en:{
+    demo:"Demo · sample data",
+    tagline:"The picking list, straight from your system — on any phone.",
+    connected:"Warehouse system · connected",
+    yourName:"Your name", department:"Department", store:"Store cluster",
+    feedLive:"Live order feed", startShift:"Start shift",
+    loginNote:"No camera, no paper, no install. Orders come from the system; nothing leaves it.",
+    qEyebrow:"Order queue", qTitle:"You get the next order in line.",
+    qSub:"Orders arrive from the system in order. Nobody picks only the big ones — and small orders never get left behind.",
+    qHead:"Next free picker", nextTo:"NEXT — to you", inLine:"in line",
+    waitsWave:"waits for wave {w}", small:"small",
+    colli:"colli", lines:"lines",
+    feedNote:"This is the live feed from your system — paper and scanning are gone. You're handed the next order; you can skip a couple if you must.",
+    takeNext:"▶ Take next order", skipBtn:"Skip ({n})", noSkip:"No skips left",
+    openLog:"📋 Shift log", officeView:"🏢 Office view",
+    queueEmpty:"Queue clear — every order picked.", greatJob:"Nice work — the table's empty.",
+    take:"TAKEN", back:"Back", less:"⚠ Less", pause:"Pause", logBtn:"Shift log",
+    took:"Took:", nextItem:"→ next: {loc}", lastItem:"→ last spot in this order",
+    taken:"taken {n} pcs", unit:"pcs",
+    whint:"One tap = TAKEN · ⚠ Less if the shelf was short",
+    orderDone:"Order done", colliPacked:"colli packed",
+    ofN:"{a} / {b}", short:"{n} short", noShort:"all complete",
+    backQueue:"Back to queue →", toLog:"📋 See shift log",
+    logTitle:"Shift log", colliPackedN:"colli packed · {n} orders",
+    paceTxt:"≈ {n} colli/h", bonusZone:"bonus zone",
+    bonusProg:"progress to next bonus step",
+    perOrder:"This shift, order by order", zerosN:"{n} short",
+    officeTitle:"Office view", officeSub:"What the office sees — live, as it happens. Every number stays inside Netto.",
+    pickersLive:"Pickers · live", waveStatus:"Wave status", shortReport:"Shortfalls this shift",
+    wDone:"done", wDoing:"in progress", wWaiting:"waiting", noShortYet:"No shortfalls recorded yet.",
+    dataLock:"Nothing is sent to an outside service. The office reads it live and owns every number.",
+    back:"Back", restart:"↺ Restart demo",
+    paused:"Paused", pausedTap:"Tap anywhere to resume",
+    foot:"Demo — sample data, no live connection. Picker · built and used on the floor by Mykhailo Lynnyk."
+  },
+  da:{
+    demo:"Demo · eksempeldata",
+    tagline:"Plukkelisten, direkte fra jeres system — på enhver telefon.",
+    connected:"Lagersystem · forbundet",
+    yourName:"Dit navn", department:"Afdeling", store:"Butiksgruppe",
+    feedLive:"Live ordrefeed", startShift:"Start vagt",
+    loginNote:"Intet kamera, intet papir, ingen installation. Ordrer kommer fra systemet; intet forlader det.",
+    qEyebrow:"Ordrekø", qTitle:"Du får den næste ordre i rækken.",
+    qSub:"Ordrer kommer fra systemet i rækkefølge. Ingen tager kun de store — og små ordrer bliver aldrig efterladt.",
+    qHead:"Næste ledige plukker", nextTo:"NÆSTE — til dig", inLine:"i kø",
+    waitsWave:"venter på bølge {w}", small:"lille",
+    colli:"kolli", lines:"linjer",
+    feedNote:"Dette er live-feedet fra jeres system — papir og scanning er væk. Du får den næste ordre; du kan springe et par over om nødvendigt.",
+    takeNext:"▶ Tag næste ordre", skipBtn:"Spring over ({n})", noSkip:"Ingen flere spring",
+    openLog:"📋 Vagtlog", officeView:"🏢 Kontorvisning",
+    queueEmpty:"Køen er tom — alle ordrer plukket.", greatJob:"Godt gået — bordet er tomt.",
+    take:"TAGET", back:"Tilbage", less:"⚠ Mindre", pause:"Pause", logBtn:"Vagtlog",
+    took:"Tog:", nextItem:"→ næste: {loc}", lastItem:"→ sidste plads i ordren",
+    taken:"taget {n} stk", unit:"stk",
+    whint:"Ét tryk = TAGET · ⚠ Mindre hvis hylden var tom",
+    orderDone:"Ordre færdig", colliPacked:"kolli pakket",
+    ofN:"{a} / {b}", short:"{n} mangler", noShort:"alt komplet",
+    backQueue:"Tilbage til køen →", toLog:"📋 Se vagtlog",
+    logTitle:"Vagtlog", colliPackedN:"kolli pakket · {n} ordrer",
+    paceTxt:"≈ {n} kolli/t", bonusZone:"bonuszone",
+    bonusProg:"fremgang til næste bonustrin",
+    perOrder:"Denne vagt, ordre for ordre", zerosN:"{n} mangler",
+    officeTitle:"Kontorvisning", officeSub:"Det kontoret ser — live, mens det sker. Alle tal bliver inde i Netto.",
+    pickersLive:"Plukkere · live", waveStatus:"Bølgestatus", shortReport:"Mangler denne vagt",
+    wDone:"færdig", wDoing:"i gang", wWaiting:"venter", noShortYet:"Ingen mangler registreret endnu.",
+    dataLock:"Intet sendes til en ekstern tjeneste. Kontoret læser det live og ejer hvert tal.",
+    back:"Tilbage", restart:"↺ Genstart demo",
+    paused:"På pause", pausedTap:"Tryk for at fortsætte",
+    foot:"Demo — eksempeldata, ingen live-forbindelse. Picker · bygget og brugt på gulvet af Mykhailo Lynnyk."
+  },
+  uk:{
+    demo:"Демо · приклад даних",
+    tagline:"Лист підбору — прямо з вашої системи, на будь-якому телефоні.",
+    connected:"Складська система · підключено",
+    yourName:"Ваше ім'я", department:"Відділ", store:"Група магазинів",
+    feedLive:"Живий потік замовлень", startShift:"Почати зміну",
+    loginNote:"Без камери, без паперу, без встановлення. Замовлення йдуть із системи; нічого не виходить назовні.",
+    qEyebrow:"Черга замовлень", qTitle:"Ви отримуєте наступне замовлення в черзі.",
+    qSub:"Замовлення надходять із системи по порядку. Ніхто не бере лише великі — і малі замовлення не залишаються.",
+    qHead:"Наступному вільному", nextTo:"НАСТУПНЕ — вам", inLine:"у черзі",
+    waitsWave:"чекає хвилю {w}", small:"мале",
+    colli:"колі", lines:"рядків",
+    feedNote:"Це живий потік із вашої системи — паперу й сканування немає. Вам видають наступне замовлення; за потреби можна пропустити кілька.",
+    takeNext:"▶ Взяти наступне", skipBtn:"Пропустити ({n})", noSkip:"Пропусків немає",
+    openLog:"📋 Журнал зміни", officeView:"🏢 Вид офісу",
+    queueEmpty:"Черга порожня — усі замовлення зібрані.", greatJob:"Чудово — стіл порожній.",
+    take:"ВЗЯВ", back:"Назад", less:"⚠ Менше", pause:"Пауза", logBtn:"Журнал",
+    took:"Взяв:", nextItem:"→ далі: {loc}", lastItem:"→ остання позиція замовлення",
+    taken:"взято {n} шт", unit:"шт",
+    whint:"Один тап = ВЗЯВ · ⚠ Менше, якщо на полиці бракувало",
+    orderDone:"Замовлення зібрано", colliPacked:"колі зібрано",
+    ofN:"{a} / {b}", short:"{n} нестача", noShort:"усе зібрано",
+    backQueue:"До черги →", toLog:"📋 Журнал зміни",
+    logTitle:"Журнал зміни", colliPackedN:"колі зібрано · {n} замовлень",
+    paceTxt:"≈ {n} колі/год", bonusZone:"бонусна зона",
+    bonusProg:"прогрес до наступного бонусу",
+    perOrder:"Ця зміна, замовлення за замовленням", zerosN:"{n} нестача",
+    officeTitle:"Вид офісу", officeSub:"Те, що бачить офіс — наживо. Кожна цифра лишається в Netto.",
+    pickersLive:"Збирачі · наживо", waveStatus:"Статус хвиль", shortReport:"Нестачі за зміну",
+    wDone:"готово", wDoing:"у роботі", wWaiting:"очікує", noShortYet:"Нестач поки не зафіксовано.",
+    dataLock:"Нічого не йде до зовнішнього сервісу. Офіс читає це наживо й володіє кожною цифрою.",
+    back:"Назад", restart:"↺ Перезапустити демо",
+    paused:"Пауза", pausedTap:"Торкніться, щоб продовжити",
+    foot:"Демо — приклад даних, без живого з'єднання. Picker · створено й використовується на складі Mykhailo Lynnyk."
+  }
+};
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const LS = "picker_demo_state_v1";
+let S;
+
+function freshState(){
+  return {
+    lang:"en", name:"Mykhailo", screen:"login",
+    skips:2,
+    queue:QUEUE_SEED.map(o=>o.id),         // pending order ids, FIFO
+    cur:null,                              // {orderId, idx, taken:[]}
+    done:DONE_SEED.map(d=>({...d, shortfalls:d.shortfalls.map(s=>({...s}))})),
+    lastDone:null
+  };
+}
+function load(){
+  try{ const r=localStorage.getItem(LS); if(r){ S=JSON.parse(r); if(S&&S.queue) return; } }catch(e){}
+  S=freshState();
+}
+function save(){ try{ localStorage.setItem(LS, JSON.stringify(S)); }catch(e){} }
+function resetDemo(){ S=freshState(); save(); document.body.classList.remove("working"); show("login"); }
+
+const order = id => QUEUE_SEED.find(o=>o.id===id);
+function t(k){ return (I18N[S.lang]&&I18N[S.lang][k]) || I18N.en[k] || k; }
+function tpl(k,v){ let s=t(k); for(const p in v) s=s.replace("{"+p+"}", v[p]); return s; }
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// live shift totals
+function shiftColli(){ return S.done.reduce((s,d)=>s+d.colli,0); }
+function shiftOrders(){ return S.done.reduce((s,d)=>s+(d.orders||1),0); }
+function allShortfalls(){ const a=[]; S.done.forEach(d=>(d.shortfalls||[]).forEach(s=>a.push({...s,store:s.store||d.store}))); return a; }
+function minPendingWave(){ return S.queue.length? Math.min(...S.queue.map(id=>order(id).wave)) : 0; }
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+const app = document.getElementById("app");
+
+function langBar(){
+  return `<div class="lang">${["en","da","uk"].map(l=>
+    `<button data-lang="${l}" class="${S.lang===l?"on":""}">${l.toUpperCase()}</button>`).join("")}</div>`;
+}
+function header(){
+  return `<div class="top">
+    <div class="logo sm">P</div>
+    <div class="who">
+      <div class="nm">${esc(S.name)||"Picker"}</div>
+      <div class="conn"><span class="dotlive"></span>${t("connected")}</div>
+    </div>
+    ${langBar()}
+  </div>`;
+}
+function locHtml(loc){
+  return loc.split("-").map(p=>`<span>${p}</span>`).join('<i class="locsep">·</i>');
+}
+
+function show(screen){
+  S.screen=screen; save();
+  if(screen==="work"){ document.body.classList.add("working"); }
+  else { document.body.classList.remove("working"); }
+  ({login:rLogin, queue:rQueue, work:rWork, done:rDone, log:rLog, office:rOffice}[screen]||rLogin)();
+  window.scrollTo(0,0);
+}
+
+/* ---- login ---- */
+function rLogin(){
+  app.innerHTML = `
+    <div class="top" style="justify-content:space-between">
+      <span class="demobadge">● ${t("demo")}</span>
+      ${langBar()}
+    </div>
+    <div class="loginhero">
+      <div class="logo">P</div>
+      <h1>Picker</h1>
+      <p class="tag">${t("tagline")}</p>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <div class="kv"><span class="k">${t("feedLive")}</span><span class="v" style="color:var(--go);display:flex;align-items:center;gap:7px"><span class="dotlive"></span>${t("connected")}</span></div>
+      <div class="kv"><span class="k">${t("department")}</span><span class="v">SPOT CHILLED</span></div>
+      <div class="kv"><span class="k">${t("store")}</span><span class="v num">7810 · 7732 · 7901 …</span></div>
+      <div class="field">
+        <label>${t("yourName")}</label>
+        <input id="nameInp" type="text" value="${esc(S.name)}" autocomplete="off">
+      </div>
+    </div>
+    <button class="btn btn-go" data-act="start">${t("startShift")}</button>
+    <p class="foot" style="margin-top:14px">${t("loginNote")}</p>
+  `;
+}
+
+/* ---- queue ---- */
+function rQueue(){
+  document.body.classList.remove("working");
+  if(S.queue.length===0){
+    app.innerHTML = header() + `
+      <span class="eyebrow">${t("qEyebrow")}</span>
+      <h2 class="scr">${t("greatJob")}</h2>
+      <div class="card" style="text-align:center;padding:30px 18px">
+        <div style="font-size:46px">🎉</div>
+        <p class="sub" style="margin:10px 0 0">${t("queueEmpty")}</p>
+      </div>
+      <button class="btn" data-act="open-log">${t("openLog")}</button>
+      <button class="btn" data-act="open-office">${t("officeView")}</button>
+      <button class="btn btn-small btn-ghost" data-act="restart">${t("restart")}</button>`;
+    return;
+  }
+  const minW = minPendingWave();
+  let nextSeen=false;
+  const tix = S.queue.map(id=>{
+    const o=order(id), colli=sum(o.items), small=colli<=12;
+    const future = o.wave>minW;
+    let cls="", status="";
+    if(!future && !nextSeen){ cls="next"; nextSeen=true; status=t("nextTo"); }
+    else if(future){ cls="dim"; status=tpl("waitsWave",{w:minW}); }
+    else { status=t("inLine"); }
+    return `<div class="tix ${cls}">
+      <div class="tn">W${o.wave}<small>WAVE</small></div>
+      <div class="ti">
+        <div class="o">Store ${o.store}${small?`<span class="smallflag">${t("small")}</span>`:""}</div>
+        <div class="m">${o.dept} · <span class="num">${colli}</span> ${t("colli")} · <span class="num">${o.items.length}</span> ${t("lines")}</div>
+      </div>
+      <div class="ts">${status}</div>
+    </div>`;
+  }).join("");
+
+  app.innerHTML = header() + `
+    <span class="eyebrow">${t("qEyebrow")}</span>
+    <h2 class="scr">${t("qTitle")}</h2>
+    <p class="sub">${t("qSub")}</p>
+    <div class="feednote">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+      <span>${t("feedNote")}</span>
+    </div>
+    <div class="qhead">${t("qHead")}</div>
+    ${tix}
+    <button class="btn btn-go" data-act="take-next">${t("takeNext")}</button>
+    <button class="btn ${S.skips>0?"":"btn-ghost"}" data-act="skip" ${S.skips>0?"":"disabled"}>${S.skips>0?tpl("skipBtn",{n:S.skips}):t("noSkip")}</button>
+    <div class="row">
+      <button class="btn btn-small" data-act="open-log">${t("openLog")}</button>
+      <button class="btn btn-small" data-act="open-office">${t("officeView")}</button>
+    </div>
+    <p class="foot">${t("foot")}</p>`;
+}
+
+/* ---- work ---- */
+function rWork(){
+  document.body.classList.add("working");
+  const o=order(S.cur.orderId), i=S.cur.idx, it=o.items[i];
+  const takenSoFar = S.cur.taken.reduce((s,x)=>s+x,0);
+  const last = i===o.items.length-1;
+  const nextLine = last ? t("lastItem") : tpl("nextItem",{loc:o.items[i+1].loc});
+
+  app.innerHTML = `
+    <div class="workbar">
+      <span class="num">${tpl("ofN",{a:i+1,b:o.items.length})}</span>
+      <span class="mid" data-act="open-log">${t("logBtn")}</span>
+      <span>${tpl("taken",{n:takenSoFar})}</span>
+    </div>
+    <div class="wcard">
+      <div class="locbig num">${locHtml(it.loc)}</div>
+      <div class="wsep"></div>
+      <div class="qtybig num" id="qtyBig"><span class="full"><span class="n">${it.qty}</span><span class="u">${t("unit")}</span></span></div>
+      <div class="wdesc">${esc(it.desc)}</div>
+      <div class="wart num">${it.art}</div>
+      <div class="wnext num">${nextLine}</div>
+      <div class="pbar" id="pbar">
+        <span class="lab">${t("took")}</span>
+        <input id="lessInp" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+        <button class="ok" data-act="less-ok">✓</button>
+        <button class="x" data-act="less-x">✕</button>
+      </div>
+    </div>
+    <button class="btn btn-go" data-act="take" style="margin-top:14px;padding:24px">${t("take")}</button>
+    <div class="row">
+      <button class="btn" data-act="back" ${i===0?"disabled":""}>${t("back")}</button>
+      <button class="btn btn-amber" data-act="less">${t("less")}</button>
+    </div>
+    <button class="btn btn-small" data-act="pause" style="margin-top:10px">${t("pause")}</button>
+    <p class="whint">${t("whint")}</p>`;
+}
+
+function setLessQty(planned, actual){
+  const el=document.getElementById("qtyBig");
+  if(!el) return;
+  el.innerHTML = `<span class="orig num">${planned} ${t("unit")}</span><span class="act num">${actual} ${t("unit")}</span>`;
+}
+
+/* ---- order done ---- */
+function rDone(){
+  const d=S.lastDone;
+  const shorts=(d.shortfalls||[]).length;
+  app.innerHTML = header() + `
+    <div class="doneic">✅</div>
+    <h2 class="scr" style="text-align:center">${t("orderDone")}</h2>
+    <p class="sub" style="text-align:center">Wave ${d.wave} · Store ${d.store} · ${d.dept||"SPOT CHILLED"}</p>
+    <div class="card">
+      <div class="bigstat"><div class="n num">${d.colli}</div><div class="l">${t("colliPacked")} · <span class="num">${d.items}</span> ${t("lines")}</div></div>
+      <div style="text-align:center;margin-top:12px;font-size:13.5px;color:${shorts?"var(--amber)":"var(--go)"}">
+        ${shorts? tpl("short",{n:shorts}) : t("noShort")}
+      </div>
+    </div>
+    <button class="btn btn-go" data-act="back-queue">${t("backQueue")}</button>
+    <button class="btn" data-act="open-log">${t("toLog")}</button>`;
+}
+
+/* ---- shift log ---- */
+function rLog(){
+  const colli=shiftColli(), orders=shiftOrders();
+  const pct=Math.min(100, Math.round(colli/BONUS_TARGET*100));
+  const rows = S.done.slice().reverse().map(d=>{
+    const z=(d.shortfalls||[]).length;
+    return `<div class="jrow">
+      <div class="jl">Wave ${d.wave} · <b>Store ${d.store}</b>${z?` <span class="zero">· ${tpl("zerosN",{n:z})}</span>`:""}</div>
+      <div class="jv num">${d.colli}</div>
+    </div>`;
+  }).join("");
+  app.innerHTML = header() + `
+    <span class="eyebrow amber">${t("logTitle")}</span>
+    <div class="card" style="margin-top:11px">
+      <div style="font-size:13px;color:var(--muted)">${esc(S.name)} · 27-06 · 16:00–23:45</div>
+      <div class="jtot num" style="margin-top:8px">${colli}</div>
+      <div class="jtotl">${tpl("colliPackedN",{n:orders})}</div>
+      <div class="jpace num">${tpl("paceTxt",{n:PACE})} · ${t("bonusZone")}</div>
+      <div class="prog">
+        <div class="track"><div class="fill" style="width:${pct}%"></div></div>
+        <div class="pl"><span>${t("bonusProg")}</span><span class="num">${pct}%</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sectitle">${t("perOrder")}</div>
+      ${rows}
+    </div>
+    <div class="row">
+      <button class="btn" data-act="goto-queue">${t("back")}</button>
+      <button class="btn btn-small" data-act="open-office">${t("officeView")}</button>
+    </div>
+    <button class="btn btn-small btn-ghost" data-act="restart">${t("restart")}</button>`;
+}
+
+/* ---- office view ---- */
+function rOffice(){
+  const mine=shiftColli();
+  const board=[{name:S.name, colli:mine, me:true}, ...TEAMMATES.map(p=>({...p,me:false}))]
+    .sort((a,b)=>b.colli-a.colli);
+  const max=Math.max(...board.map(p=>p.colli),1);
+  const bars=board.map(p=>`
+    <div class="pkbar ${p.me?"me":""}">
+      <div class="pkh"><span class="${p.me?"me":""}">${esc(p.name)}${p.me?" · you":""}</span><span class="v num">${p.colli} ${t("colli")}</span></div>
+      <div class="track"><div class="fill" style="width:${Math.round(p.colli/max*100)}%"></div></div>
+    </div>`).join("");
+
+  const minW=minPendingWave();
+  const wave=(n)=>{
+    let cls,st;
+    if(minW===0){ cls="done"; st=t("wDone"); }                 // queue empty -> all done
+    else if(n<minW){ cls="done"; st=t("wDone"); }
+    else if(n===minW){ cls="doing"; st=t("wDoing"); }
+    else { cls="wait"; st=t("wWaiting"); }
+    return `<div class="wave ${cls}"><span class="wd"></span><span class="wn">Wave ${n}</span><span class="wst">${st}</span></div>`;
+  };
+
+  const shorts=allShortfalls();
+  const shortHtml = shorts.length? shorts.map(s=>`
+    <div class="shortrow">
+      <div class="sd"><b>Store ${s.store}</b> · ${esc(s.desc)} <span style="color:var(--faint)">(${s.loc})</span></div>
+      <div class="sq"><span class="from num">${s.planned}</span><span class="to num">${s.actual}</span></div>
+    </div>`).join("") : `<div class="empty">${t("noShortYet")}</div>`;
+
+  app.innerHTML = header() + `
+    <span class="eyebrow">${t("officeTitle")}</span>
+    <h2 class="scr">${t("officeSub")}</h2>
+    <div class="card">
+      <div class="sectitle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>${t("pickersLive")}</div>
+      ${bars}
+    </div>
+    <div class="card">
+      <div class="sectitle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>${t("waveStatus")}</div>
+      ${wave(1)}${wave(2)}${wave(3)}
+    </div>
+    <div class="card">
+      <div class="sectitle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg>${t("shortReport")}</div>
+      ${shortHtml}
+    </div>
+    <div class="lock">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span>${t("dataLock")}</span>
+    </div>
+    <div class="row">
+      <button class="btn" data-act="goto-queue">${t("back")}</button>
+      <button class="btn btn-small" data-act="open-log">${t("openLog")}</button>
+    </div>
+    <button class="btn btn-small btn-ghost" data-act="restart">${t("restart")}</button>`;
+}
+
+/* ============================================================
+   ACTIONS
+   ============================================================ */
+function takeNext(){
+  if(S.queue.length===0) return;
+  const minW=minPendingWave();
+  // hand out the first pending order of the earliest wave
+  const id = S.queue.find(x=>order(x).wave===minW) || S.queue[0];
+  S.cur={orderId:id, idx:0, taken:[]};
+  save(); show("work");
+}
+function skipOrder(){
+  if(S.skips<=0 || S.queue.length<2) return;
+  const minW=minPendingWave();
+  const idx=S.queue.findIndex(x=>order(x).wave===minW);
+  if(idx<0) return;
+  const [id]=S.queue.splice(idx,1);
+  // hand it to the next picker -> move just behind the following same-wave order
+  let ins=idx;
+  while(ins<S.queue.length && order(S.queue[ins]).wave===minW){ ins++; if(ins>idx) break; }
+  S.queue.splice(Math.min(ins,S.queue.length),0,id);
+  S.skips--; save(); rQueue();
+}
+function takeItem(actual){
+  const o=order(S.cur.orderId), it=o.items[S.cur.idx];
+  S.cur.taken[S.cur.idx] = (actual==null? it.qty : Math.max(0,Math.min(it.qty,actual)));
+  if(S.cur.idx >= o.items.length-1){ finishOrder(); }
+  else { S.cur.idx++; save(); rWork(); }
+}
+function backItem(){
+  if(S.cur.idx>0){ S.cur.idx--; S.cur.taken.pop(); save(); rWork(); }
+}
+function finishOrder(){
+  const o=order(S.cur.orderId);
+  const colli=S.cur.taken.reduce((s,x)=>s+x,0);
+  const planned=sum(o.items);
+  const shortfalls=[];
+  o.items.forEach((it,k)=>{ const a=S.cur.taken[k]; if(a<it.qty) shortfalls.push({loc:it.loc,desc:it.desc,planned:it.qty,actual:a,store:o.store}); });
+  S.done.push({wave:o.wave, store:o.store, dept:o.dept, colli, planned, orders:1, items:o.items.length, shortfalls});
+  S.lastDone={wave:o.wave, store:o.store, dept:o.dept, colli, items:o.items.length, shortfalls};
+  S.queue = S.queue.filter(id=>id!==o.id);
+  S.cur=null; save(); show("done");
+}
+
+/* ============================================================
+   EVENTS
+   ============================================================ */
+document.addEventListener("click", e=>{
+  const langB=e.target.closest("[data-lang]");
+  if(langB){ S.lang=langB.getAttribute("data-lang"); save(); show(S.screen); return; }
+
+  const el=e.target.closest("[data-act]");
+  if(!el) return;
+  const a=el.getAttribute("data-act");
+  switch(a){
+    case "start": {
+      const v=document.getElementById("nameInp");
+      if(v && v.value.trim()) S.name=v.value.trim().slice(0,24);
+      save(); show("queue"); break;
+    }
+    case "take-next": takeNext(); break;
+    case "skip": skipOrder(); break;
+    case "open-log": show("log"); break;
+    case "open-office": show("office"); break;
+    case "goto-queue": show("queue"); break;
+    case "back-queue": show("queue"); break;
+    case "take": takeItem(null); break;
+    case "back": backItem(); break;
+    case "less": {
+      const pb=document.getElementById("pbar");
+      if(pb){ pb.classList.add("on"); const inp=document.getElementById("lessInp");
+        const it=order(S.cur.orderId).items[S.cur.idx];
+        if(inp){ inp.value=""; inp.placeholder=String(it.qty); inp.focus();
+          inp.oninput=()=>{ const val=parseInt(inp.value,10);
+            if(!isNaN(val)) setLessQty(it.qty, Math.max(0,Math.min(it.qty,val))); }; }
+      }
+      break;
+    }
+    case "less-ok": {
+      const inp=document.getElementById("lessInp");
+      const it=order(S.cur.orderId).items[S.cur.idx];
+      let v=parseInt(inp&&inp.value,10);
+      if(isNaN(v)) v=it.qty;
+      takeItem(v); break;
+    }
+    case "less-x": { const pb=document.getElementById("pbar"); if(pb) pb.classList.remove("on"); rWork(); break; }
+    case "pause": { document.getElementById("paused").classList.add("on"); break; }
+    case "restart": resetDemo(); break;
+  }
+});
+
+// resume from paused overlay
+document.getElementById("paused").addEventListener("click", ()=>{
+  document.getElementById("paused").classList.remove("on");
+});
+
+// localize the paused overlay whenever language changes / screen renders
+function syncPaused(){
+  document.getElementById("pausedT").textContent=t("paused");
+  document.getElementById("pausedP").textContent=t("pausedTap");
+}
+const _show=show;
+show=function(s){ _show(s); syncPaused(); };
+
+/* ============================================================
+   INIT
+   ============================================================ */
+load();
+// if a stale state points at "work" but there is no current order, fall back
+if(S.screen==="work" && !S.cur) S.screen="queue";
+if(S.screen==="done" && !S.lastDone) S.screen="queue";
+show(S.screen||"login");
+</script>
+</body>
+</html>
