@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <!--
-  PICKER v3.19 — pick-by-voice для склада (личный инструмент)
+  PICKER v3.20 — pick-by-voice для склада (личный инструмент)
   ============================================================
   v1.0:
   • Микрофон: полудуплекс (глохнет во время озвучки) + epoch-guard
@@ -16,7 +16,7 @@
   • «→ далее: 004-006» — видно куда ехать следующим (для погрузчика)
   • Новый интерфейс: iOS-переключатели, секции, без мелких галочек
   ============================================================
-  Править: озвучка → itemPhrase() · щелчки AirPods → stemAction() · промпт AI → buildPrompt()
+  Править: озвучка → itemPhrase() · щелчки AirPods → stemAction() · промпт распознавания → buildPrompt()
   v3.8: убрано распознавание речи/постоянный микрофон (нестабильно в iOS Safari).
         Осталось: щелчки AirPods + кнопки + TTS-озвучка. Журнал смены переработан.
 -->
@@ -29,10 +29,13 @@
 <title>Picker</title>
 <style>
 :root{
-  --bg:#0b0f14;--card:#141a22;--line:#243040;
-  --txt:#e8eef5;--dim:#8fa1b3;
-  --go:#2dd46f;--go-press:#24b35d;
+  --bg:#0b0f14;--card:#141a22;--card2:#10151c;--line:#243040;--line2:#1b2430;
+  --txt:#e8eef5;--dim:#8fa1b3;--faint:#5a6b7d;
+  --go:#2dd46f;--go-press:#24b35d;--go-dk:#06250f;
   --warn:#ffb020;--bad:#ff5d5d;--blue:#4aa3ff;
+  --r:14px;--r-lg:20px;--r-sm:10px;
+  --sh:0 10px 28px -18px rgba(0,0,0,.85);
+  --hl:inset 0 1px 0 rgba(255,255,255,.05);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
 html,body{overscroll-behavior:none;}
@@ -308,6 +311,135 @@ h2 .ic{vertical-align:-3px;margin-right:7px;}
 #parseOut .pt-x:active{background:#1a222e;}
 #parseOut .pt-row.excluded .pt-x{border-color:var(--go);color:var(--go);}
 [hidden]{display:none !important;}
+/* ===================== ПОЛИРОВКА UI (v3.20) ===================== */
+body:not(.work)::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(135% 72% at 50% -18%,rgba(45,212,111,.13),transparent 55%),
+             radial-gradient(95% 55% at 102% 2%,rgba(74,163,255,.06),transparent 60%);}
+
+/* — Бренд-хедер — */
+.hdr{align-items:center;margin-bottom:4px;}
+.brand{display:flex;align-items:center;gap:11px;min-width:0;}
+.logo{width:42px;height:42px;border-radius:13px;flex:0 0 auto;display:grid;place-items:center;color:#eafff2;
+  background:linear-gradient(140deg,#37e27b,#15a050);
+  box-shadow:0 9px 20px -8px rgba(45,212,111,.8),inset 0 1px 0 rgba(255,255,255,.45);}
+.logo .ic{width:24px;height:24px;}
+.brand-tx{min-width:0;}
+.brand h1{display:flex;align-items:center;gap:8px;margin:0;font-size:22px;line-height:1.05;letter-spacing:-.3px;}
+.ver{font-size:10.5px;font-weight:800;color:var(--go);background:rgba(45,212,111,.13);
+  border:1px solid rgba(45,212,111,.32);border-radius:7px;padding:2px 7px;letter-spacing:.4px;}
+.brand .tagline{margin:3px 0 0;font-size:12px;}
+.copyline{font-size:10.5px;line-height:1.5;margin:11px 2px 16px;opacity:.5;color:var(--dim);}
+.copyline a{color:var(--dim);text-decoration:underline;}
+.lang{border-radius:12px;box-shadow:var(--hl);}
+.lang button{padding:9px 12px;font-size:12px;transition:color .15s,background .15s;}
+.lang button.on{background:#22313f;}
+
+/* — Карточка-панель — */
+.panel{background:linear-gradient(180deg,#161d27,#11171f);border:1px solid var(--line);
+  border-radius:var(--r-lg);padding:15px 14px;box-shadow:var(--sh),var(--hl);margin-top:13px;}
+.panel-hd{display:flex;align-items:center;gap:10px;margin-bottom:13px;}
+.panel-ic{width:34px;height:34px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;
+  color:var(--go);background:rgba(45,212,111,.12);}
+.panel-ic .ic{width:19px;height:19px;}
+.panel-hd h3{margin:0;font-size:15.5px;font-weight:700;color:var(--txt);letter-spacing:-.1px;}
+
+/* — Зона добавления фото — */
+.btn-upload{flex-direction:column;gap:9px;border-style:dashed;border-width:1.5px;border-color:#2d3b4e;
+  background:rgba(45,212,111,.05);color:var(--txt);padding:20px;font-size:15.5px;font-weight:600;}
+.btn-upload .ic{width:27px;height:27px;color:var(--go);}
+.btn-upload:active{background:rgba(45,212,111,.1);}
+
+/* — Статус распознавания — */
+#aiState{margin-top:12px;font-size:12.5px;line-height:1.5;color:var(--dim);
+  padding:10px 12px;border-radius:11px;background:var(--card2);border:1px solid var(--line2);}
+
+/* — Total coli (компакт) — */
+.totline{margin-top:13px;gap:5px 10px;background:var(--card2);border:1px solid var(--line2);
+  border-radius:var(--r);padding:11px 13px;flex-wrap:wrap;align-items:center;}
+.totline>span:first-child{font-size:13.5px;color:var(--dim);font-weight:600;}
+.totline input{width:88px;font-size:18px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;
+  background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px;}
+.totline .hint{flex-basis:100%;margin-top:0;}
+
+/* — «Ввести вручную» (disclosure) — */
+.adv{margin-top:13px;border:1px solid var(--line2);border-radius:var(--r);background:var(--card2);overflow:hidden;}
+.adv>summary{list-style:none;display:flex;align-items:center;gap:9px;padding:13px 14px;
+  font-size:14.5px;font-weight:600;color:var(--dim);cursor:pointer;}
+.adv>summary::-webkit-details-marker{display:none;}
+.adv>summary .lead{color:var(--faint);display:inline-flex;}
+.adv>summary .chev2{margin-left:auto;transition:transform .25s;color:var(--faint);display:inline-flex;}
+.adv[open]>summary .chev2{transform:rotate(180deg);}
+.adv .adv-body{padding:2px 13px 14px;}
+.adv .adv-body textarea{margin-top:2px;}
+.adv .adv-body .btn{margin-top:10px;}
+
+/* — Тулбар второстепенных действий — */
+.toolbar{display:flex;gap:8px;margin-top:14px;}
+.toolbar .btn{flex:1;flex-direction:column;gap:6px;margin-top:0;padding:13px 4px;
+  font-size:11.5px;font-weight:600;color:var(--dim);background:var(--card2);border-color:var(--line2);}
+.toolbar .btn .ic{width:21px;height:21px;color:var(--dim);}
+.toolbar .btn:active .ic{color:var(--txt);}
+
+/* — Resume — */
+.resume-bar{background:linear-gradient(135deg,rgba(45,212,111,.16),rgba(45,212,111,.05));
+  border:1px solid rgba(45,212,111,.42);border-radius:var(--r-lg);box-shadow:var(--sh);}
+.resume-bar p{font-size:14.5px;}
+
+/* — Кнопки — */
+.btn{background:linear-gradient(180deg,#171e28,#121821);box-shadow:var(--hl);}
+.btn:active{transform:scale(.97);background:#1b2330;}
+.btn-go{background:linear-gradient(180deg,#34dc78,#21bb62);color:var(--go-dk);border:none;font-weight:800;letter-spacing:.3px;
+  box-shadow:0 14px 28px -12px rgba(45,212,111,.62),inset 0 1px 0 rgba(255,255,255,.32);}
+.btn-go:active{background:linear-gradient(180deg,#2bca6c,#1cab57);transform:scale(.985);}
+.btn-warn{background:linear-gradient(180deg,#27190a,#1e1408);}
+
+/* — Карточка работы — */
+.card{border-radius:var(--r-lg);box-shadow:var(--sh),var(--hl);background:linear-gradient(180deg,#161d27,#0f141c);}
+body.work .card{background:linear-gradient(180deg,#0c1118,#06090d);border-color:#19222e;
+  box-shadow:0 16px 38px -20px rgba(0,0,0,.9);}
+
+/* — Прогресс-строка работы — */
+.progress{margin:2px 0 11px;}
+#posTxt,#takenTxt{font-size:13px;color:var(--dim);font-weight:600;font-variant-numeric:tabular-nums;}
+#summaryTap{font-weight:600;}
+
+/* — Итог-экран — */
+.done-icon{filter:drop-shadow(0 8px 18px rgba(45,212,111,.4));}
+
+/* — Модалки: лёгкое размытие фона — */
+#helpModal,#logModal,#summaryModal{-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}
+
+/* — Номер butik в строке работы (вместо «Сводки») — */
+#storeTxt{color:var(--go);font-weight:700;font-size:13.5px;text-align:center;
+  font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+
+/* — Эко-экран: верхняя строка + «далее» — */
+#eco .etop{color:#3c4756;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;
+  white-space:nowrap;margin-bottom:14px;text-align:center;padding:0 14px;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;}
+#eco .enext{color:#33414e;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:10px;}
+
+/* — Настройки «Ещё»: раскрывающиеся карточки — */
+#morePanel .settings{background:none;border:0;padding:0;margin-top:12px;}
+.setcard{background:linear-gradient(180deg,#141b24,#0f151d);border:1px solid var(--line2);
+  border-radius:14px;margin-top:10px;overflow:hidden;box-shadow:var(--hl);}
+.setcard:first-child{margin-top:0;}
+.setrow{display:flex;align-items:center;gap:11px;padding:12px 13px;}
+.setic{flex:0 0 auto;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
+  color:var(--go);background:rgba(45,212,111,.12);}
+.setic .ic{width:18px;height:18px;}
+.setmain{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:none;border:0;
+  padding:0;margin:0;color:var(--txt);font-size:15px;font-weight:600;text-align:left;cursor:pointer;}
+.setmain .setlab{flex:1;min-width:0;}
+.setmain .chev3{flex:0 0 auto;display:inline-flex;color:var(--faint);transition:transform .25s;}
+.setcard.open .setmain .chev3{transform:rotate(180deg);}
+.setrow .sw{padding:0;}
+.setdetail{overflow:hidden;max-height:0;transition:max-height .3s ease;}
+.setcard.open .setdetail{max-height:240px;}
+.setdetail-in{padding:4px 14px 12px 58px;border-top:1px solid var(--line2);}
+.setdetail-in .rate-row{padding:10px 0 6px;}
+.setdetail-in .inline-num{padding:8px 0;}
+.setdetail-in .hint{margin-top:6px;}
 </style>
 </head>
 <body>
@@ -316,15 +448,17 @@ h2 .ic{vertical-align:-3px;margin-right:7px;}
 <!-- ================= ЭКРАН 1: ЗАГРУЗКА ================= -->
 <div id="scrSetup">
   <div class="hdr">
-    <div><h1>Picker</h1><p class="sub" style="margin-bottom:0">v3.19</p></div>
+    <div class="brand">
+      <div class="logo"><svg class="ic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
+      <div class="brand-tx"><h1>Picker <span class="ver">v3.20</span></h1><p class="sub tagline" data-i18n="tagline">Pick-by-voice · личный прототип</p></div>
+    </div>
     <div class="lang" id="langSel">
       <button data-lang="ru">RU</button>
       <button data-lang="en">EN</button>
       <button data-lang="da">DA</button>
     </div>
   </div>
-  <p class="sub" data-i18n="tagline">Pick-by-voice · личный прототип</p>
-  <p class="sub" style="font-size:11px;line-height:1.45;margin:-8px 0 16px;opacity:.6">© 2025–2026 Mykhailo Lynnyk · Personal prototype · All rights reserved · <a href="https://github.com/TheFleece/picker" target="_blank" rel="noopener" style="color:var(--dim);text-decoration:underline">source &amp; license</a></p>
+  <p class="copyline">© 2025–2026 Mykhailo Lynnyk · Personal prototype · All rights reserved · <a href="https://github.com/TheFleece/picker" target="_blank" rel="noopener">source &amp; license</a></p>
 
   <div id="resumeBar" class="resume-bar" hidden>
     <p><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span data-i18n="resumeTitle">Есть незаконченный лист:</span> <b id="resumeInfo"></b></p>
@@ -334,46 +468,49 @@ h2 .ic{vertical-align:-3px;margin-right:7px;}
     </div>
   </div>
 
-  <div class="settings">
-    <div class="sec" style="margin-top:4px">
-      <h3 data-i18n="secScan">Сканирование листа</h3>
-      <button class="btn" id="btnPhoto" data-i18n="addPhoto">Добавить фото</button>
-      <p class="tip" data-i18n="photoHint">Весь лист + нижняя часть при мелком шрифте</p>
-      <div id="photoQueue" class="pq" hidden></div>
-      <button class="btn btn-go" id="btnScanAI" style="font-size:19px;padding:16px" hidden>Сканировать</button>
-      <div id="ocrStatus" class="warn-line" hidden></div>
-      <div class="hint" id="aiState" style="margin-top:10px"></div>
-      <button class="btn btn-small" id="btnCopyPrompt" data-i18n="copyPrompt" style="margin-top:10px">Копировать промт</button>
-      <p class="tip" data-i18n="copyPromptHint">Запасной вариант при 429: вставь промт + фото в любую ИИ (можно в этот чат), ответ — в поле ниже, затем «Распознать лист».</p>
-    </div>
-  </div>
+  <section class="panel">
+    <div class="panel-hd"><span class="panel-ic"><svg class="ic" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg></span><h3 data-i18n="secScan">Сканирование листа</h3></div>
+    <button class="btn btn-upload" id="btnPhoto" data-i18n="addPhoto" data-ic="camera">Добавить фото</button>
+    <p class="tip" data-i18n="photoHint">Весь лист + нижняя часть при мелком шрифте</p>
+    <div id="photoQueue" class="pq" hidden></div>
+    <button class="btn btn-go" id="btnScanAI" style="font-size:19px;padding:16px;margin-top:12px" hidden>Сканировать</button>
+    <div id="ocrStatus" class="warn-line" hidden></div>
+    <div class="hint" id="aiState"></div>
+  </section>
   <input type="file" id="photoInput" accept="image/*" multiple hidden>
 
-  <textarea id="raw" data-i18n-ph="rawPh" placeholder="Текст с фото — или вставь вручную"></textarea>
-
-  <button class="btn" id="btnParse" data-i18n="parseBtn">Распознать лист</button>
+  <div id="parseOut"></div>
 
   <label class="totline"><span data-i18n="totalLabel">Total coli с листа:</span>
     <input type="number" id="expTotal" inputmode="numeric">
-    <span class="hint" data-i18n="totalHint" style="margin-top:0">(заполнится само, если попало в скан)</span>
+    <span class="hint" data-i18n="totalHint">(заполнится само, если попало в скан)</span>
   </label>
 
-  <div id="parseOut"></div>
-  <div class="row">
-    <button class="btn btn-small" id="btnHelp" data-i18n="help">Помощь</button>
-    <button class="btn btn-small" id="btnKey" data-i18n="aiKey">AI-ключ</button>
-    <button class="btn btn-small" id="btnClear" data-i18n="clear">Очистить</button>
+  <details class="adv">
+    <summary><span class="lead"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></span><span data-i18n="manualTitle">Ввести вручную</span><span class="chev2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></summary>
+    <div class="adv-body">
+      <textarea id="raw" data-i18n-ph="rawPh" placeholder="Текст с фото — или вставь вручную"></textarea>
+      <button class="btn" id="btnParse" data-i18n="parseBtn">Распознать лист</button>
+      <button class="btn btn-small" id="btnCopyPrompt" data-i18n="copyPrompt">Копировать промт</button>
+      <p class="tip" data-i18n="copyPromptHint">Запасной вариант при ошибке 429: скопируй промт, вставь полученный текст листа в поле ниже и нажми «Распознать лист».</p>
+    </div>
+  </details>
+
+  <div class="toolbar">
+    <button class="btn" id="btnHelp" data-i18n="help" data-ic="help">Помощь</button>
+    <button class="btn" id="btnKey" data-i18n="aiKey" data-ic="key">Ключ</button>
+    <button class="btn" id="btnClear" data-i18n="clear" data-ic="trash">Очистить</button>
+    <button class="btn" id="btnLog" data-i18n="shiftLog" data-ic="log">Журнал смены</button>
   </div>
-  <button class="btn btn-small" id="btnLog" data-i18n="shiftLog" data-ic="log" style="margin-top:10px">Журнал смены</button>
   <div class="grow"></div>
-  <button class="btn btn-go" id="btnStart" data-i18n="start" hidden>СТАРТ</button>
+  <button class="btn btn-go" id="btnStart" data-i18n="start" data-ic="play" hidden>СТАРТ</button>
 </div>
 
 <!-- ================= ЭКРАН 2: РАБОТА ================= -->
 <div id="scrWork" hidden>
   <div class="progress">
     <span id="posTxt">1 / 1</span>
-    <span id="summaryTap" data-i18n="summary">Сводка</span>
+    <span id="storeTxt"></span>
     <span id="takenTxt">взято 0 шт</span>
   </div>
 
@@ -392,42 +529,59 @@ h2 .ic{vertical-align:-3px;margin-right:7px;}
     <button id="partialX" class="pbar-x" title="Отмена"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
   </div>
 
-  <button class="btn btn-go" id="btnTake" data-i18n="take" style="padding:26px">ВЗЯЛ</button>
+  <button class="btn btn-go" id="btnTake" data-i18n="take" data-ic="check" style="padding:26px">ВЗЯЛ</button>
 
   <div class="row" style="margin-top:10px">
-    <button class="btn" id="btnBack" data-i18n="back">Назад</button>
+    <button class="btn" id="btnBack" data-i18n="back" data-ic="arrowleft">Назад</button>
     <button class="btn btn-warn" id="btnPartial" data-i18n="less" data-ic="alert">Меньше</button>
   </div>
   <div class="row">
-    <button class="btn" id="btnPause" data-i18n="pause">Пауза</button>
-    <button class="btn" id="btnViewSummary" data-i18n="review">Итог</button>
+    <button class="btn" id="btnPause" data-i18n="pause" data-ic="pause">Пауза</button>
+    <button class="btn" id="btnViewSummary" data-i18n="review" data-ic="review">Итог</button>
   </div>
 
   <button id="moreBar"><span data-i18n="more" data-ic="sliders">Ещё</span><span class="chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></button>
   <div id="morePanel">
   <div class="settings">
-    <div class="sec">
-      <h3>AirPods</h3>
-      <label class="sw" id="podRow"><span data-i18n="podLabel">Щелчки по ножке AirPods</span><input type="checkbox" id="podChk"><span class="tg"></span></label>
-      <p class="hint" data-i18n="podHint" style="margin-top:8px">1 щелчок = ВЗЯЛ · 2 = Назад · 3 = Пауза / Продолжить.</p>
+
+    <div class="setcard" id="setPod">
+      <div class="setrow">
+        <span class="setic"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1v-6a9 9 0 0 1 18 0v6a1 1 0 0 1-1 1h-2a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg></span>
+        <button class="setmain" type="button" data-expand><span class="setlab" data-i18n="podLabel">Щелчки по ножке AirPods</span><span class="chev3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <label class="sw"><input type="checkbox" id="podChk"><span class="tg"></span></label>
+      </div>
+      <div class="setdetail"><div class="setdetail-in">
+        <p class="hint" data-i18n="podHint" style="margin-top:0">1 щелчок = ВЗЯЛ · 2 = Назад · 3 = Пауза / Продолжить.</p>
+      </div></div>
     </div>
 
-    <div class="sec">
-      <h3 data-i18n="speechSec">Озвучка</h3>
-      <div class="rate-row"><span data-i18n="rateLabel">Скорость речи</span> <b id="rateVal">1.1×</b>
-        <input type="range" id="rate" min="0.7" max="1.5" step="0.05" value="1.1"></div>
-      <label class="sw"><span data-i18n="repLabel">Автоповтор позиции</span><input type="checkbox" id="repChk" checked><span class="tg"></span></label>
-      <div class="inline-num" id="repSecRow"><span data-i18n="repSecLabel">Интервал повтора, сек</span>
-        <input type="number" id="repSec" value="8" min="3" max="60"></div>
+    <div class="setcard" id="setRep">
+      <div class="setrow">
+        <span class="setic"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
+        <button class="setmain" type="button" data-expand><span class="setlab" data-i18n="repLabel">Автоповтор позиции</span><span class="chev3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <label class="sw"><input type="checkbox" id="repChk" checked><span class="tg"></span></label>
+      </div>
+      <div class="setdetail"><div class="setdetail-in">
+        <div class="rate-row"><span data-i18n="rateLabel">Скорость речи</span> <b id="rateVal">1.1×</b>
+          <input type="range" id="rate" min="0.7" max="1.5" step="0.05" value="1.1"></div>
+        <div class="inline-num"><span data-i18n="repSecLabel">Интервал повтора, сек</span>
+          <input type="number" id="repSec" value="8" min="3" max="60"></div>
+      </div></div>
     </div>
 
-    <div class="sec">
-      <h3 data-i18n="screenSec">Экран</h3>
-      <label class="sw"><span data-i18n="ecoLabel">Эко-экран</span><input type="checkbox" id="ecoChk" checked><span class="tg"></span></label>
-      <div class="inline-num"><span data-i18n="ecoSecLabel">Гаснет через, сек (мин. 5)</span>
-        <input type="number" id="ecoSec" value="20" min="5" max="300"></div>
+    <div class="setcard" id="setEco">
+      <div class="setrow">
+        <span class="setic"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>
+        <button class="setmain" type="button" data-expand><span class="setlab" data-i18n="ecoLabel">Эко-экран</span><span class="chev3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <label class="sw"><input type="checkbox" id="ecoChk" checked><span class="tg"></span></label>
+      </div>
+      <div class="setdetail"><div class="setdetail-in">
+        <div class="inline-num"><span data-i18n="ecoSecLabel">Гаснет через, сек (мин. 5)</span>
+          <input type="number" id="ecoSec" value="20" min="5" max="300"></div>
+      </div></div>
     </div>
-    <button class="btn btn-small" id="btnFinish" data-i18n="finishBtn">Закончить и показать итог</button>
+
+    <button class="btn btn-small" id="btnFinish" data-i18n="finishBtn" style="margin-top:14px">Закончить и показать итог</button>
     <button class="btn btn-small" id="btnEdit" data-i18n="editBtn" data-ic="pencil">Назад к списку</button>
 
     <div class="hint" data-i18n-html="workHint"></div>
@@ -442,9 +596,9 @@ h2 .ic{vertical-align:-3px;margin-right:7px;}
   <p class="sub" style="text-align:center" id="doneSub"></p>
   <div id="doneTable"></div>
   <button class="btn" id="btnBackToWork" data-i18n="backToWork" data-ic="arrowleft">Вернуться к листу</button>
-  <button class="btn" id="btnSayAll" data-i18n="sayAllBtn">Озвучить итог</button>
+  <button class="btn" id="btnSayAll" data-i18n="sayAllBtn" data-ic="volume">Озвучить итог</button>
   <button class="btn" id="btnDoneLog" data-i18n="saveToLog" data-ic="log">Записать в журнал</button>
-  <button class="btn" id="btnNew" data-i18n="newList">Новый лист</button>
+  <button class="btn btn-go" id="btnNew" data-i18n="newList" data-ic="plus" style="font-size:18px;padding:16px">Новый лист</button>
 </div>
 
 <!-- ================= ПОМОЩЬ ================= -->
@@ -494,10 +648,12 @@ h2 .ic{vertical-align:-3px;margin-right:7px;}
 </div>
 
 <div id="eco" hidden>
+  <div class="etop" id="ecoTop"></div>
   <div class="e1" id="ecoLoc">000-000</div>
   <div class="e2" id="ecoQty">× 0</div>
   <div class="ed" id="ecoDesc"></div>
   <div class="eart" id="ecoArt"></div>
+  <div class="enext" id="ecoNext"></div>
   <div class="e3" id="ecoHint" data-i18n="ecoHint">коснись экрана, чтобы вернуть</div>
 </div>
 
@@ -565,7 +721,19 @@ const ICO={
   x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   chevron:'<polyline points="6 9 12 15 18 9"/>',
   phone:'<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>',
-  clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'
+  clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  package:'<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
+  camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+  scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/>',
+  pause:'<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+  review:'<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
+  help:'<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+  key:'<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>',
+  trash:'<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>',
+  volume:'<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>',
+  plus:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  headphones:'<path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1v-6a9 9 0 0 1 18 0v6a1 1 0 0 1-1 1h-2a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/>',
+  moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>'
 };
 function ic(n,s){s=s||20;return '<svg class="ic" width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICO[n]||'')+'</svg>';}
 
@@ -585,15 +753,15 @@ continue:'Продолжить', delete:'Удалить',
 secScan:'Сканирование листа', addPhoto:'Добавить фото',
 photoHint:'Весь лист + нижняя часть при мелком шрифте',
 scan:'Сканировать', photosWord:'фото',
-aiConnected:'AI-распознавание: <b style="color:var(--go)">подключено ✓</b> — фото читает Gemini',
-aiNotSet:'AI не настроен. Нажми «AI-ключ» и вставь бесплатный ключ с <b>aistudio.google.com</b>.',
+aiConnected:'Распознавание фото: <b style="color:var(--go)">подключено ✓</b>',
+aiNotSet:'Распознавание не настроено. Нажми «Ключ» и вставь бесплатный ключ с <b>aistudio.google.com</b>.',
 rawPh:'Текст с фото — или вставь вручную',
-parseBtn:'Распознать лист',
+parseBtn:'Распознать лист', manualTitle:'Ввести вручную',
 totalLabel:'Total coli с листа:', totalHint:'(заполнится само, если попало в скан)',
-help:'Помощь', aiKey:'AI-ключ', clear:'Очистить', shiftLog:'Журнал смены', start:'СТАРТ',
+help:'Помощь', aiKey:'Ключ', clear:'Очистить', shiftLog:'Журнал смены', start:'СТАРТ',
 copyPrompt:'Копировать промт', copied:'Скопировано ✓',
-copyPromptHint:'Запасной вариант при 429: вставь промт + фото в любую ИИ (можно в этот чат), ответ — в поле ниже, затем «Распознать лист».',
-summary:'Сводка', picked:'взято', pcs:'шт',
+copyPromptHint:'Запасной вариант при ошибке 429: скопируй промт, вставь полученный текст листа в поле ниже и нажми «Распознать лист».',
+summary:'Сводка', butikLab:'Butik', picked:'взято', pcs:'шт',
 take:'ВЗЯЛ', back:'Назад', less:'Меньше', pause:'Пауза', review:'Итог', more:'Ещё',
 podLabel:'Щелчки по ножке AirPods', podHint:'1 щелчок = ВЗЯЛ · 2 = Назад · 3 = Пауза / Продолжить.',
 speechSec:'Озвучка', rateLabel:'Скорость речи', repLabel:'Автоповтор позиции', repSecLabel:'Интервал повтора, сек',
@@ -634,19 +802,19 @@ parsePos:'Позиций: {n} · Сумма Qty: {sum}', eqTotal:' = Total coli 
 neTotal:' ≠ Total coli ({exp}), разница {d}', checkTotal:' — сверь с «Total coli» на листе',
 missQty:'{n} позиций без Qty. ', confQty:'{n} с расхождением. ', fixHint:'Нажми на число в Qty, чтобы исправить.',
 thLocShort:'Лок.', thQtyShort:'Кол', thArtDesc:'Артикул / Описание',
-dupRows:'{n} строк с повторяющейся локацией. На чистом листе локации не повторяются — ИИ мог сдвинуть колонку. Сверь с бумагой и вычеркни лишние (✕).',
-dupArt:'{n} строк с одинаковым артикулом — часто это лишняя/фантомная строка от ИИ. Сверь с бумагой и вычеркни лишнее (✕).',
+dupRows:'{n} строк с повторяющейся локацией. На чистом листе локации не повторяются — распознавание могло сдвинуть колонку. Сверь с бумагой и вычеркни лишние (✕).',
+dupArt:'{n} строк с одинаковым артикулом — часто это лишняя строка распознавания. Сверь с бумагой и вычеркни лишнее (✕).',
 qtyPrompt:'Qty для {loc}:', partialPrompt:'Сколько взял по факту?\n(по плану: {plan})',
 partialBad:'Введи число от 0 до {plan}.', partialOver:'Нельзя взять больше плана ({plan}).\nЕсли ошибка в листе — исправь Qty тапом на ×.', partialBarLabel:'Взял:',
 finishConfirm:'Не все позиции взяты ({n} осталось). Точно закончить?', allExcluded:'Все позиции вычеркнуты — нечего собирать.',
-aiKeyPrompt:'API-ключ Google AI Studio (вида AIza… или AQ…).\nМожно несколько через запятую — чередуются при лимите 429.\nПусто = удалить.',
+aiKeyPrompt:'Ключ для распознавания (вида AIza… или AQ…).\nМожно несколько через запятую — чередуются при лимите 429.\nПусто = удалить.',
 rotPortrait:'Поверни телефон вертикально',
-ocrCompress:'Сжимаю {n} фото…', ocrReading:'AI читает лист ({n} фото, {mb} МБ, один запрос)…',
-ocrNoKey:'Нет AI-ключа. Нажми «AI-ключ» и вставь ключ, потом «Сканировать».',
+ocrCompress:'Сжимаю {n} фото…', ocrReading:'Распознаю лист ({n} фото, {mb} МБ)…',
+ocrNoKey:'Нет ключа. Нажми «Ключ» и вставь ключ, потом «Сканировать».',
 ocrNoNet:'Нет связи с Google. Проверь интернет и нажми «Сканировать» ещё раз.',
 ocr503:'Google временно недоступен (503). Подожди ~30 сек и нажми «Сканировать».',
 ocr429:'Слишком много запросов (429). Подожди минуту и нажми «Сканировать».',
-ocr400:'Ключ не принят (400). Проверь «AI-ключ».', ocr403:'Доступ запрещён (403). Проверь «AI-ключ».',
+ocr400:'Ключ не принят (400). Проверь «Ключ».', ocr403:'Доступ запрещён (403). Проверь «Ключ».',
 ocrErr:'Ошибка: {c}. Нажми «Сканировать» ещё раз.',
 audioFail:'Не удалось включить аудио-канал.',
 jNeed:'Укажи butik или коли.',
@@ -668,15 +836,15 @@ continue:'Continue', delete:'Delete',
 secScan:'Scan the list', addPhoto:'Add photo',
 photoHint:'Whole sheet + bottom part if the text is small',
 scan:'Scan', photosWord:'photos',
-aiConnected:'AI recognition: <b style="color:var(--go)">connected ✓</b> — Gemini reads the photos',
-aiNotSet:'AI not set up. Tap «AI key» and paste a free key from <b>aistudio.google.com</b>.',
+aiConnected:'Photo recognition: <b style="color:var(--go)">connected ✓</b>',
+aiNotSet:'Recognition not set up. Tap «Key» and paste a free key from <b>aistudio.google.com</b>.',
 rawPh:'Text from the photo — or paste manually',
-parseBtn:'Parse the list',
+parseBtn:'Parse the list', manualTitle:'Manual entry',
 totalLabel:'Total coli from sheet:', totalHint:'(fills in automatically if scanned)',
-help:'Help', aiKey:'AI key', clear:'Clear', shiftLog:'Shift log', start:'START',
+help:'Help', aiKey:'Key', clear:'Clear', shiftLog:'Shift log', start:'START',
 copyPrompt:'Copy prompt', copied:'Copied ✓',
-copyPromptHint:'Backup when 429 hits: paste the prompt + photo into any AI (this chat works too), put the reply in the field below, then «Parse list».',
-summary:'Summary', picked:'picked', pcs:'pcs',
+copyPromptHint:'Backup when error 429 hits: copy the prompt, paste the resulting list text in the field below, then «Parse the list».',
+summary:'Summary', butikLab:'Store', picked:'picked', pcs:'pcs',
 take:'PICKED', back:'Back', less:'Less', pause:'Pause', review:'Review', more:'More',
 podLabel:'AirPods stem clicks', podHint:'1 click = PICKED · 2 = Back · 3 = Pause / Continue.',
 speechSec:'Speech', rateLabel:'Speech rate', repLabel:'Auto-repeat position', repSecLabel:'Repeat interval, sec',
@@ -717,19 +885,19 @@ parsePos:'Positions: {n} · Qty sum: {sum}', eqTotal:' = Total coli ✓',
 neTotal:' ≠ Total coli ({exp}), diff {d}', checkTotal:' — check against «Total coli» on the sheet',
 missQty:'{n} positions without Qty. ', confQty:'{n} with a mismatch. ', fixHint:'Tap the Qty number to fix it.',
 thLocShort:'Loc.', thQtyShort:'Qty', thArtDesc:'Article / Description',
-dupRows:'{n} rows with a repeated location. On a clean sheet locations are unique — the AI may have shifted a column. Check the paper and cross out extras (✕).',
-dupArt:'{n} rows share an article number — often an extra/phantom AI row. Check the paper and cross out extras (✕).',
+dupRows:'{n} rows with a repeated location. On a clean sheet locations are unique — recognition may have shifted a column. Check the paper and cross out extras (✕).',
+dupArt:'{n} rows share an article number — often an extra/phantom recognition row. Check the paper and cross out extras (✕).',
 qtyPrompt:'Qty for {loc}:', partialPrompt:'How many did you actually take?\n(planned: {plan})',
 partialBad:'Enter a number from 0 to {plan}.', partialOver:'You cannot take more than planned ({plan}).\nIf the sheet is wrong — fix Qty by tapping ×.', partialBarLabel:'Picked:',
 finishConfirm:'Not all positions are picked ({n} left). Finish anyway?', allExcluded:'All positions are crossed out — nothing to pick.',
-aiKeyPrompt:'Google AI Studio API key (like AIza… or AQ…).\nSeveral keys separated by comma rotate on a 429 limit.\nEmpty = remove.',
+aiKeyPrompt:'Recognition key (like AIza… or AQ…).\nSeveral keys separated by comma rotate on a 429 limit.\nEmpty = remove.',
 rotPortrait:'Turn the phone upright',
-ocrCompress:'Compressing {n} photos…', ocrReading:'AI is reading the list ({n} photos, {mb} MB, one request)…',
-ocrNoKey:'No AI key. Tap «AI key» and paste a key, then «Scan».',
+ocrCompress:'Compressing {n} photos…', ocrReading:'Reading the list ({n} photos, {mb} MB)…',
+ocrNoKey:'No key. Tap «Key» and paste a key, then «Scan».',
 ocrNoNet:'No connection to Google. Check the internet and tap «Scan» again.',
 ocr503:'Google is temporarily unavailable (503). Wait ~30 sec and tap «Scan».',
 ocr429:'Too many requests (429). Wait a minute and tap «Scan».',
-ocr400:'Key not accepted (400). Check «AI key».', ocr403:'Access denied (403). Check «AI key».',
+ocr400:'Key not accepted (400). Check «Key».', ocr403:'Access denied (403). Check «Key».',
 ocrErr:'Error: {c}. Tap «Scan» again.',
 audioFail:'Could not start the audio channel.',
 jNeed:'Enter a butik or coli.',
@@ -751,15 +919,15 @@ continue:'Fortsæt', delete:'Slet',
 secScan:'Scan listen', addPhoto:'Tilføj foto',
 photoHint:'Hele listen + nederste del ved lille skrift',
 scan:'Scan', photosWord:'fotos',
-aiConnected:'AI-genkendelse: <b style="color:var(--go)">forbundet ✓</b> — Gemini læser fotos',
-aiNotSet:'AI ikke konfigureret. Tryk «AI-nøgle» og indsæt en gratis nøgle fra <b>aistudio.google.com</b>.',
+aiConnected:'Fotogenkendelse: <b style="color:var(--go)">forbundet ✓</b>',
+aiNotSet:'Genkendelse ikke konfigureret. Tryk «Nøgle» og indsæt en gratis nøgle fra <b>aistudio.google.com</b>.',
 rawPh:'Tekst fra foto — eller indsæt manuelt',
-parseBtn:'Analysér listen',
+parseBtn:'Analysér listen', manualTitle:'Indtast manuelt',
 totalLabel:'Total coli fra listen:', totalHint:'(udfyldes automatisk hvis scannet)',
-help:'Hjælp', aiKey:'AI-nøgle', clear:'Ryd', shiftLog:'Vagtlog', start:'START',
+help:'Hjælp', aiKey:'Nøgle', clear:'Ryd', shiftLog:'Vagtlog', start:'START',
 copyPrompt:'Kopiér prompt', copied:'Kopieret ✓',
-copyPromptHint:'Backup ved 429: indsæt prompten + foto i en hvilken som helst AI (også denne chat), svaret i feltet nedenfor, derefter «Parse liste».',
-summary:'Oversigt', picked:'taget', pcs:'stk',
+copyPromptHint:'Backup ved fejl 429: kopiér prompten, indsæt den modtagne listetekst i feltet nedenfor, derefter «Analysér listen».',
+summary:'Oversigt', butikLab:'Butik', picked:'taget', pcs:'stk',
 take:'TAGET', back:'Tilbage', less:'Færre', pause:'Pause', review:'Tjek', more:'Mere',
 podLabel:'AirPods-klik', podHint:'1 klik = TAGET · 2 = Tilbage · 3 = Pause / Fortsæt.',
 speechSec:'Tale', rateLabel:'Talehastighed', repLabel:'Gentag position', repSecLabel:'Gentag-interval, sek',
@@ -800,19 +968,19 @@ parsePos:'Positioner: {n} · Qty-sum: {sum}', eqTotal:' = Total coli ✓',
 neTotal:' ≠ Total coli ({exp}), forskel {d}', checkTotal:' — tjek mod «Total coli» på listen',
 missQty:'{n} positioner uden Qty. ', confQty:'{n} med uoverensstemmelse. ', fixHint:'Tryk på Qty-tallet for at rette.',
 thLocShort:'Lok.', thQtyShort:'Antal', thArtDesc:'Artikel / Beskrivelse',
-dupRows:'{n} rækker med gentaget lokation. På en ren liste er lokationer unikke — AI kan have forskudt en kolonne. Tjek papiret og streg ekstra ud (✕).',
-dupArt:'{n} rækker deler et varenummer — ofte en ekstra/fantom AI-række. Tjek papiret og streg ekstra ud (✕).',
+dupRows:'{n} rækker med gentaget lokation. På en ren liste er lokationer unikke — genkendelsen kan have forskudt en kolonne. Tjek papiret og streg ekstra ud (✕).',
+dupArt:'{n} rækker deler et varenummer — ofte en ekstra/fantom genkendelsesrække. Tjek papiret og streg ekstra ud (✕).',
 qtyPrompt:'Qty for {loc}:', partialPrompt:'Hvor mange tog du faktisk?\n(planlagt: {plan})',
 partialBad:'Indtast et tal fra 0 til {plan}.', partialOver:'Du kan ikke tage mere end planlagt ({plan}).\nHvis listen er forkert — ret Qty ved at trykke ×.', partialBarLabel:'Taget:',
 finishConfirm:'Ikke alle positioner er taget ({n} tilbage). Afslut alligevel?', allExcluded:'Alle positioner er streget ud — intet at plukke.',
-aiKeyPrompt:'Google AI Studio API-nøgle (som AIza… eller AQ…).\nFlere nøgler adskilt med komma skifter ved en 429-grænse.\nTom = fjern.',
+aiKeyPrompt:'Genkendelsesnøgle (som AIza… eller AQ…).\nFlere nøgler adskilt med komma skifter ved en 429-grænse.\nTom = fjern.',
 rotPortrait:'Hold telefonen lodret',
-ocrCompress:'Komprimerer {n} fotos…', ocrReading:'AI læser listen ({n} fotos, {mb} MB, én forespørgsel)…',
-ocrNoKey:'Ingen AI-nøgle. Tryk «AI-nøgle» og indsæt en nøgle, derefter «Scan».',
+ocrCompress:'Komprimerer {n} fotos…', ocrReading:'Læser listen ({n} fotos, {mb} MB)…',
+ocrNoKey:'Ingen nøgle. Tryk «Nøgle» og indsæt en nøgle, derefter «Scan».',
 ocrNoNet:'Ingen forbindelse til Google. Tjek internettet og tryk «Scan» igen.',
 ocr503:'Google er midlertidigt utilgængelig (503). Vent ~30 sek og tryk «Scan».',
 ocr429:'For mange forespørgsler (429). Vent et minut og tryk «Scan».',
-ocr400:'Nøgle ikke accepteret (400). Tjek «AI-nøgle».', ocr403:'Adgang nægtet (403). Tjek «AI-nøgle».',
+ocr400:'Nøgle ikke accepteret (400). Tjek «Nøgle».', ocr403:'Adgang nægtet (403). Tjek «Nøgle».',
 ocrErr:'Fejl: {c}. Tryk «Scan» igen.',
 audioFail:'Kunne ikke starte lydkanalen.',
 jNeed:'Angiv butik eller coli.',
@@ -1055,12 +1223,33 @@ function speakDesc(){
   scheduleRepeat();
 }
 /* ================= ЛОГИКА СБОРКИ ================= */
+// Верхняя строка работы/эко: Butik · позиция · взято
+function workTopLine(){
+  const sum=items.filter(i=>i.taken).reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
+  const parts=[];
+  if(scanStore)parts.push(t('butikLab')+' '+scanStore);
+  parts.push((idx+1)+' / '+items.length);
+  parts.push(t('picked')+' '+sum+' '+t('pcs'));
+  return parts.join(' · ');
+}
+function fillEco(){
+  const it=items[idx];if(!it)return;
+  $('ecoTop').textContent=workTopLine();
+  $('ecoLoc').textContent=it.loc;
+  const eff=it.actualQty!=null?it.actualQty:it.qty;
+  $('ecoQty').textContent='× '+(eff!=null?eff:'?');
+  $('ecoDesc').textContent=it.desc||'';
+  $('ecoArt').textContent=it.article||'';
+  const nx=items[idx+1];
+  $('ecoNext').textContent=nx?(t('nextLabel')+' '+nx.loc):t('lastPos');
+}
 function render(){
   if(!items.length)return;
   const it=items[idx];
   $('posTxt').textContent=(idx+1)+' / '+items.length;
   const sum=items.filter(i=>i.taken).reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
   $('takenTxt').textContent=t('picked')+' '+sum+' '+t('pcs');
+  $('storeTxt').textContent=scanStore?(t('butikLab')+' '+scanStore):'';
   const lp=String(it.loc).split('-');
   $('locBig').innerHTML='<span class="lg">'+(lp[0]||'')+'</span><span class="sep"></span><span class="lg">'+(lp[1]||'')+'</span>';
   if(renderedIdx!==idx){
@@ -1077,13 +1266,7 @@ function render(){
   $('artTxt').textContent=it.article||'';
   const nx=items[idx+1];
   $('nextTxt').textContent=nx?(t('nextLabel')+' '+nx.loc):t('lastPos');
-  if(ecoShown){
-    $('ecoLoc').textContent=it.loc;
-    const eff=it.actualQty!=null?it.actualQty:it.qty;
-    $('ecoQty').textContent='× '+(eff!=null?eff:'?');
-    $('ecoDesc').textContent=it.desc||'';
-    $('ecoArt').textContent=it.article||'';
-  }
+  if(ecoShown)fillEco();
 }
 function sayItem(){if(!paused){render();speak(itemPhrase(items[idx]));}}
 
@@ -1364,11 +1547,7 @@ setInterval(function(){
 function showEco(){
   if(!items.length)return;
   ecoShown=true;
-  $('ecoLoc').textContent=items[idx].loc;
-  const eff=items[idx].actualQty!=null?items[idx].actualQty:items[idx].qty;
-  $('ecoQty').textContent='× '+(eff!=null?eff:'?');
-  $('ecoDesc').textContent=items[idx].desc||'';
-  $('ecoArt').textContent=items[idx].article||'';
+  fillEco();
   $('eco').hidden=false;
 }
 function hideEco(){ecoShown=false;$('eco').hidden=true;}
@@ -1395,19 +1574,19 @@ function loadToCanvas(file,maxSide){
   });
 }
 
-/* ================= AI (Gemini) — все фото одним запросом ================= */
+/* ================= Распознавание — все фото одним запросом ================= */
 // Ключ только в localStorage этого телефона. В код/GitHub НЕ вставлять.
 // Порядок = приоритет: быстрые/щедрые lite-модели впереди (15 RPM / 1000 RPD, thinking OFF),
 // тяжёлые flash — в fallback на качество артикулов. Мише критична связка loc+qty, артикул вторичен → скорость важнее.
 const AI_MODELS=['gemini-2.5-flash-lite','gemini-2.0-flash-lite','gemini-2.5-flash','gemini-2.0-flash','gemini-1.5-flash-latest'];
-const AI_MAXSIDE=1536, AI_JPEG_Q=0.85;   // 1536: легче аплоад на мобильной сети (быстрее), тайлов Gemini для портретного листа столько же — квоту не теряем
-// Дубли локаций на чистом листе невозможны — это подпись сдвига колонок у ИИ. Используем как метрику качества.
+const AI_MAXSIDE=1536, AI_JPEG_Q=0.85;   // 1536: легче аплоад на мобильной сети (быстрее), тайлов распознавания для портретного листа столько же — квоту не теряем
+// Дубли локаций на чистом листе невозможны — это подпись сдвига колонок при распознавании. Используем как метрику качества.
 function locDupCount(txt){
   const seen=Object.create(null);let dups=0;
   (txt.match(/\b\d{3}-\d{3}\b/g)||[]).forEach(function(l){if(seen[l])dups++;else seen[l]=1;});
   return dups;
 }
-// Дубли артикулов на чистом листе крайне редки — обычно это фантомная/лишняя строка от ИИ.
+// Дубли артикулов на чистом листе крайне редки — обычно это фантомная/лишняя строка распознавания.
 function artDupCount(items){
   const seen=Object.create(null);let d=0;
   items.forEach(function(it){if(it.article){if(seen[it.article])d++;else seen[it.article]=1;}});
@@ -1449,8 +1628,8 @@ function buildPrompt(n){
   const multi=n>1?'You are given '+n+' photos of the SAME picking list (they may overlap). Transcribe every printed row in order; if the exact same row appears in two photos, output it only once. Do not reconcile or fix differences - transcribe what is printed.\n\n':'';
   return multi+OCR_BODY;
 }
-// Промт для ручного фолбэка (кнопка «Копировать промт»): вставить в любой ИИ-чат один раз,
-// дальше просто слать фото — ИИ будет отдавать готовый к вставке текст в формате приложения.
+// Промт для ручного фолбэка (кнопка «Копировать промт»): вставить в чат-помощник один раз,
+// дальше просто слать фото — помощник будет отдавать готовый к вставке текст в формате приложения.
 function chatPrompt(){
   return 'TASK: transcribe Netto warehouse picking lists from photos.\n'+
 'Apply the rules below to the photo(s) in THIS message AND to every photo I send later in this same conversation. From now on, whenever I send one or more photos, reply with ONLY the transcription in the exact format below — no greeting, no preamble, no explanation, no markdown fences. If I send several photos of the SAME list, merge them and output each printed row once.\n\n'+
@@ -1495,7 +1674,7 @@ async function aiRecognizeAll(canvases,keys,b64){
   }
   const sleep=function(ms){return new Promise(function(r){setTimeout(r,ms);});};
   let lastErr='all_models_failed',best=null;
-  // До 2 проходов. Внутри прохода — каждый ключ × каждая модель (лимиты free-tier у Gemini
+  // До 2 проходов. Внутри прохода — каждый ключ × каждая модель (лимиты free-tier у сервиса
   // раздельные по моделям и по ключам). Если ВЕСЬ проход упёрся в 429 — смотрим retryDelay:
   // ≤15 с → поминутный RPM, ждём ровно столько и повторяем; >15 с или поля нет → вероятно
   // суточный RPD, долгая пауза бессмысленна (короткий фолбэк). Любой реальный ответ возвращаем сразу.
@@ -1559,7 +1738,7 @@ function renderQueue(){
   });
   const b=$('btnScanAI');
   b.hidden=!photoQ.length;
-  b.textContent=t('scan')+' ('+photoQ.length+' '+t('photosWord')+')';
+  b.innerHTML=ic('scan',22)+'<span>'+t('scan')+' ('+photoQ.length+' '+t('photosWord')+')</span>';
 }
 function clearQueue(){
   photoQ.forEach(function(ph){try{URL.revokeObjectURL(ph.url);}catch(e){}});
@@ -1748,11 +1927,16 @@ $('btnPartial').addEventListener('click',openPartial);
 $('partialOk').addEventListener('click',takeBtn);
 $('partialX').addEventListener('click',hidePartial);
 $('partialInp').addEventListener('keydown',function(e){if(e.key==='Enter')takeBtn();});
-$('summaryTap').addEventListener('click',function(){if(Date.now()>=uiShield){beep(660,50);midSummary();}});
 $('moreBar').addEventListener('click',function(){
   const open=!$('morePanel').classList.contains('open');
   $('morePanel').classList.toggle('open',open);
   $('moreBar').classList.toggle('open',open);
+});
+// Тап по строке настройки (не по переключателю) раскрывает доп. параметры
+document.querySelectorAll('#morePanel [data-expand]').forEach(function(b){
+  b.addEventListener('click',function(){
+    const card=b.closest('.setcard');if(card)card.classList.toggle('open');
+  });
 });
 $('btnViewSummary').addEventListener('click',function(){if(Date.now()>=uiShield)showInterimSummary();});
 $('btnCloseSummaryX').addEventListener('click',function(){$('btnCloseSummary').click();});
