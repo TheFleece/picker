@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <!--
-  PICKER — Enterprise demo (DB-feed vision, no OCR / no API / no voice)
+  PICKER — Enterprise demo (DB-feed vision, no OCR / no API / no keys)
   ====================================================================
   A safe, self-contained demonstration of how Picker works once orders
   come straight from the company system instead of paper.
@@ -11,10 +11,14 @@
     is handed the NEXT order in line — no cherry-picking the big ones.
   • Each spot: one tap = TAKEN. Took less than planned? One tap, type
     the real number — the exact shortfall is captured on the spot.
+  • Clock-in / clock-out: the start time is logged when the shift begins,
+    the end time when it finishes — the shift length is computed for you.
+  • Hands-free, voice guidance and an eco screen are real product
+    features, here as OFF-by-default toggles (no microphone is ever used).
   • A live shift log totals every order and zero, and shows progress
     to the next bonus step.
-  • An office view shows the same data the way the office would see it —
-    live pickers, wave status, shortfalls. All data stays inside Netto.
+  • An office view shows the same data the way the office would see it.
+    All data stays inside Netto.
 
   Enterprise-safe: no camera, no external API, no keys, no microphone,
   no installation. Runs on any phone, offline. Sample data only.
@@ -59,6 +63,7 @@ body::before{
 h1,h2,h3,.brand-nm,.num,.big,.eyebrow{font-family:'Space Grotesk','Inter',system-ui,sans-serif;}
 .num{font-variant-numeric:tabular-nums;}
 a{color:var(--muted);}
+svg.ic{display:block;flex:none;}
 
 .wrap{position:relative;z-index:1;max-width:720px;margin:0 auto;
   padding:14px 16px calc(28px + env(safe-area-inset-bottom));}
@@ -78,16 +83,20 @@ a{color:var(--muted);}
 .top .who .nm{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .top .who .conn{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-top:1px;}
 .dotlive{width:7px;height:7px;border-radius:50%;background:var(--go);box-shadow:0 0 0 3px rgba(45,212,111,.18);
-  animation:blink 2.4s infinite;}
+  animation:blink 2.4s infinite;flex:none;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.iconbtn{flex:none;width:34px;height:34px;border-radius:9px;background:var(--card);border:1px solid var(--line);
+  color:var(--muted);display:grid;place-items:center;cursor:pointer;transition:transform .08s ease,color .15s;}
+.iconbtn:active{transform:scale(.93);}
 .lang{display:flex;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:none;}
-.lang button{padding:7px 9px;background:none;border:none;color:var(--faint);font-size:12px;font-weight:700;letter-spacing:.4px;font-family:inherit;}
+.lang button{padding:7px 9px;background:none;border:none;color:var(--faint);font-size:12px;font-weight:700;letter-spacing:.4px;font-family:inherit;cursor:pointer;}
 .lang button.on{background:#1d2a3a;color:var(--txt);}
 .lang button+button{border-left:1px solid var(--line);}
 
 .demobadge{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.08em;
   text-transform:uppercase;color:var(--amber);background:rgba(255,176,32,.10);
   border:1px solid rgba(255,176,32,.28);border-radius:999px;padding:5px 11px;}
+.demobadge .dotlive{background:var(--amber);box-shadow:0 0 0 3px rgba(255,176,32,.18);}
 
 .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:600;
   letter-spacing:.13em;text-transform:uppercase;color:var(--go);}
@@ -97,8 +106,8 @@ a{color:var(--muted);}
 h2.scr{font-size:23px;line-height:1.12;letter-spacing:-.015em;margin:11px 0 4px;font-weight:700;}
 .sub{color:var(--muted);font-size:14px;margin:0 0 16px;}
 
-.btn{display:block;width:100%;border:1px solid var(--line);border-radius:14px;
-  padding:15px;font-size:16px;font-weight:600;color:var(--txt);background:var(--card);
+.btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;border:1px solid var(--line);
+  border-radius:14px;padding:15px;font-size:16px;font-weight:600;color:var(--txt);background:var(--card);
   margin-top:10px;font-family:inherit;transition:transform .08s ease,background .15s;cursor:pointer;}
 .btn:active{transform:scale(.975);}
 .btn:disabled{opacity:.34;}
@@ -118,13 +127,16 @@ h2.scr{font-size:23px;line-height:1.12;letter-spacing:-.015em;margin:11px 0 4px;
 .field input{width:100%;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;color:var(--txt);
   font-size:16px;padding:13px;font-family:inherit;}
 .field input:focus{outline:none;border-color:var(--go);}
-.kv{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px;padding:9px 0;border-bottom:1px solid var(--line);}
+.kv{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;font-size:14px;padding:10px 0;border-bottom:1px solid var(--line);}
 .kv:last-child{border-bottom:0;}
-.kv .k{color:var(--muted);}.kv .v{font-weight:600;}
+.kv .k{color:var(--muted);}.kv .k small{display:block;font-size:11px;color:var(--faint);text-transform:none;letter-spacing:0;margin-top:1px;}
+.kv .v{font-weight:600;text-align:right;}
 .loginhero{text-align:center;padding:6px 0 2px;}
 .loginhero .logo{margin:0 auto 14px;width:54px;height:54px;font-size:30px;border-radius:15px;}
 .loginhero h1{font-size:30px;margin:0;letter-spacing:-.02em;}
 .loginhero .tag{color:var(--muted);font-size:14.5px;margin:8px auto 0;max-width:30ch;}
+.clockhint{display:flex;align-items:center;justify-content:center;gap:7px;color:var(--faint);font-size:12.5px;margin-top:12px;}
+.clockhint svg{color:var(--go);}
 
 /* ---------- queue ---------- */
 .qhead{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--faint);margin:4px 2px 10px;}
@@ -147,12 +159,35 @@ h2.scr{font-size:23px;line-height:1.12;letter-spacing:-.015em;margin:11px 0 4px;
   background:linear-gradient(160deg,rgba(45,212,111,.05),transparent);border-radius:0 12px 12px 0;
   padding:11px 14px;font-size:13px;color:var(--muted);line-height:1.45;margin:2px 0 16px;}
 .feednote b{color:var(--txt);font-weight:600;}
+.feednote svg{color:var(--go);margin-top:1px;}
+.resume{display:flex;align-items:center;gap:12px;border:1px solid var(--go);background:rgba(45,212,111,.08);
+  border-radius:14px;padding:12px 14px;margin-bottom:12px;cursor:pointer;}
+.resume .ri{flex:1;min-width:0;}
+.resume .ri .o{font-family:'Space Grotesk';font-weight:700;font-size:14px;}
+.resume .ri .m{font-size:12px;color:var(--muted);margin-top:1px;}
+.resume svg{color:var(--go);}
+.seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px;margin-bottom:14px;}
+.seg button{flex:1;padding:9px 6px;border:none;background:none;color:var(--muted);font-family:inherit;font-weight:600;
+  font-size:13.5px;border-radius:9px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;transition:background .15s;}
+.seg button.on{background:#1d2a3a;color:var(--txt);}
+.seg button .sgt{font-size:10px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;}
+.seg button.on .sgt{color:var(--go);}
+.sheet{display:flex;align-items:center;gap:12px;border:1px dashed var(--line-2);border-radius:12px;
+  padding:12px 14px;background:var(--bg-2);margin-bottom:8px;cursor:pointer;transition:transform .08s ease,border-color .15s;}
+.sheet:active{transform:scale(.99);}
+.sheet:hover{border-color:var(--go);}
+.sheet .si{flex:none;width:34px;height:34px;border-radius:8px;display:grid;place-items:center;background:var(--card);color:var(--muted);}
+.sheet .sb{flex:1;min-width:0;}
+.sheet .sb .o{font-family:'Space Grotesk';font-weight:700;font-size:15px;}
+.sheet .sb .m{font-size:12px;color:var(--muted);margin-top:1px;}
+.sheet .sc{flex:none;color:var(--go);}
 
 /* ---------- work ---------- */
 body.working{background:#000;}
-.workbar{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);
+.workbar{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:var(--muted);
   font-variant-numeric:tabular-nums;margin-bottom:12px;}
-.workbar .mid{color:var(--go);font-weight:600;}
+.workbar .mid{color:var(--go);font-weight:600;font-family:'Space Grotesk';text-align:center;flex:1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .wcard{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px 18px 22px;text-align:center;}
 .locbig{font-family:'Space Grotesk';font-weight:700;font-size:clamp(40px,13vw,58px);line-height:.95;letter-spacing:.5px;
   color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;}
@@ -170,20 +205,25 @@ body.working{background:#000;}
 .pbar .lab{color:var(--amber);font-size:15px;font-weight:700;flex:none;}
 .pbar input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--amber);border-radius:10px;color:#fff;
   font-size:24px;font-weight:800;text-align:center;padding:9px;font-variant-numeric:tabular-nums;}
-.pbar .ok{flex:none;width:56px;background:var(--go);border:none;border-radius:10px;color:#06250f;font-size:24px;font-weight:800;padding:10px 0;cursor:pointer;}
-.pbar .x{flex:none;width:48px;background:#1a2230;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:17px;padding:11px 0;cursor:pointer;}
-.whint{text-align:center;font-size:12px;color:#3f5165;margin-top:12px;line-height:1.4;}
+.pbar .ok{flex:none;width:56px;background:var(--go);border:none;border-radius:10px;color:#06250f;padding:11px 0;cursor:pointer;display:grid;place-items:center;}
+.pbar .x{flex:none;width:48px;background:#1a2230;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:12px 0;cursor:pointer;display:grid;place-items:center;}
+.whint{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;text-align:center;font-size:12px;color:#3f5165;margin-top:12px;line-height:1.4;}
+.whint svg{color:#516579;}
 
 /* ---------- done ---------- */
-.doneic{text-align:center;font-size:54px;margin:6px 0 2px;}
+.doneic{display:flex;justify-content:center;margin:6px 0 2px;}
+.doneic svg{color:var(--go);}
 .bigstat{text-align:center;}
 .bigstat .n{font-family:'Space Grotesk';font-weight:700;font-size:52px;color:var(--go);line-height:1;}
 .bigstat .l{color:var(--muted);font-size:13px;margin-top:6px;}
 
 /* ---------- shift log ---------- */
+.shiftmeta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:13px;color:var(--muted);}
+.shiftmeta svg{color:var(--go);}
+.shiftmeta b{color:var(--txt);font-weight:600;}
 .jtot{font-family:'Space Grotesk';font-weight:700;color:var(--go);font-size:54px;line-height:1;}
 .jtotl{color:var(--muted);font-size:13px;margin-top:3px;}
-.jpace{display:inline-block;margin-top:12px;background:rgba(255,176,32,.12);color:var(--amber);
+.jpace{display:inline-flex;align-items:center;gap:7px;margin-top:12px;background:rgba(255,176,32,.12);color:var(--amber);
   font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:8px;}
 .prog{margin-top:14px;}
 .prog .track{height:9px;border-radius:5px;background:#1b2430;overflow:hidden;}
@@ -195,6 +235,9 @@ body.working{background:#000;}
 .jrow .jl b{color:var(--txt);font-weight:600;}
 .jrow .jv{font-weight:700;font-variant-numeric:tabular-nums;}
 .jrow .zero{color:var(--amber);font-size:12px;font-weight:600;}
+.clockedout{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:13.5px;
+  margin-top:14px;border:1px solid var(--line);border-radius:12px;padding:12px;}
+.clockedout svg{color:var(--go);}
 
 /* ---------- office ---------- */
 .pkbar{margin:11px 0;}
@@ -227,13 +270,45 @@ body.working{background:#000;}
 .sectitle svg{color:var(--go);}
 .foot{text-align:center;color:var(--faint);font-size:12px;margin-top:22px;line-height:1.5;}
 
-/* paused overlay */
+/* ---------- overlays ---------- */
 #paused{position:fixed;inset:0;z-index:80;background:rgba(5,8,11,.96);display:none;
   flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:30px;}
 #paused.on{display:flex;}
-#paused .pi{font-size:44px;}
+#paused .pi{color:var(--muted);}
 #paused h2{font-size:24px;margin:0;}
 #paused p{color:var(--muted);margin:0;}
+
+#eco{position:fixed;inset:0;z-index:85;background:#000;display:none;flex-direction:column;align-items:center;
+  justify-content:center;gap:6px;text-align:center;padding:24px;}
+#eco.on{display:flex;}
+#eco .em{position:absolute;top:18px;right:20px;color:#33414f;}
+#eco .e1{color:#39434f;font-family:'Space Grotesk';font-weight:700;font-size:54px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+#eco .e2{color:#2c473a;font-family:'Space Grotesk';font-weight:700;font-size:42px;}
+#eco .ed{color:#44505c;font-size:18px;font-weight:600;max-width:92%;line-height:1.3;margin-top:6px;word-break:break-word;}
+#eco .eart{color:#36424e;font-size:15px;font-weight:600;margin-top:5px;font-variant-numeric:tabular-nums;}
+#eco .e3{color:#23292f;font-size:13px;margin-top:22px;}
+
+#sheetBack{position:fixed;inset:0;z-index:89;background:rgba(3,6,9,.55);opacity:0;pointer-events:none;transition:opacity .3s;}
+#sheetBack.on{opacity:1;pointer-events:auto;}
+#sheet{position:fixed;left:0;right:0;bottom:0;z-index:90;max-width:720px;margin:0 auto;
+  background:var(--bg-2);border-top:1px solid var(--line-2);border-radius:20px 20px 0 0;
+  padding:16px 18px calc(20px + env(safe-area-inset-bottom));
+  transform:translateY(115%);transition:transform .3s var(--ease);}
+#sheet.on{transform:none;}
+.sheeth{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;}
+.sheeth h3{font-size:18px;margin:0;font-family:'Space Grotesk';}
+.setrow{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid var(--line);}
+.setrow:last-child{border-bottom:0;}
+.setic{flex:none;width:34px;height:34px;border-radius:9px;background:var(--card);display:grid;place-items:center;color:var(--go);}
+.setmain{flex:1;min-width:0;}
+.setlab{font-weight:600;font-size:15px;}
+.sethint{color:var(--muted);font-size:12.5px;margin-top:2px;line-height:1.4;}
+.sw{flex:none;width:46px;height:28px;border-radius:999px;background:#26323f;border:1px solid var(--line-2);position:relative;cursor:pointer;transition:background .2s,border-color .2s;margin-top:2px;}
+.sw .knob{position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#7d8ea0;transition:transform .2s,background .2s;}
+.sw.on{background:rgba(45,212,111,.25);border-color:var(--go);}
+.sw.on .knob{transform:translateX(18px);background:var(--go);}
+.safenote{display:flex;align-items:center;gap:8px;color:var(--faint);font-size:11.5px;margin-top:12px;line-height:1.4;}
+.safenote svg{color:var(--go);flex:none;}
 
 @media (max-width:420px){
   .wrap{padding:12px 13px calc(24px + env(safe-area-inset-bottom));}
@@ -244,11 +319,23 @@ body.working{background:#000;}
 <body>
 <div class="wrap" id="app"></div>
 
+<div id="eco">
+  <div class="em" id="ecoMoon"></div>
+  <div class="e1" id="ecoLoc">001 · 001</div>
+  <div class="e2" id="ecoQty">× 7</div>
+  <div class="ed" id="ecoDesc"></div>
+  <div class="eart" id="ecoArt"></div>
+  <div class="e3" id="ecoHint">Tap to wake</div>
+</div>
+
 <div id="paused">
-  <div class="pi">⏸️</div>
+  <div class="pi" id="pausedIc"></div>
   <h2 id="pausedT">Paused</h2>
   <p id="pausedP">Tap to resume</p>
 </div>
+
+<div id="sheetBack"></div>
+<div id="sheet"></div>
 
 <script>
 "use strict";
@@ -297,21 +384,38 @@ const ORD_7704_W3 = [
   {loc:"002-010", qty:4,  art:"92836801",    desc:"LØGISMOSE SKYR JORDBÆR/RABARBE"}
 ];
 
+// DRY / ODD SIZE - NEW PALLET orders (the other category printed on the lists).
+// 7810 also has a CHILLED order above — same store, two different sheets:
+// this is why a list is identified by Store + Colli, not store alone.
+const DRY_7810 = [
+  {loc:"014-002", qty:6,  art:"20455110", desc:"KIMS CHIPS SOURCREAM 175G"},
+  {loc:"014-005", qty:12, art:"20455320", desc:"OLW CHEESE DOODLES 160G"},
+  {loc:"015-001", qty:4,  art:"20781004", desc:"HARIBO MATADOR MIX 375G"},
+  {loc:"015-003", qty:20, art:"20781220", desc:"COCA-COLA 1,5L 6-PACK"}
+];
+const DRY_7732 = [
+  {loc:"014-001", qty:8, art:"20455100", desc:"KIMS CHIPS SALT 175G"},
+  {loc:"016-002", qty:3, art:"20990450", desc:"LAMBI TOILETPAPIR 8 RULLER"}
+];
+
 const sum = a => a.reduce((s,x)=>s+x.qty,0);
 
-// FIFO queue exactly as it would arrive from the system.
+// The order feed as it would arrive from the system (a FIFO queue once fully
+// connected; in pilot mode the same orders are opened from the paper in hand).
 const QUEUE_SEED = [
-  {id:"o7810", wave:2, store:"7810", dept:"SPOT CHILLED", items:REAL_ITEMS},
-  {id:"o7732", wave:2, store:"7732", dept:"SPOT CHILLED", items:ORD_7732},
-  {id:"o7901", wave:2, store:"7901", dept:"SPOT CHILLED", items:ORD_7901},
-  {id:"o7704", wave:3, store:"7704", dept:"SPOT CHILLED", items:ORD_7704_W3}
+  {id:"o7810c", wave:2, store:"7810", dept:"SPOT CHILLED",  items:REAL_ITEMS},
+  {id:"o7810d", wave:2, store:"7810", dept:"DRY/ODD SIZE",  items:DRY_7810},
+  {id:"o7732c", wave:2, store:"7732", dept:"SPOT CHILLED",  items:ORD_7732},
+  {id:"o7901c", wave:2, store:"7901", dept:"SPOT CHILLED",  items:ORD_7901},
+  {id:"o7732d", wave:2, store:"7732", dept:"DRY/ODD SIZE",  items:DRY_7732},
+  {id:"o7704c", wave:3, store:"7704", dept:"SPOT CHILLED",  items:ORD_7704_W3}
 ];
 
 // Orders already finished earlier in the shift (seed the log with realistic numbers).
 const DONE_SEED = [
-  {wave:1, store:"7704", colli:312, planned:312, orders:1, shortfalls:[]},
-  {wave:1, store:"7458", colli:163, planned:168, orders:1,
-   shortfalls:[{loc:"001-005", desc:"STEFF HOULBERG GRILLPØLSER 800", planned:14, actual:9, store:"7458"}]}
+  {wave:1, store:"7704", dept:"SPOT CHILLED", colli:312, planned:312, orders:1, items:24, shortfalls:[]},
+  {wave:1, store:"7458", dept:"DRY/ODD SIZE", colli:163, planned:168, orders:1, items:19,
+   shortfalls:[{loc:"014-005", desc:"OLW CHEESE DOODLES 160G", planned:14, actual:9, store:"7458"}]}
 ];
 
 // Other pickers on the floor (static, for the office board).
@@ -321,6 +425,36 @@ const BONUS_TARGET = 1000;  // colli to the next bonus step
 const PACE = 150;           // representative live pace, colli/h
 
 /* ============================================================
+   ICONS — inline SVG (Lucide-style), no emoji
+   ============================================================ */
+const ICO={
+  play:'<polygon points="6 4 19 12 6 20 6 4"/>',
+  skip:'<polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>',
+  log:'<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
+  office:'<rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/>',
+  check:'<polyline points="20 6 9 17 4 12"/>',
+  checkc:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+  award:'<path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/><circle cx="12" cy="8" r="6"/>',
+  pause:'<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+  restart:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+  alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  headphones:'<path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5a9 9 0 0 1 18 0v5a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/>',
+  volume:'<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>',
+  moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  gear:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  arrow:'<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/>',
+  radio:'<path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/>',
+  updown:'<path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/>',
+  lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  layers:'<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>'
+};
+function ic(n,s){s=s||18;return '<svg class="ic" width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(ICO[n]||"")+'</svg>';}
+
+/* ============================================================
    I18N — English / Dansk / Українська
    ============================================================ */
 const I18N = {
@@ -328,8 +462,11 @@ const I18N = {
     demo:"Demo · sample data",
     tagline:"The picking list, straight from your system — on any phone.",
     connected:"Warehouse system · connected",
-    yourName:"Your name", department:"Department", store:"Store cluster",
-    feedLive:"Live order feed", startShift:"Start shift",
+    yourName:"Your name",
+    zoneLabel:"Zone", zoneHint:"chilled and dry / odd-size goods",
+    storesLabel:"Stores in this queue",
+    feedLive:"Live order feed", startShift:"Clock in & start shift",
+    clockHint:"Your start time is logged the moment you clock in.",
     loginNote:"No camera, no paper, no install. Orders come from the system; nothing leaves it.",
     qEyebrow:"Order queue", qTitle:"You get the next order in line.",
     qSub:"Orders arrive from the system in order. Nobody picks only the big ones — and small orders never get left behind.",
@@ -337,34 +474,56 @@ const I18N = {
     waitsWave:"waits for wave {w}", small:"small",
     colli:"colli", lines:"lines",
     feedNote:"This is the live feed from your system — paper and scanning are gone. You're handed the next order; you can skip a couple if you must.",
-    takeNext:"▶ Take next order", skipBtn:"Skip ({n})", noSkip:"No skips left",
-    openLog:"📋 Shift log", officeView:"🏢 Office view",
+    categories:"Categories",
+    modePaper:"Beside paper", modeFifo:"From the system",
+    stageTag1:"Pilot · stage 1", stageTag2:"Fully connected",
+    paperTitle:"Open the list in your hand",
+    paperNote:"Paper stays exactly as it is. You grab a sheet like always, then open it here by its store and colli. Who takes what doesn't change — the app just replaces the pen and sends the office the numbers live, so nothing is picked twice and a colleague on paper is never blocked.",
+    tableHint:"Sheets on the table — tap the one in your hand:",
+    orTypeIt:"…or type the store and colli printed on the sheet:",
+    butikLabel:"Store (Butik)", coliLabel:"Colli on the sheet",
+    openList:"Open this list", notFound:"No matching list in the queue — check the store number and the colli total.",
+    resumeLab:"Resume current order", resumeMeta:"line {a} / {b} · {loc}",
+    takeNext:"Take next order", skipBtn:"Skip ({n})", noSkip:"No skips left",
+    openLog:"Shift log", officeView:"Office view",
     queueEmpty:"Queue clear — every order picked.", greatJob:"Nice work — the table's empty.",
-    take:"TAKEN", back:"Back", less:"⚠ Less", pause:"Pause", logBtn:"Shift log",
-    took:"Took:", nextItem:"→ next: {loc}", lastItem:"→ last spot in this order",
+    take:"TAKEN", back:"Back", less:"Less", pause:"Pause",
+    took:"Took:", nextItem:"next: {loc}", lastItem:"last spot in this order",
     taken:"taken {n} pcs", unit:"pcs",
-    whint:"One tap = TAKEN · ⚠ Less if the shelf was short",
+    whint:"One tap = TAKEN · Less if the shelf was short",
     orderDone:"Order done", colliPacked:"colli packed",
-    ofN:"{a} / {b}", short:"{n} short", noShort:"all complete",
-    backQueue:"Back to queue →", toLog:"📋 See shift log",
+    short:"{n} short", noShort:"all complete",
+    backQueue:"Back to queue", toLog:"See shift log",
     logTitle:"Shift log", colliPackedN:"colli packed · {n} orders",
     paceTxt:"≈ {n} colli/h", bonusZone:"bonus zone",
     bonusProg:"progress to next bonus step",
+    started:"Started {t}", ended:"ended {t}", onShift:"on shift · {d}", workedFor:"worked {d}",
+    endShift:"End shift", endConfirm:"End your shift now? Your clock-out time will be logged.",
+    clockedOut:"Clocked out · worked {d}",
     perOrder:"This shift, order by order", zerosN:"{n} short",
     officeTitle:"Office view", officeSub:"What the office sees — live, as it happens. Every number stays inside Netto.",
     pickersLive:"Pickers · live", waveStatus:"Wave status", shortReport:"Shortfalls this shift",
     wDone:"done", wDoing:"in progress", wWaiting:"waiting", noShortYet:"No shortfalls recorded yet.",
     dataLock:"Nothing is sent to an outside service. The office reads it live and owns every number.",
-    back:"Back", restart:"↺ Restart demo",
-    paused:"Paused", pausedTap:"Tap anywhere to resume",
+    back:"Back", restart:"Restart demo",
+    paused:"Paused", pausedTap:"Tap anywhere to resume", ecoTap:"Tap to wake",
+    settings:"Controls", close:"Done",
+    handsFree:"Hands-free (earbud)", handsFreeHint:"Control picking with an earbud click — no screen taps. No microphone is used.",
+    voiceLab:"Voice guidance", voiceHint:"Reads the location and quantity aloud and repeats on a timer. Plays only on this device.",
+    ecoLab:"Eco screen", ecoHint:"Dims the screen between picks to save battery. One tap wakes it.",
+    safeNote:"None of these use the microphone. Everything stays on the phone.",
+    ttsItem:"Location {loc}. Take {qty}.",
     foot:"Demo — sample data, no live connection. Picker · built and used on the floor by Mykhailo Lynnyk."
   },
   da:{
     demo:"Demo · eksempeldata",
     tagline:"Plukkelisten, direkte fra jeres system — på enhver telefon.",
     connected:"Lagersystem · forbundet",
-    yourName:"Dit navn", department:"Afdeling", store:"Butiksgruppe",
-    feedLive:"Live ordrefeed", startShift:"Start vagt",
+    yourName:"Dit navn",
+    zoneLabel:"Zone", zoneHint:"køle- og tør-/odd-size-varer",
+    storesLabel:"Butikker i denne kø",
+    feedLive:"Live ordrefeed", startShift:"Stempl ind & start vagt",
+    clockHint:"Dit starttidspunkt logges, så snart du stempler ind.",
     loginNote:"Intet kamera, intet papir, ingen installation. Ordrer kommer fra systemet; intet forlader det.",
     qEyebrow:"Ordrekø", qTitle:"Du får den næste ordre i rækken.",
     qSub:"Ordrer kommer fra systemet i rækkefølge. Ingen tager kun de store — og små ordrer bliver aldrig efterladt.",
@@ -372,34 +531,56 @@ const I18N = {
     waitsWave:"venter på bølge {w}", small:"lille",
     colli:"kolli", lines:"linjer",
     feedNote:"Dette er live-feedet fra jeres system — papir og scanning er væk. Du får den næste ordre; du kan springe et par over om nødvendigt.",
-    takeNext:"▶ Tag næste ordre", skipBtn:"Spring over ({n})", noSkip:"Ingen flere spring",
-    openLog:"📋 Vagtlog", officeView:"🏢 Kontorvisning",
+    categories:"Kategorier",
+    modePaper:"Ved siden af papir", modeFifo:"Fra systemet",
+    stageTag1:"Pilot · trin 1", stageTag2:"Fuldt forbundet",
+    paperTitle:"Åbn listen du står med",
+    paperNote:"Papiret forbliver præcis som det er. Du tager en seddel som altid og åbner den her ud fra butik og kolli. Hvem der tager hvad ændres ikke — appen erstatter bare kuglepennen og sender kontoret tallene live, så intet plukkes dobbelt, og en kollega på papir blokeres aldrig.",
+    tableHint:"Sedler på bordet — tryk på den du står med:",
+    orTypeIt:"…eller indtast butik og kolli fra sedlen:",
+    butikLabel:"Butik", coliLabel:"Kolli på sedlen",
+    openList:"Åbn denne liste", notFound:"Ingen matchende liste i køen — tjek butiksnummer og samlet kolli.",
+    resumeLab:"Fortsæt nuværende ordre", resumeMeta:"linje {a} / {b} · {loc}",
+    takeNext:"Tag næste ordre", skipBtn:"Spring over ({n})", noSkip:"Ingen flere spring",
+    openLog:"Vagtlog", officeView:"Kontorvisning",
     queueEmpty:"Køen er tom — alle ordrer plukket.", greatJob:"Godt gået — bordet er tomt.",
-    take:"TAGET", back:"Tilbage", less:"⚠ Mindre", pause:"Pause", logBtn:"Vagtlog",
-    took:"Tog:", nextItem:"→ næste: {loc}", lastItem:"→ sidste plads i ordren",
+    take:"TAGET", back:"Tilbage", less:"Mindre", pause:"Pause",
+    took:"Tog:", nextItem:"næste: {loc}", lastItem:"sidste plads i ordren",
     taken:"taget {n} stk", unit:"stk",
-    whint:"Ét tryk = TAGET · ⚠ Mindre hvis hylden var tom",
+    whint:"Ét tryk = TAGET · Mindre hvis hylden var tom",
     orderDone:"Ordre færdig", colliPacked:"kolli pakket",
-    ofN:"{a} / {b}", short:"{n} mangler", noShort:"alt komplet",
-    backQueue:"Tilbage til køen →", toLog:"📋 Se vagtlog",
+    short:"{n} mangler", noShort:"alt komplet",
+    backQueue:"Tilbage til køen", toLog:"Se vagtlog",
     logTitle:"Vagtlog", colliPackedN:"kolli pakket · {n} ordrer",
     paceTxt:"≈ {n} kolli/t", bonusZone:"bonuszone",
     bonusProg:"fremgang til næste bonustrin",
+    started:"Startet {t}", ended:"sluttet {t}", onShift:"på vagt · {d}", workedFor:"arbejdede {d}",
+    endShift:"Afslut vagt", endConfirm:"Afslut din vagt nu? Dit udstemplingstidspunkt logges.",
+    clockedOut:"Stemplet ud · arbejdede {d}",
     perOrder:"Denne vagt, ordre for ordre", zerosN:"{n} mangler",
     officeTitle:"Kontorvisning", officeSub:"Det kontoret ser — live, mens det sker. Alle tal bliver inde i Netto.",
     pickersLive:"Plukkere · live", waveStatus:"Bølgestatus", shortReport:"Mangler denne vagt",
     wDone:"færdig", wDoing:"i gang", wWaiting:"venter", noShortYet:"Ingen mangler registreret endnu.",
     dataLock:"Intet sendes til en ekstern tjeneste. Kontoret læser det live og ejer hvert tal.",
-    back:"Tilbage", restart:"↺ Genstart demo",
-    paused:"På pause", pausedTap:"Tryk for at fortsætte",
+    back:"Tilbage", restart:"Genstart demo",
+    paused:"På pause", pausedTap:"Tryk for at fortsætte", ecoTap:"Tryk for at vække",
+    settings:"Indstillinger", close:"Færdig",
+    handsFree:"Håndfri (øreprop)", handsFreeHint:"Styr plukningen med et klik på øreproppen — ingen tryk på skærmen. Ingen mikrofon bruges.",
+    voiceLab:"Stemmevejledning", voiceHint:"Læser lokation og antal højt og gentager med jævne mellemrum. Afspilles kun på denne telefon.",
+    ecoLab:"Eco-skærm", ecoHint:"Dæmper skærmen mellem plukninger for at spare batteri. Ét tryk vækker den.",
+    safeNote:"Ingen af disse bruger mikrofonen. Alt bliver på telefonen.",
+    ttsItem:"Lokation {loc}. Tag {qty}.",
     foot:"Demo — eksempeldata, ingen live-forbindelse. Picker · bygget og brugt på gulvet af Mykhailo Lynnyk."
   },
   uk:{
     demo:"Демо · приклад даних",
     tagline:"Лист підбору — прямо з вашої системи, на будь-якому телефоні.",
     connected:"Складська система · підключено",
-    yourName:"Ваше ім'я", department:"Відділ", store:"Група магазинів",
-    feedLive:"Живий потік замовлень", startShift:"Почати зміну",
+    yourName:"Ваше ім'я",
+    zoneLabel:"Зона", zoneHint:"охолоджені та сухі / odd-size товари",
+    storesLabel:"Магазини в цій черзі",
+    feedLive:"Живий потік замовлень", startShift:"Відмітитись і почати зміну",
+    clockHint:"Час початку фіксується, щойно ви відмічаєтесь.",
     loginNote:"Без камери, без паперу, без встановлення. Замовлення йдуть із системи; нічого не виходить назовні.",
     qEyebrow:"Черга замовлень", qTitle:"Ви отримуєте наступне замовлення в черзі.",
     qSub:"Замовлення надходять із системи по порядку. Ніхто не бере лише великі — і малі замовлення не залишаються.",
@@ -407,26 +588,45 @@ const I18N = {
     waitsWave:"чекає хвилю {w}", small:"мале",
     colli:"колі", lines:"рядків",
     feedNote:"Це живий потік із вашої системи — паперу й сканування немає. Вам видають наступне замовлення; за потреби можна пропустити кілька.",
-    takeNext:"▶ Взяти наступне", skipBtn:"Пропустити ({n})", noSkip:"Пропусків немає",
-    openLog:"📋 Журнал зміни", officeView:"🏢 Вид офісу",
+    categories:"Категорії",
+    modePaper:"Поруч із папером", modeFifo:"Із системи",
+    stageTag1:"Пілот · етап 1", stageTag2:"Повне підключення",
+    paperTitle:"Відкрити лист, що в руці",
+    paperNote:"Папір лишається як є. Ви берете лист як завжди, а тут відкриваєте його за магазином і колі. Хто що бере — не змінюється: застосунок лише замінює ручку й надсилає офісу цифри наживо, тож нічого не береться двічі, а колега на папері ніколи не заблокований.",
+    tableHint:"Листи на столі — торкніться того, що у вас у руці:",
+    orTypeIt:"…або введіть магазин і колі з листа:",
+    butikLabel:"Магазин (Butik)", coliLabel:"Колі на листі",
+    openList:"Відкрити цей лист", notFound:"Немає такого листа в черзі — перевірте номер магазину й суму колі.",
+    resumeLab:"Продовжити поточне замовлення", resumeMeta:"рядок {a} / {b} · {loc}",
+    takeNext:"Взяти наступне", skipBtn:"Пропустити ({n})", noSkip:"Пропусків немає",
+    openLog:"Журнал зміни", officeView:"Вид офісу",
     queueEmpty:"Черга порожня — усі замовлення зібрані.", greatJob:"Чудово — стіл порожній.",
-    take:"ВЗЯВ", back:"Назад", less:"⚠ Менше", pause:"Пауза", logBtn:"Журнал",
-    took:"Взяв:", nextItem:"→ далі: {loc}", lastItem:"→ остання позиція замовлення",
+    take:"ВЗЯВ", back:"Назад", less:"Менше", pause:"Пауза",
+    took:"Взяв:", nextItem:"далі: {loc}", lastItem:"остання позиція замовлення",
     taken:"взято {n} шт", unit:"шт",
-    whint:"Один тап = ВЗЯВ · ⚠ Менше, якщо на полиці бракувало",
+    whint:"Один тап = ВЗЯВ · Менше, якщо на полиці бракувало",
     orderDone:"Замовлення зібрано", colliPacked:"колі зібрано",
-    ofN:"{a} / {b}", short:"{n} нестача", noShort:"усе зібрано",
-    backQueue:"До черги →", toLog:"📋 Журнал зміни",
+    short:"{n} нестача", noShort:"усе зібрано",
+    backQueue:"До черги", toLog:"Журнал зміни",
     logTitle:"Журнал зміни", colliPackedN:"колі зібрано · {n} замовлень",
     paceTxt:"≈ {n} колі/год", bonusZone:"бонусна зона",
     bonusProg:"прогрес до наступного бонусу",
+    started:"Початок {t}", ended:"кінець {t}", onShift:"на зміні · {d}", workedFor:"відпрацьовано {d}",
+    endShift:"Завершити зміну", endConfirm:"Завершити зміну зараз? Час виходу буде зафіксовано.",
+    clockedOut:"Зміну завершено · відпрацьовано {d}",
     perOrder:"Ця зміна, замовлення за замовленням", zerosN:"{n} нестача",
     officeTitle:"Вид офісу", officeSub:"Те, що бачить офіс — наживо. Кожна цифра лишається в Netto.",
     pickersLive:"Збирачі · наживо", waveStatus:"Статус хвиль", shortReport:"Нестачі за зміну",
     wDone:"готово", wDoing:"у роботі", wWaiting:"очікує", noShortYet:"Нестач поки не зафіксовано.",
     dataLock:"Нічого не йде до зовнішнього сервісу. Офіс читає це наживо й володіє кожною цифрою.",
-    back:"Назад", restart:"↺ Перезапустити демо",
-    paused:"Пауза", pausedTap:"Торкніться, щоб продовжити",
+    back:"Назад", restart:"Перезапустити демо",
+    paused:"Пауза", pausedTap:"Торкніться, щоб продовжити", ecoTap:"Торкніться, щоб увімкнути",
+    settings:"Керування", close:"Готово",
+    handsFree:"Без рук (навушник)", handsFreeHint:"Керуйте підбором кліком навушника — без дотиків екрана. Мікрофон не використовується.",
+    voiceLab:"Голосові підказки", voiceHint:"Озвучує локацію й кількість і повторює за таймером. Звучить лише на цьому телефоні.",
+    ecoLab:"Еко-екран", ecoHint:"Гасить екран між підборами для економії батареї. Один тап вмикає його.",
+    safeNote:"Жодна з цих функцій не використовує мікрофон. Усе лишається на телефоні.",
+    ttsItem:"Локація {loc}. Взяти {qty}.",
     foot:"Демо — приклад даних, без живого з'єднання. Picker · створено й використовується на складі Mykhailo Lynnyk."
   }
 };
@@ -434,30 +634,40 @@ const I18N = {
 /* ============================================================
    STATE
    ============================================================ */
-const LS = "picker_demo_state_v1";
+const LS = "picker_demo_state_v3";
 let S;
 
 function freshState(){
   return {
     lang:"en", name:"Mykhailo", screen:"login",
+    mode:"paper",                          // "paper" = beside paper (pilot) · "fifo" = straight from system
     skips:2,
     queue:QUEUE_SEED.map(o=>o.id),         // pending order ids, FIFO
     cur:null,                              // {orderId, idx, taken:[]}
     done:DONE_SEED.map(d=>({...d, shortfalls:d.shortfalls.map(s=>({...s}))})),
-    lastDone:null
+    lastDone:null,
+    checkIn:null, checkOut:null,
+    settings:{pod:false, voice:false, eco:false}
   };
 }
 function load(){
-  try{ const r=localStorage.getItem(LS); if(r){ S=JSON.parse(r); if(S&&S.queue) return; } }catch(e){}
+  try{ const r=localStorage.getItem(LS); if(r){ S=JSON.parse(r); if(S&&S.queue&&S.settings) return; } }catch(e){}
   S=freshState();
 }
 function save(){ try{ localStorage.setItem(LS, JSON.stringify(S)); }catch(e){} }
 function resetDemo(){ S=freshState(); save(); document.body.classList.remove("working"); show("login"); }
 
 const order = id => QUEUE_SEED.find(o=>o.id===id);
+const shortDept = d => /dry|odd/i.test(d||"") ? "DRY" : "CHILLED";
+function findPending(butik, coli){
+  return S.queue.map(order).find(o=>o.store===String(butik).trim() && sum(o.items)===coli) || null;
+}
 function t(k){ return (I18N[S.lang]&&I18N[S.lang][k]) || I18N.en[k] || k; }
 function tpl(k,v){ let s=t(k); for(const p in v) s=s.replace("{"+p+"}", v[p]); return s; }
 const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const inWork = () => S.screen==="work";
+const curItem = () => S.cur ? order(S.cur.orderId).items[S.cur.idx] : null;
 
 // live shift totals
 function shiftColli(){ return S.done.reduce((s,d)=>s+d.colli,0); }
@@ -465,79 +675,230 @@ function shiftOrders(){ return S.done.reduce((s,d)=>s+(d.orders||1),0); }
 function allShortfalls(){ const a=[]; S.done.forEach(d=>(d.shortfalls||[]).forEach(s=>a.push({...s,store:s.store||d.store}))); return a; }
 function minPendingWave(){ return S.queue.length? Math.min(...S.queue.map(id=>order(id).wave)) : 0; }
 
+function fmtTime(ts){ const d=new Date(ts); return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+function fmtDur(ms){ const m=Math.max(0,Math.round(ms/60000)); const h=Math.floor(m/60); return h>0?(h+"h "+(m%60)+"m"):(m+"m"); }
+
+/* ============================================================
+   AUDIO — beeps + AirPods (MediaSession) + voice (TTS)
+   No microphone is ever requested. Everything is local.
+   ============================================================ */
+let actx=null;
+function ensureAudio(){
+  try{
+    if(actx&&actx.state==="closed")actx=null;
+    actx=actx||new(window.AudioContext||window.webkitAudioContext)();
+    if(actx.state!=="running")actx.resume().catch(()=>{});
+  }catch(e){}
+}
+function beep(freq,ms,vol){
+  try{
+    if(!actx||actx.state==="closed"){ensureAudio();if(!actx)return;}
+    if(actx.state!=="running")actx.resume().catch(()=>{});
+    const tt=actx.currentTime+0.005;
+    const o=actx.createOscillator(),g=actx.createGain();
+    o.frequency.value=freq;o.connect(g);g.connect(actx.destination);
+    g.gain.setValueAtTime(vol||0.12,tt);
+    g.gain.exponentialRampToValueAtTime(0.001,tt+ms/1000);
+    o.start(tt);o.stop(tt+ms/1000+0.02);
+  }catch(e){}
+}
+function beepTake(){beep(660,55);setTimeout(()=>beep(990,80),70);}
+function beepBack(){beep(520,55);setTimeout(()=>beep(390,80),70);}
+function clickTick(){beep(1500,16,0.04);}
+
+/* ---- voice (TTS) + autorepeat ---- */
+let voices=[];
+function loadVoices(){ try{ voices=window.speechSynthesis?speechSynthesis.getVoices()||[]:[]; }catch(e){ voices=[]; } }
+if(window.speechSynthesis){ speechSynthesis.onvoiceschanged=loadVoices; loadVoices(); }
+function voiceFor(){
+  const pre={en:"en",da:"da",uk:"uk"}[S.lang]||"en";
+  let v=voices.find(x=>new RegExp("^"+pre,"i").test(x.lang));
+  if(!v&&pre==="uk")v=voices.find(x=>/^ru/i.test(x.lang));
+  const code={en:"en-US",da:"da-DK",uk:"uk-UA"}[S.lang]||"en-US";
+  return {voice:v||null, lang:(v&&v.lang)||code};
+}
+function cancelSpeech(){ try{ if(window.speechSynthesis)speechSynthesis.cancel(); }catch(e){} }
+function speak(text){
+  if(!window.speechSynthesis||!S.settings.voice)return;
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    const v=voiceFor(); if(v.voice)u.voice=v.voice; u.lang=v.lang; u.rate=1.05;
+    setTimeout(()=>{ try{speechSynthesis.speak(u);}catch(e){} },50);
+  }catch(e){}
+}
+function locSpeak(loc){ return String(loc).split("-").map(p=>p.split("").join(" ")).join(", "); }
+function itemPhrase(it){ return tpl("ttsItem",{loc:locSpeak(it.loc), qty:it.qty}); }
+let repeatTimer=null;
+function scheduleRepeat(){
+  clearTimeout(repeatTimer);
+  if(!inWork()||paused||!S.settings.voice)return;
+  if(pbarOpen())return;
+  repeatTimer=setTimeout(sayItem,8000);
+}
+function sayItem(){
+  if(!inWork()||paused)return;
+  const it=curItem(); if(!it)return;
+  if(S.settings.voice && !pbarOpen()) speak(itemPhrase(it));
+  scheduleRepeat();
+}
+
+/* ---- AirPods via MediaSession (silent looping audio holds the session) ---- */
+function silentWavURL(){
+  const rate=8000,len=rate*2,buf=new ArrayBuffer(44+len*2),v=new DataView(buf);
+  const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  ws(0,"RIFF");v.setUint32(4,36+len*2,true);ws(8,"WAVE");ws(12,"fmt ");
+  v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);
+  v.setUint16(32,2,true);v.setUint16(34,16,true);
+  ws(36,"data");v.setUint32(40,len*2,true);
+  return URL.createObjectURL(new Blob([buf],{type:"audio/wav"}));
+}
+let pod=null,podGuard=0,podIgnorePause=0;
+function registerPodHandlers(){
+  if(!("mediaSession"in navigator)||!pod)return;
+  try{
+    navigator.mediaSession.metadata=new MediaMetadata({title:"Picker"});
+    navigator.mediaSession.playbackState="playing";
+    navigator.mediaSession.setActionHandler("pause",()=>{stemAction("take");pod.play().catch(()=>{});});
+    navigator.mediaSession.setActionHandler("play",()=>{stemAction("take");pod.play().catch(()=>{});});
+    navigator.mediaSession.setActionHandler("nexttrack",()=>{stemAction("back");});
+    navigator.mediaSession.setActionHandler("previoustrack",()=>{stemAction("third");});
+  }catch(e){}
+}
+function stemAction(kind){
+  if(!inWork())return;
+  const now=Date.now(); if(now<podGuard)return; podGuard=now+300;
+  if(kind==="third"){ if(paused)resumeWork(); else pauseWork(); return; }
+  if(paused)return;
+  if(kind==="take")doTake();
+  else if(kind==="back")backItem();
+}
+async function podToggle(on){
+  try{ if("audioSession"in navigator)navigator.audioSession.type="playback"; }catch(e){}
+  if(on){
+    if(!pod){
+      pod=new Audio(silentWavURL());pod.loop=true;pod.volume=0.01;
+      pod.addEventListener("pause",()=>{
+        if(Date.now()<podIgnorePause)return;
+        if(S.settings.pod)pod.play().catch(()=>{});
+      });
+    }
+    try{ await pod.play(); }catch(e){ S.settings.pod=false; save(); renderSheet(); return; }
+    registerPodHandlers();
+    setTimeout(registerPodHandlers,800);
+  }else if(pod){ podIgnorePause=Date.now()+1200; pod.pause(); }
+}
+
+/* ============================================================
+   WAKE LOCK + ECO + idle loop
+   ============================================================ */
+let wakeLock=null;
+async function keepAwake(){ try{ if("wakeLock"in navigator)wakeLock=await navigator.wakeLock.request("screen"); }catch(e){} }
+let lastTouch=Date.now(), ecoShown=false, paused=false, uiShield=0;
+const pbarOpen = () => { const p=document.getElementById("pbar"); return !!(p&&p.classList.contains("on")); };
+function showEco(){
+  const it=curItem(); if(!it)return;
+  ecoShown=true;
+  document.getElementById("ecoLoc").textContent=String(it.loc).replace("-"," · ");
+  document.getElementById("ecoQty").textContent="× "+it.qty;
+  document.getElementById("ecoDesc").textContent=it.desc||"";
+  document.getElementById("ecoArt").textContent=it.art||"";
+  document.getElementById("eco").classList.add("on");
+}
+function hideEco(){ ecoShown=false; const e=document.getElementById("eco"); if(e)e.classList.remove("on"); }
+setInterval(()=>{
+  if(inWork()&&!paused&&!ecoShown&&S.settings.eco&&!pbarOpen()&&Date.now()-lastTouch>15000) showEco();
+  if(S.screen==="log"&&!S.checkOut&&S.checkIn){ const c=document.getElementById("durChip"); if(c)c.textContent=tpl("onShift",{d:fmtDur(Date.now()-S.checkIn)}); }
+},2000);
+document.addEventListener("pointerdown",()=>{
+  lastTouch=Date.now();
+  if(S.settings.pod&&pod&&pod.paused)pod.play().catch(()=>{});
+});
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState!=="visible")return;
+  if(inWork()){ keepAwake(); lastTouch=Date.now();
+    if(S.settings.pod&&pod&&pod.paused){pod.play().catch(()=>{});registerPodHandlers();} }
+});
+
 /* ============================================================
    RENDER
    ============================================================ */
 const app = document.getElementById("app");
 
 function langBar(){
-  return `<div class="lang">${["en","da","uk"].map(l=>
-    `<button data-lang="${l}" class="${S.lang===l?"on":""}">${l.toUpperCase()}</button>`).join("")}</div>`;
+  return '<div class="lang">'+["en","da","uk"].map(l=>
+    '<button data-lang="'+l+'" class="'+(S.lang===l?"on":"")+'">'+l.toUpperCase()+'</button>').join("")+'</div>';
 }
 function header(){
-  return `<div class="top">
-    <div class="logo sm">P</div>
-    <div class="who">
-      <div class="nm">${esc(S.name)||"Picker"}</div>
-      <div class="conn"><span class="dotlive"></span>${t("connected")}</div>
-    </div>
-    ${langBar()}
-  </div>`;
+  return '<div class="top">'
+    +'<div class="logo sm">P</div>'
+    +'<div class="who"><div class="nm">'+(esc(S.name)||"Picker")+'</div>'
+    +'<div class="conn"><span class="dotlive"></span>'+t("connected")+'</div></div>'
+    +'<button class="iconbtn" data-act="settings" aria-label="controls">'+ic("gear",18)+'</button>'
+    +langBar()+'</div>';
 }
 function locHtml(loc){
-  return loc.split("-").map(p=>`<span>${p}</span>`).join('<i class="locsep">·</i>');
+  return loc.split("-").map(p=>"<span>"+p+"</span>").join('<i class="locsep">·</i>');
 }
 
 function show(screen){
   S.screen=screen; save();
   if(screen==="work"){ document.body.classList.add("working"); }
-  else { document.body.classList.remove("working"); }
+  else {
+    document.body.classList.remove("working");
+    clearTimeout(repeatTimer); hideEco(); cancelSpeech();
+    paused=false; const pe=document.getElementById("paused"); if(pe)pe.classList.remove("on");
+  }
   ({login:rLogin, queue:rQueue, work:rWork, done:rDone, log:rLog, office:rOffice}[screen]||rLogin)();
+  syncOverlays();
   window.scrollTo(0,0);
 }
 
 /* ---- login ---- */
 function rLogin(){
-  app.innerHTML = `
-    <div class="top" style="justify-content:space-between">
-      <span class="demobadge">● ${t("demo")}</span>
-      ${langBar()}
-    </div>
-    <div class="loginhero">
-      <div class="logo">P</div>
-      <h1>Picker</h1>
-      <p class="tag">${t("tagline")}</p>
-    </div>
-    <div class="card" style="margin-top:18px">
-      <div class="kv"><span class="k">${t("feedLive")}</span><span class="v" style="color:var(--go);display:flex;align-items:center;gap:7px"><span class="dotlive"></span>${t("connected")}</span></div>
-      <div class="kv"><span class="k">${t("department")}</span><span class="v">SPOT CHILLED</span></div>
-      <div class="kv"><span class="k">${t("store")}</span><span class="v num">7810 · 7732 · 7901 …</span></div>
-      <div class="field">
-        <label>${t("yourName")}</label>
-        <input id="nameInp" type="text" value="${esc(S.name)}" autocomplete="off">
-      </div>
-    </div>
-    <button class="btn btn-go" data-act="start">${t("startShift")}</button>
-    <p class="foot" style="margin-top:14px">${t("loginNote")}</p>
-  `;
+  app.innerHTML =
+    '<div class="top" style="justify-content:space-between">'
+    +'<span class="demobadge"><span class="dotlive"></span>'+t("demo")+'</span>'+langBar()+'</div>'
+    +'<div class="loginhero"><div class="logo">P</div><h1>Picker</h1>'
+    +'<p class="tag">'+t("tagline")+'</p></div>'
+    +'<div class="card" style="margin-top:18px">'
+    +'<div class="kv"><span class="k">'+t("feedLive")+'</span><span class="v" style="color:var(--go);display:flex;align-items:center;gap:7px"><span class="dotlive"></span>'+t("connected")+'</span></div>'
+    +'<div class="kv"><span class="k">'+t("categories")+'<small>'+t("zoneHint")+'</small></span><span class="v">SPOT CHILLED · DRY/ODD SIZE</span></div>'
+    +'<div class="kv"><span class="k">'+t("storesLabel")+'</span><span class="v num">7810 · 7732 · 7901 · 7704</span></div>'
+    +'<div class="field"><label>'+t("yourName")+'</label>'
+    +'<input id="nameInp" type="text" value="'+esc(S.name)+'" autocomplete="off"></div></div>'
+    +'<button class="btn btn-go" data-act="start">'+ic("clock",20)+t("startShift")+'</button>'
+    +'<div class="clockhint">'+ic("clock",14)+'<span>'+t("clockHint")+'</span></div>'
+    +'<p class="foot" style="margin-top:14px">'+t("loginNote")+'</p>';
 }
 
-/* ---- queue ---- */
-function rQueue(){
-  document.body.classList.remove("working");
-  if(S.queue.length===0){
-    app.innerHTML = header() + `
-      <span class="eyebrow">${t("qEyebrow")}</span>
-      <h2 class="scr">${t("greatJob")}</h2>
-      <div class="card" style="text-align:center;padding:30px 18px">
-        <div style="font-size:46px">🎉</div>
-        <p class="sub" style="margin:10px 0 0">${t("queueEmpty")}</p>
-      </div>
-      <button class="btn" data-act="open-log">${t("openLog")}</button>
-      <button class="btn" data-act="open-office">${t("officeView")}</button>
-      <button class="btn btn-small btn-ghost" data-act="restart">${t("restart")}</button>`;
-    return;
-  }
+/* ---- queue / home (two modes: beside paper · from the system) ---- */
+function segBar(){
+  return '<div class="seg">'
+    +'<button data-mode="paper" class="'+(S.mode==="paper"?"on":"")+'"><span>'+t("modePaper")+'</span><span class="sgt">'+t("stageTag1")+'</span></button>'
+    +'<button data-mode="fifo" class="'+(S.mode==="fifo"?"on":"")+'"><span>'+t("modeFifo")+'</span><span class="sgt">'+t("stageTag2")+'</span></button>'
+    +'</div>';
+}
+function rPaperBody(){
+  const chips = S.queue.map(order).map(o=>
+    '<div class="sheet" data-act="open-chip" data-id="'+o.id+'">'
+    +'<div class="si">'+ic("log",18)+'</div>'
+    +'<div class="sb"><div class="o">Store '+o.store+' · '+shortDept(o.dept)+'</div>'
+    +'<div class="m">W'+o.wave+' · <span class="num">'+sum(o.items)+'</span> '+t("colli")+' · <span class="num">'+o.items.length+'</span> '+t("lines")+'</div></div>'
+    +'<span class="sc">'+ic("arrow")+'</span></div>').join("");
+  return '<span class="eyebrow">'+t("modePaper")+'</span>'
+    +'<h2 class="scr">'+t("paperTitle")+'</h2>'
+    +'<div class="feednote">'+ic("log",16)+'<span>'+t("paperNote")+'</span></div>'
+    +'<div class="qhead">'+t("tableHint")+'</div>'+chips
+    +'<div class="qhead" style="margin-top:16px">'+t("orTypeIt")+'</div>'
+    +'<div class="row">'
+    +'<div class="field" style="flex:1;margin-top:0"><label>'+t("butikLabel")+'</label><input id="butikInp" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="7810"></div>'
+    +'<div class="field" style="flex:1;margin-top:0"><label>'+t("coliLabel")+'</label><input id="coliInp" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="105"></div></div>'
+    +'<div id="paperErr" style="display:none;color:var(--bad);font-size:13px;margin-top:10px"></div>'
+    +'<button class="btn btn-go" data-act="open-list">'+ic("arrow",20)+t("openList")+'</button>';
+}
+function rFifoBody(){
   const minW = minPendingWave();
   let nextSeen=false;
   const tix = S.queue.map(id=>{
@@ -547,33 +908,46 @@ function rQueue(){
     if(!future && !nextSeen){ cls="next"; nextSeen=true; status=t("nextTo"); }
     else if(future){ cls="dim"; status=tpl("waitsWave",{w:minW}); }
     else { status=t("inLine"); }
-    return `<div class="tix ${cls}">
-      <div class="tn">W${o.wave}<small>WAVE</small></div>
-      <div class="ti">
-        <div class="o">Store ${o.store}${small?`<span class="smallflag">${t("small")}</span>`:""}</div>
-        <div class="m">${o.dept} · <span class="num">${colli}</span> ${t("colli")} · <span class="num">${o.items.length}</span> ${t("lines")}</div>
-      </div>
-      <div class="ts">${status}</div>
-    </div>`;
+    return '<div class="tix '+cls+'">'
+      +'<div class="tn">W'+o.wave+'<small>WAVE</small></div>'
+      +'<div class="ti"><div class="o">Store '+o.store+' · '+shortDept(o.dept)+(small?'<span class="smallflag">'+t("small")+'</span>':"")+'</div>'
+      +'<div class="m">'+o.dept+' · <span class="num">'+colli+'</span> '+t("colli")+' · <span class="num">'+o.items.length+'</span> '+t("lines")+'</div></div>'
+      +'<div class="ts">'+status+'</div></div>';
   }).join("");
-
-  app.innerHTML = header() + `
-    <span class="eyebrow">${t("qEyebrow")}</span>
-    <h2 class="scr">${t("qTitle")}</h2>
-    <p class="sub">${t("qSub")}</p>
-    <div class="feednote">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
-      <span>${t("feedNote")}</span>
-    </div>
-    <div class="qhead">${t("qHead")}</div>
-    ${tix}
-    <button class="btn btn-go" data-act="take-next">${t("takeNext")}</button>
-    <button class="btn ${S.skips>0?"":"btn-ghost"}" data-act="skip" ${S.skips>0?"":"disabled"}>${S.skips>0?tpl("skipBtn",{n:S.skips}):t("noSkip")}</button>
-    <div class="row">
-      <button class="btn btn-small" data-act="open-log">${t("openLog")}</button>
-      <button class="btn btn-small" data-act="open-office">${t("officeView")}</button>
-    </div>
-    <p class="foot">${t("foot")}</p>`;
+  return '<span class="eyebrow">'+t("qEyebrow")+'</span>'
+    +'<h2 class="scr">'+t("qTitle")+'</h2>'
+    +'<p class="sub">'+t("qSub")+'</p>'
+    +'<div class="feednote">'+ic("radio",16)+'<span>'+t("feedNote")+'</span></div>'
+    +'<div class="qhead">'+t("qHead")+'</div>'+tix
+    +'<button class="btn btn-go" data-act="take-next">'+ic("play",20)+t("takeNext")+'</button>'
+    +'<button class="btn '+(S.skips>0?"":"btn-ghost")+'" data-act="skip" '+(S.skips>0?"":"disabled")+'>'+ic("skip")+(S.skips>0?tpl("skipBtn",{n:S.skips}):t("noSkip"))+'</button>';
+}
+function rQueue(){
+  if(S.queue.length===0){
+    app.innerHTML = header()
+      +'<span class="eyebrow">'+t("qEyebrow")+'</span>'
+      +'<h2 class="scr">'+t("greatJob")+'</h2>'
+      +'<div class="card" style="text-align:center;padding:30px 18px">'
+      +'<div style="color:var(--go);display:flex;justify-content:center">'+ic("award",46)+'</div>'
+      +'<p class="sub" style="margin:12px 0 0">'+t("queueEmpty")+'</p></div>'
+      +'<button class="btn" data-act="open-log">'+ic("log")+t("openLog")+'</button>'
+      +'<button class="btn" data-act="open-office">'+ic("office")+t("officeView")+'</button>'
+      +'<button class="btn btn-small btn-ghost" data-act="restart">'+ic("restart",16)+t("restart")+'</button>';
+    return;
+  }
+  let resume="";
+  if(S.cur){
+    const o=order(S.cur.orderId);
+    resume='<div class="resume" data-act="resume"><div class="ri">'
+      +'<div class="o">'+t("resumeLab")+'</div>'
+      +'<div class="m">Store '+o.store+' · '+shortDept(o.dept)+' · '+tpl("resumeMeta",{a:S.cur.idx+1,b:o.items.length,loc:o.items[S.cur.idx].loc})+'</div></div>'
+      +'<span class="sc">'+ic("arrow")+'</span></div>';
+  }
+  app.innerHTML = header() + segBar() + resume
+    + (S.mode==="paper" ? rPaperBody() : rFifoBody())
+    +'<div class="row"><button class="btn btn-small" data-act="open-log">'+ic("log",16)+t("openLog")+'</button>'
+    +'<button class="btn btn-small" data-act="open-office">'+ic("office",16)+t("officeView")+'</button></div>'
+    +'<p class="foot">'+t("foot")+'</p>';
 }
 
 /* ---- work ---- */
@@ -584,91 +958,79 @@ function rWork(){
   const last = i===o.items.length-1;
   const nextLine = last ? t("lastItem") : tpl("nextItem",{loc:o.items[i+1].loc});
 
-  app.innerHTML = `
-    <div class="workbar">
-      <span class="num">${tpl("ofN",{a:i+1,b:o.items.length})}</span>
-      <span class="mid" data-act="open-log">${t("logBtn")}</span>
-      <span>${tpl("taken",{n:takenSoFar})}</span>
-    </div>
-    <div class="wcard">
-      <div class="locbig num">${locHtml(it.loc)}</div>
-      <div class="wsep"></div>
-      <div class="qtybig num" id="qtyBig"><span class="full"><span class="n">${it.qty}</span><span class="u">${t("unit")}</span></span></div>
-      <div class="wdesc">${esc(it.desc)}</div>
-      <div class="wart num">${it.art}</div>
-      <div class="wnext num">${nextLine}</div>
-      <div class="pbar" id="pbar">
-        <span class="lab">${t("took")}</span>
-        <input id="lessInp" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
-        <button class="ok" data-act="less-ok">✓</button>
-        <button class="x" data-act="less-x">✕</button>
-      </div>
-    </div>
-    <button class="btn btn-go" data-act="take" style="margin-top:14px;padding:24px">${t("take")}</button>
-    <div class="row">
-      <button class="btn" data-act="back" ${i===0?"disabled":""}>${t("back")}</button>
-      <button class="btn btn-amber" data-act="less">${t("less")}</button>
-    </div>
-    <button class="btn btn-small" data-act="pause" style="margin-top:10px">${t("pause")}</button>
-    <p class="whint">${t("whint")}</p>`;
+  app.innerHTML =
+    '<div class="workbar"><span class="num">'+(i+1)+' / '+o.items.length+'</span>'
+    +'<span class="mid">W'+o.wave+' · '+o.store+' · '+shortDept(o.dept)+'</span>'
+    +'<span>'+tpl("taken",{n:takenSoFar})+'</span></div>'
+    +'<div class="wcard"><div class="locbig num">'+locHtml(it.loc)+'</div>'
+    +'<div class="wsep"></div>'
+    +'<div class="qtybig num" id="qtyBig"><span class="n">'+it.qty+'</span><span class="u">'+t("unit")+'</span></div>'
+    +'<div class="wdesc">'+esc(it.desc)+'</div>'
+    +'<div class="wart num">'+it.art+'</div>'
+    +'<div class="wnext num">'+nextLine+'</div>'
+    +'<div class="pbar" id="pbar"><span class="lab">'+t("took")+'</span>'
+    +'<input id="lessInp" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off">'
+    +'<button class="ok" data-act="less-ok">'+ic("check",22)+'</button>'
+    +'<button class="x" data-act="less-x">'+ic("x",18)+'</button></div></div>'
+    +'<button class="btn btn-go" data-act="take" style="margin-top:14px;padding:24px">'+ic("check",24)+t("take")+'</button>'
+    +'<div class="row"><button class="btn" data-act="back" '+(i===0?"disabled":"")+'><span style="display:inline-flex;transform:scaleX(-1)">'+ic("arrow",18)+'</span>'+t("back")+'</button>'
+    +'<button class="btn btn-amber" data-act="less">'+ic("alert",18)+t("less")+'</button></div>'
+    +'<button class="btn btn-small" data-act="pause" style="margin-top:10px">'+ic("pause",16)+t("pause")+'</button>'
+    +'<p class="whint">'+ic("check",14)+'<span>'+t("whint")+'</span></p>';
 }
 
 function setLessQty(planned, actual){
   const el=document.getElementById("qtyBig");
-  if(!el) return;
-  el.innerHTML = `<span class="orig num">${planned} ${t("unit")}</span><span class="act num">${actual} ${t("unit")}</span>`;
+  if(!el)return;
+  el.innerHTML='<span class="orig num">'+planned+' '+t("unit")+'</span><span class="act num">'+actual+' '+t("unit")+'</span>';
 }
 
 /* ---- order done ---- */
 function rDone(){
   const d=S.lastDone;
   const shorts=(d.shortfalls||[]).length;
-  app.innerHTML = header() + `
-    <div class="doneic">✅</div>
-    <h2 class="scr" style="text-align:center">${t("orderDone")}</h2>
-    <p class="sub" style="text-align:center">Wave ${d.wave} · Store ${d.store} · ${d.dept||"SPOT CHILLED"}</p>
-    <div class="card">
-      <div class="bigstat"><div class="n num">${d.colli}</div><div class="l">${t("colliPacked")} · <span class="num">${d.items}</span> ${t("lines")}</div></div>
-      <div style="text-align:center;margin-top:12px;font-size:13.5px;color:${shorts?"var(--amber)":"var(--go)"}">
-        ${shorts? tpl("short",{n:shorts}) : t("noShort")}
-      </div>
-    </div>
-    <button class="btn btn-go" data-act="back-queue">${t("backQueue")}</button>
-    <button class="btn" data-act="open-log">${t("toLog")}</button>`;
+  app.innerHTML = header()
+    +'<div class="doneic">'+ic("checkc",56)+'</div>'
+    +'<h2 class="scr" style="text-align:center">'+t("orderDone")+'</h2>'
+    +'<p class="sub" style="text-align:center">Wave '+d.wave+' · Store '+d.store+' · '+(d.dept||"SPOT CHILLED")+'</p>'
+    +'<div class="card"><div class="bigstat"><div class="n num">'+d.colli+'</div>'
+    +'<div class="l">'+t("colliPacked")+' · <span class="num">'+d.items+'</span> '+t("lines")+'</div></div>'
+    +'<div style="text-align:center;margin-top:12px;font-size:13.5px;color:'+(shorts?"var(--amber)":"var(--go)")+'">'
+    +(shorts?tpl("short",{n:shorts}):t("noShort"))+'</div></div>'
+    +'<button class="btn btn-go" data-act="back-queue">'+ic("arrow",20)+t("backQueue")+'</button>'
+    +'<button class="btn" data-act="open-log">'+ic("log")+t("toLog")+'</button>';
 }
 
 /* ---- shift log ---- */
 function rLog(){
   const colli=shiftColli(), orders=shiftOrders();
   const pct=Math.min(100, Math.round(colli/BONUS_TARGET*100));
+  const started=S.checkIn?fmtTime(S.checkIn):"—";
+  const dur=fmtDur((S.checkOut||Date.now())-(S.checkIn||Date.now()));
   const rows = S.done.slice().reverse().map(d=>{
     const z=(d.shortfalls||[]).length;
-    return `<div class="jrow">
-      <div class="jl">Wave ${d.wave} · <b>Store ${d.store}</b>${z?` <span class="zero">· ${tpl("zerosN",{n:z})}</span>`:""}</div>
-      <div class="jv num">${d.colli}</div>
-    </div>`;
+    return '<div class="jrow"><div class="jl">Wave '+d.wave+' · <b>Store '+d.store+'</b> · '+shortDept(d.dept)
+      +(z?' <span class="zero">· '+tpl("zerosN",{n:z})+'</span>':"")+'</div>'
+      +'<div class="jv num">'+d.colli+'</div></div>';
   }).join("");
-  app.innerHTML = header() + `
-    <span class="eyebrow amber">${t("logTitle")}</span>
-    <div class="card" style="margin-top:11px">
-      <div style="font-size:13px;color:var(--muted)">${esc(S.name)} · 27-06 · 16:00–23:45</div>
-      <div class="jtot num" style="margin-top:8px">${colli}</div>
-      <div class="jtotl">${tpl("colliPackedN",{n:orders})}</div>
-      <div class="jpace num">${tpl("paceTxt",{n:PACE})} · ${t("bonusZone")}</div>
-      <div class="prog">
-        <div class="track"><div class="fill" style="width:${pct}%"></div></div>
-        <div class="pl"><span>${t("bonusProg")}</span><span class="num">${pct}%</span></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="sectitle">${t("perOrder")}</div>
-      ${rows}
-    </div>
-    <div class="row">
-      <button class="btn" data-act="goto-queue">${t("back")}</button>
-      <button class="btn btn-small" data-act="open-office">${t("officeView")}</button>
-    </div>
-    <button class="btn btn-small btn-ghost" data-act="restart">${t("restart")}</button>`;
+  const endBlock = S.checkOut
+    ? '<div class="clockedout">'+ic("check",16)+tpl("clockedOut",{d:dur})+'</div>'
+    : '<button class="btn btn-amber" data-act="end-shift">'+ic("logout",18)+t("endShift")+'</button>';
+  app.innerHTML = header()
+    +'<span class="eyebrow amber">'+t("logTitle")+'</span>'
+    +'<div class="card" style="margin-top:11px">'
+    +'<div class="shiftmeta">'+ic("clock",14)+'<b>'+esc(S.name)+'</b> · '+tpl("started",{t:started})
+    +(S.checkOut?' · '+tpl("ended",{t:fmtTime(S.checkOut)}):"")+'</div>'
+    +'<div class="jtot num" style="margin-top:8px">'+colli+'</div>'
+    +'<div class="jtotl">'+tpl("colliPackedN",{n:orders})+'</div>'
+    +'<div class="jpace num" id="durChip">'+(S.checkOut?tpl("workedFor",{d:dur}):tpl("onShift",{d:dur}))+'</div>'
+    +'<div class="prog"><div class="track"><div class="fill" style="width:'+pct+'%"></div></div>'
+    +'<div class="pl"><span>'+t("bonusProg")+'</span><span class="num">'+pct+'%</span></div></div></div>'
+    +'<div class="card"><div class="sectitle">'+ic("layers",16)+t("perOrder")+'</div>'+rows+'</div>'
+    +endBlock
+    +'<div class="row"><button class="btn" data-act="goto-queue">'+ic("arrow",18)+t("back")+'</button>'
+    +'<button class="btn btn-small" data-act="open-office">'+ic("office",16)+t("officeView")+'</button></div>'
+    +'<button class="btn btn-small btn-ghost" data-act="restart">'+ic("restart",16)+t("restart")+'</button>';
 }
 
 /* ---- office view ---- */
@@ -677,86 +1039,132 @@ function rOffice(){
   const board=[{name:S.name, colli:mine, me:true}, ...TEAMMATES.map(p=>({...p,me:false}))]
     .sort((a,b)=>b.colli-a.colli);
   const max=Math.max(...board.map(p=>p.colli),1);
-  const bars=board.map(p=>`
-    <div class="pkbar ${p.me?"me":""}">
-      <div class="pkh"><span class="${p.me?"me":""}">${esc(p.name)}${p.me?" · you":""}</span><span class="v num">${p.colli} ${t("colli")}</span></div>
-      <div class="track"><div class="fill" style="width:${Math.round(p.colli/max*100)}%"></div></div>
-    </div>`).join("");
+  const bars=board.map(p=>
+    '<div class="pkbar '+(p.me?"me":"")+'"><div class="pkh"><span class="'+(p.me?"me":"")+'">'+esc(p.name)+(p.me?" · you":"")+'</span>'
+    +'<span class="v num">'+p.colli+' '+t("colli")+'</span></div>'
+    +'<div class="track"><div class="fill" style="width:'+Math.round(p.colli/max*100)+'%"></div></div></div>').join("");
 
   const minW=minPendingWave();
   const wave=(n)=>{
     let cls,st;
-    if(minW===0){ cls="done"; st=t("wDone"); }                 // queue empty -> all done
+    if(minW===0){ cls="done"; st=t("wDone"); }
     else if(n<minW){ cls="done"; st=t("wDone"); }
     else if(n===minW){ cls="doing"; st=t("wDoing"); }
     else { cls="wait"; st=t("wWaiting"); }
-    return `<div class="wave ${cls}"><span class="wd"></span><span class="wn">Wave ${n}</span><span class="wst">${st}</span></div>`;
+    return '<div class="wave '+cls+'"><span class="wd"></span><span class="wn">Wave '+n+'</span><span class="wst">'+st+'</span></div>';
   };
 
   const shorts=allShortfalls();
-  const shortHtml = shorts.length? shorts.map(s=>`
-    <div class="shortrow">
-      <div class="sd"><b>Store ${s.store}</b> · ${esc(s.desc)} <span style="color:var(--faint)">(${s.loc})</span></div>
-      <div class="sq"><span class="from num">${s.planned}</span><span class="to num">${s.actual}</span></div>
-    </div>`).join("") : `<div class="empty">${t("noShortYet")}</div>`;
+  const shortHtml = shorts.length? shorts.map(s=>
+    '<div class="shortrow"><div class="sd"><b>Store '+s.store+'</b> · '+esc(s.desc)+' <span style="color:var(--faint)">('+s.loc+')</span></div>'
+    +'<div class="sq"><span class="from num">'+s.planned+'</span><span class="to num">'+s.actual+'</span></div></div>').join("")
+    : '<div class="empty">'+t("noShortYet")+'</div>';
 
-  app.innerHTML = header() + `
-    <span class="eyebrow">${t("officeTitle")}</span>
-    <h2 class="scr">${t("officeSub")}</h2>
-    <div class="card">
-      <div class="sectitle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>${t("pickersLive")}</div>
-      ${bars}
-    </div>
-    <div class="card">
-      <div class="sectitle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>${t("waveStatus")}</div>
-      ${wave(1)}${wave(2)}${wave(3)}
-    </div>
-    <div class="card">
-      <div class="sectitle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg>${t("shortReport")}</div>
-      ${shortHtml}
-    </div>
-    <div class="lock">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      <span>${t("dataLock")}</span>
-    </div>
-    <div class="row">
-      <button class="btn" data-act="goto-queue">${t("back")}</button>
-      <button class="btn btn-small" data-act="open-log">${t("openLog")}</button>
-    </div>
-    <button class="btn btn-small btn-ghost" data-act="restart">${t("restart")}</button>`;
+  app.innerHTML = header()
+    +'<span class="eyebrow">'+t("officeTitle")+'</span>'
+    +'<h2 class="scr">'+t("officeSub")+'</h2>'
+    +'<div class="card"><div class="sectitle">'+ic("users",16)+t("pickersLive")+'</div>'+bars+'</div>'
+    +'<div class="card"><div class="sectitle">'+ic("radio",16)+t("waveStatus")+'</div>'+wave(1)+wave(2)+wave(3)+'</div>'
+    +'<div class="card"><div class="sectitle">'+ic("updown",16)+t("shortReport")+'</div>'+shortHtml+'</div>'
+    +'<div class="lock">'+ic("lock",15)+'<span>'+t("dataLock")+'</span></div>'
+    +'<div class="row"><button class="btn" data-act="goto-queue">'+ic("arrow",18)+t("back")+'</button>'
+    +'<button class="btn btn-small" data-act="open-log">'+ic("log",16)+t("openLog")+'</button></div>'
+    +'<button class="btn btn-small btn-ghost" data-act="restart">'+ic("restart",16)+t("restart")+'</button>';
+}
+
+/* ---- settings sheet ---- */
+function renderSheet(){
+  const sw=(k)=>'<button class="sw '+(S.settings[k]?"on":"")+'" data-toggle="'+k+'"><span class="knob"></span></button>';
+  document.getElementById("sheet").innerHTML =
+    '<div class="sheeth"><h3>'+t("settings")+'</h3>'
+    +'<button class="iconbtn" data-act="sheet-close" aria-label="close">'+ic("x",18)+'</button></div>'
+    +'<div class="setrow"><div class="setic">'+ic("headphones",18)+'</div>'
+    +'<div class="setmain"><div class="setlab">'+t("handsFree")+'</div><div class="sethint">'+t("handsFreeHint")+'</div></div>'+sw("pod")+'</div>'
+    +'<div class="setrow"><div class="setic">'+ic("volume",18)+'</div>'
+    +'<div class="setmain"><div class="setlab">'+t("voiceLab")+'</div><div class="sethint">'+t("voiceHint")+'</div></div>'+sw("voice")+'</div>'
+    +'<div class="setrow"><div class="setic">'+ic("moon",18)+'</div>'
+    +'<div class="setmain"><div class="setlab">'+t("ecoLab")+'</div><div class="sethint">'+t("ecoHint")+'</div></div>'+sw("eco")+'</div>'
+    +'<div class="safenote">'+ic("lock",14)+'<span>'+t("safeNote")+'</span></div>';
+}
+function openSheet(){ ensureAudio(); renderSheet(); document.getElementById("sheet").classList.add("on"); document.getElementById("sheetBack").classList.add("on"); }
+function closeSheet(){ document.getElementById("sheet").classList.remove("on"); document.getElementById("sheetBack").classList.remove("on"); }
+function toggleSetting(k){
+  S.settings[k]=!S.settings[k]; save();
+  if(k==="pod") podToggle(S.settings.pod);
+  if(k==="voice"){ if(!S.settings.voice)cancelSpeech(); else sayItem(); }
+  if(k==="eco" && !S.settings.eco) hideEco();
+  renderSheet();
+}
+
+/* ---- overlays localization ---- */
+function syncOverlays(){
+  document.getElementById("pausedIc").innerHTML=ic("pause",44);
+  document.getElementById("pausedT").textContent=t("paused");
+  document.getElementById("pausedP").textContent=t("pausedTap");
+  document.getElementById("ecoMoon").innerHTML=ic("moon",22);
+  document.getElementById("ecoHint").textContent=t("ecoTap");
 }
 
 /* ============================================================
    ACTIONS
    ============================================================ */
-function takeNext(){
-  if(S.queue.length===0) return;
-  const minW=minPendingWave();
-  // hand out the first pending order of the earliest wave
-  const id = S.queue.find(x=>order(x).wave===minW) || S.queue[0];
+function startOrderById(id){
+  if(!S.queue.includes(id))return false;
+  if(!S.checkIn) S.checkIn=Date.now();   // safety: ensure clocked in
+  if(S.checkOut) S.checkOut=null;        // picking again after End shift → back on shift
   S.cur={orderId:id, idx:0, taken:[]};
-  save(); show("work");
+  save(); show("work"); keepAwake(); sayItem(); return true;
 }
+function takeNext(){
+  if(S.queue.length===0)return;
+  const minW=minPendingWave();
+  const id = S.queue.find(x=>order(x).wave===minW) || S.queue[0];
+  startOrderById(id);
+}
+// Pilot mode: open the exact paper list in hand by Store + Colli (the lists's id on the sheet).
+function openListEntry(){
+  const b=document.getElementById("butikInp"), c=document.getElementById("coliInp");
+  const bv=(b&&b.value||"").trim(), cv=parseInt(c&&c.value,10);
+  const o=(bv && !isNaN(cv)) ? findPending(bv,cv) : null;
+  if(!o){ const e=document.getElementById("paperErr"); if(e){ e.textContent=t("notFound"); e.style.display="block"; } beep(300,140); return; }
+  startOrderById(o.id);
+}
+function resumeOrder(){ if(!S.cur)return; show("work"); keepAwake(); sayItem(); }
 function skipOrder(){
-  if(S.skips<=0 || S.queue.length<2) return;
+  if(S.skips<=0 || S.queue.length<2)return;
   const minW=minPendingWave();
   const idx=S.queue.findIndex(x=>order(x).wave===minW);
-  if(idx<0) return;
+  if(idx<0)return;
   const [id]=S.queue.splice(idx,1);
-  // hand it to the next picker -> move just behind the following same-wave order
   let ins=idx;
-  while(ins<S.queue.length && order(S.queue[ins]).wave===minW){ ins++; if(ins>idx) break; }
+  while(ins<S.queue.length && order(S.queue[ins]).wave===minW){ ins++; if(ins>idx)break; }
   S.queue.splice(Math.min(ins,S.queue.length),0,id);
   S.skips--; save(); rQueue();
+}
+function doTake(){
+  if(Date.now()<uiShield)return;
+  if(pbarOpen()){
+    const inp=document.getElementById("lessInp");
+    const it=curItem();
+    let v=parseInt(inp&&inp.value,10);
+    if(isNaN(v))v=it.qty;
+    v=Math.max(0,Math.min(it.qty,v));
+    document.getElementById("pbar").classList.remove("on");
+    takeItem(v);
+  }else{
+    takeItem(null);
+  }
 }
 function takeItem(actual){
   const o=order(S.cur.orderId), it=o.items[S.cur.idx];
   S.cur.taken[S.cur.idx] = (actual==null? it.qty : Math.max(0,Math.min(it.qty,actual)));
+  beepTake();
   if(S.cur.idx >= o.items.length-1){ finishOrder(); }
-  else { S.cur.idx++; save(); rWork(); }
+  else { S.cur.idx++; save(); rWork(); sayItem(); }
 }
 function backItem(){
-  if(S.cur.idx>0){ S.cur.idx--; S.cur.taken.pop(); save(); rWork(); }
+  if(Date.now()<uiShield)return;
+  if(S.cur.idx>0){ S.cur.idx--; S.cur.taken.pop(); beepBack(); save(); rWork(); sayItem(); }
 }
 function finishOrder(){
   const o=order(S.cur.orderId);
@@ -767,7 +1175,21 @@ function finishOrder(){
   S.done.push({wave:o.wave, store:o.store, dept:o.dept, colli, planned, orders:1, items:o.items.length, shortfalls});
   S.lastDone={wave:o.wave, store:o.store, dept:o.dept, colli, items:o.items.length, shortfalls};
   S.queue = S.queue.filter(id=>id!==o.id);
-  S.cur=null; save(); show("done");
+  S.cur=null; save();
+  beep(880,80);setTimeout(()=>beep(1320,120),140);
+  show("done");
+}
+function pauseWork(){
+  paused=true; clearTimeout(repeatTimer); cancelSpeech(); hideEco();
+  document.getElementById("paused").classList.add("on");
+}
+function resumeWork(){
+  paused=false; document.getElementById("paused").classList.remove("on");
+  lastTouch=Date.now(); sayItem();
+}
+function endShift(){
+  if(!confirm(t("endConfirm")))return;
+  S.checkOut=Date.now(); save(); rLog();
 }
 
 /* ============================================================
@@ -775,66 +1197,71 @@ function finishOrder(){
    ============================================================ */
 document.addEventListener("click", e=>{
   const langB=e.target.closest("[data-lang]");
-  if(langB){ S.lang=langB.getAttribute("data-lang"); save(); show(S.screen); return; }
+  if(langB){ S.lang=langB.getAttribute("data-lang"); save(); if(document.getElementById("sheet").classList.contains("on"))renderSheet(); show(S.screen); return; }
+
+  const modeB=e.target.closest("[data-mode]");
+  if(modeB){ S.mode=modeB.getAttribute("data-mode"); save(); clickTick(); rQueue(); return; }
+
+  const chip=e.target.closest("[data-id]");
+  if(chip && chip.getAttribute("data-act")==="open-chip"){ clickTick(); startOrderById(chip.getAttribute("data-id")); return; }
+
+  const tg=e.target.closest("[data-toggle]");
+  if(tg){ clickTick(); toggleSetting(tg.getAttribute("data-toggle")); return; }
 
   const el=e.target.closest("[data-act]");
-  if(!el) return;
+  if(!el)return;
   const a=el.getAttribute("data-act");
+  if(a!=="take"&&a!=="back") clickTick();
   switch(a){
     case "start": {
       const v=document.getElementById("nameInp");
       if(v && v.value.trim()) S.name=v.value.trim().slice(0,24);
-      save(); show("queue"); break;
+      if(!S.checkIn) S.checkIn=Date.now();
+      ensureAudio(); save(); show("queue"); break;
     }
     case "take-next": takeNext(); break;
+    case "open-list": openListEntry(); break;
+    case "resume": resumeOrder(); break;
     case "skip": skipOrder(); break;
     case "open-log": show("log"); break;
     case "open-office": show("office"); break;
     case "goto-queue": show("queue"); break;
     case "back-queue": show("queue"); break;
-    case "take": takeItem(null); break;
+    case "take": doTake(); break;
     case "back": backItem(); break;
     case "less": {
       const pb=document.getElementById("pbar");
-      if(pb){ pb.classList.add("on"); const inp=document.getElementById("lessInp");
-        const it=order(S.cur.orderId).items[S.cur.idx];
-        if(inp){ inp.value=""; inp.placeholder=String(it.qty); inp.focus();
+      if(pb){ pb.classList.add("on"); clearTimeout(repeatTimer);
+        const inp=document.getElementById("lessInp");
+        const it=curItem();
+        if(inp){ inp.value=""; inp.placeholder=String(it.qty); beep(700,40);
+          setTimeout(()=>{try{inp.focus();}catch(e){}},60);
           inp.oninput=()=>{ const val=parseInt(inp.value,10);
             if(!isNaN(val)) setLessQty(it.qty, Math.max(0,Math.min(it.qty,val))); }; }
       }
       break;
     }
-    case "less-ok": {
-      const inp=document.getElementById("lessInp");
-      const it=order(S.cur.orderId).items[S.cur.idx];
-      let v=parseInt(inp&&inp.value,10);
-      if(isNaN(v)) v=it.qty;
-      takeItem(v); break;
-    }
-    case "less-x": { const pb=document.getElementById("pbar"); if(pb) pb.classList.remove("on"); rWork(); break; }
-    case "pause": { document.getElementById("paused").classList.add("on"); break; }
-    case "restart": resetDemo(); break;
+    case "less-ok": doTake(); break;
+    case "less-x": { const pb=document.getElementById("pbar"); if(pb)pb.classList.remove("on"); rWork(); scheduleRepeat(); break; }
+    case "pause": pauseWork(); break;
+    case "end-shift": endShift(); break;
+    case "settings": openSheet(); break;
+    case "sheet-close": closeSheet(); break;
+    case "restart": closeSheet(); resetDemo(); break;
   }
 });
 
-// resume from paused overlay
-document.getElementById("paused").addEventListener("click", ()=>{
-  document.getElementById("paused").classList.remove("on");
+document.getElementById("paused").addEventListener("click", resumeWork);
+document.getElementById("sheetBack").addEventListener("click", closeSheet);
+document.getElementById("eco").addEventListener("click", e=>{
+  e.preventDefault(); e.stopPropagation();
+  hideEco(); uiShield=Date.now()+350; lastTouch=Date.now();
 });
-
-// localize the paused overlay whenever language changes / screen renders
-function syncPaused(){
-  document.getElementById("pausedT").textContent=t("paused");
-  document.getElementById("pausedP").textContent=t("pausedTap");
-}
-const _show=show;
-show=function(s){ _show(s); syncPaused(); };
 
 /* ============================================================
    INIT
    ============================================================ */
 load();
-// if a stale state points at "work" but there is no current order, fall back
 if(S.screen==="work" && !S.cur) S.screen="queue";
 if(S.screen==="done" && !S.lastDone) S.screen="queue";
 show(S.screen||"login");
