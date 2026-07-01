@@ -258,7 +258,8 @@ h2 .ic{vertical-align:-3px;margin-right:7px;}
 .sum-partial td{color:var(--warn);}
 .sum-todo td{color:var(--dim);}
 /* Раскладка обхода */
-#layoutModal{position:fixed;inset:0;background:#06090d;z-index:49;display:flex;flex-direction:column;}
+#layoutModal{position:fixed;inset:0;background:#06090d;z-index:49;display:flex;flex-direction:column;
+  transform:translateZ(0);-webkit-transform:translateZ(0);}
 #layoutHead{flex:0 0 auto;width:100%;max-width:620px;margin:0 auto;padding:14px 12px 4px;}
 #layoutHead h2{margin:6px 0 2px;font-size:20px;}
 .lsub{color:var(--dim);font-size:13px;margin:0 0 12px;}
@@ -497,7 +498,7 @@ body.work .card{background:linear-gradient(180deg,#0c1118,#06090d);border-color:
   <div class="hdr">
     <div class="brand">
       <div class="logo"><svg class="ic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
-      <div class="brand-tx"><h1>Picker <span class="ver">v3.21</span></h1><p class="sub tagline" data-i18n="tagline">Pick-by-voice · личный прототип</p></div>
+      <div class="brand-tx"><h1>Picker <span class="ver">v3.22</span></h1><p class="sub tagline" data-i18n="tagline">Pick-by-voice · личный прототип</p></div>
     </div>
     <div class="lang" id="langSel">
       <button data-lang="ru">RU</button>
@@ -1180,15 +1181,15 @@ const NUM={
       w:function(n){if(n<10)return this.digits[n];if(n<20)return this.teens[n-10];var o=n%10,te=this.tens[(n/10)|0];return o?this.digits[o]+'og'+te:te;}}
 };
 function numL(){return NUM[lang]||NUM.ru;}
+function stripZeros(g){const s=String(g).replace(/^0+(?=.)/,'');return s;}   // убрать ВСЕ ведущие нули: 001→1, 010→10, 000→0
 function groupToSpeech(g){
   const N=numL(),dig=N.digits;
-  const tt=String(g).replace(/^0/,'');                                         // убрать ОДИН ведущий ноль: 002→02, 010→10
-  if(tt.length>=2&&tt[0]==='0')return tt.split('').map(d=>dig[+d]).join(' ');   // «0X» → цифрами
-  if(/^\d{2}$/.test(tt))return N.w(parseInt(tt,10));                            // 10..99 словом
-  if(/^\d$/.test(tt))return dig[+tt];
+  const tt=stripZeros(g);
+  if(/^\d{1,2}$/.test(tt))return N.w(parseInt(tt,10));   // 0..99 словом
   return tt.split('').map(d=>dig[+d]).join(' ');
 }
 function locToSpeech(loc){return loc.split('-').map(groupToSpeech).join(', ');}
+function locDisp(loc){return String(loc).split('-').map(stripZeros).join('-');}   // отображение на экране: 001-001 → 1-1
 function qtyToSpeech(n){return QTY_W[n]||String(n);}
 function shtuk(n){
   const a=n%10,b=n%100;
@@ -1296,13 +1297,13 @@ function workTopLine(){
 function fillEco(){
   const it=items[idx];if(!it)return;
   $('ecoTop').textContent=workTopLine();
-  $('ecoLoc').textContent=it.loc;
+  $('ecoLoc').textContent=locDisp(it.loc);
   const eff=it.actualQty!=null?it.actualQty:it.qty;
   $('ecoQty').textContent='× '+(eff!=null?eff:'?');
   $('ecoDesc').textContent=it.desc||'';
   $('ecoArt').textContent=it.article||'';
   const nx=items[idx+1];
-  $('ecoNext').textContent=nx?(t('nextLabel')+' '+nx.loc):t('lastPos');
+  $('ecoNext').textContent=nx?(t('nextLabel')+' '+locDisp(nx.loc)):t('lastPos');
 }
 function render(){
   if(!items.length)return;
@@ -1311,7 +1312,7 @@ function render(){
   const sum=items.filter(i=>i.taken).reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
   $('takenTxt').textContent=t('picked')+' '+sum+' '+t('pcs');
   $('storeTxt').textContent=scanStore?(t('butikLab')+' '+scanStore):'';
-  const lp=String(it.loc).split('-');
+  const lp=locDisp(it.loc).split('-');
   $('locBig').innerHTML='<span class="lg">'+(lp[0]||'')+'</span><span class="sep"></span><span class="lg">'+(lp[1]||'')+'</span>';
   if(renderedIdx!==idx){
     renderedIdx=idx;
@@ -1326,7 +1327,7 @@ function render(){
   $('descTxt').textContent=it.desc||'';
   $('artTxt').textContent=it.article||'';
   const nx=items[idx+1];
-  $('nextTxt').textContent=nx?(t('nextLabel')+' '+nx.loc):t('lastPos');
+  $('nextTxt').textContent=nx?(t('nextLabel')+' '+locDisp(nx.loc)):t('lastPos');
   if(ecoShown)fillEco();
 }
 function sayItem(){if(!paused){render();speak(itemPhrase(items[idx]));}}
@@ -1407,7 +1408,7 @@ function finish(force){
   _doneView.forEach(function(it){
     const eff=it.actualQty!=null?it.actualQty:(it.qty!=null?it.qty:'-');
     const isP=it.taken&&it.actualQty!=null;
-    html+='<tr><td class="num">'+it.loc+'</td><td class="num'+(isP?' partial-badge" style="color:var(--warn)':'')+'">'+(it.taken?eff:'—')+'</td>'
+    html+='<tr><td class="num">'+locDisp(it.loc)+'</td><td class="num'+(isP?' partial-badge" style="color:var(--warn)':'')+'">'+(it.taken?eff:'—')+'</td>'
       +'<td class="num">'+(it.qty!=null?it.qty:'?')+'</td>'
       +'<td>'+(it.taken?(isP?'<span class="ic-warn">'+ic('alert',16)+'</span>':'<span class="ic-go">'+ic('check',16)+'</span>'):'—')+'</td></tr>';
   });
@@ -1446,7 +1447,7 @@ function showInterimSummary(){
     let cls='sum-todo',status='○';
     const eff=it.taken?(it.actualQty!=null?it.actualQty:(it.qty!=null?it.qty:'-')):'—';
     if(it.taken){cls=it.actualQty!=null?'sum-partial':'sum-ok';status=it.actualQty!=null?'<span class="ic-warn">'+ic('alert',16)+'</span>':'<span class="ic-go">'+ic('check',16)+'</span>';}
-    html+='<tr class="'+cls+'"><td class="num">'+it.loc+'</td><td class="num">'+eff+'</td>'+
+    html+='<tr class="'+cls+'"><td class="num">'+locDisp(it.loc)+'</td><td class="num">'+eff+'</td>'+
       '<td class="num">'+(it.qty!=null?it.qty:'?')+'</td><td>'+status+'</td></tr>';
   });
   html+='</table>';
@@ -1462,7 +1463,7 @@ function pauseWork(){
   curUtter=null;ttsSpeaking=false;
   hideEco();updateAudio();
   $('summaryModal').hidden=true;summaryHold=false;
-  $('pauseInfo').textContent=t('positionWord')+' '+(idx+1)+' / '+items.length+' · '+items[idx].loc;
+  $('pauseInfo').textContent=t('positionWord')+' '+(idx+1)+' / '+items.length+' · '+locDisp(items[idx].loc);
   $('pauseOverlay').hidden=false;
 }
 function resumeWork(){
@@ -1488,7 +1489,7 @@ function checkSavedSession(){
   if(!s||!s.items||!s.items.length)return;
   if(Date.now()-s.ts>12*3600*1000){clearSession();return;}   // старше 12ч — мусор
   const done=s.items.filter(i=>i.taken).length;
-  $('resumeInfo').textContent=done+' / '+s.items.length+' '+t('positionsShort')+' · '+t('nextShort')+' '+(s.items[s.idx]?s.items[s.idx].loc:'—');
+  $('resumeInfo').textContent=done+' / '+s.items.length+' '+t('positionsShort')+' · '+t('nextShort')+' '+(s.items[s.idx]?locDisp(s.items[s.idx].loc):'—');
   $('resumeBar').hidden=false;
   $('btnResumeSession').onclick=function(){
     items=s.items;idx=Math.min(s.idx,items.length-1);
@@ -1873,7 +1874,7 @@ function renderParse(){
     if((locCount[it.loc]>1||(it.article&&artCount[it.article]>1))&&!it.excluded)cls.push('dup');
     if(it.excluded)cls.push('excluded');
     html+='<div class="'+cls.join(' ')+'">'
-      +'<span class="pt-loc">'+it.loc+'</span>'
+      +'<span class="pt-loc">'+locDisp(it.loc)+'</span>'
       +'<span class="pt-qty" data-q="'+i+'">'+(it.qty!=null?it.qty:'?')+(it.conflict?' <span class="ic-warn" style="vertical-align:-2px">'+ic('alert',13)+'</span>':'')+'</span>'
       +'<span class="pt-mid"><span class="pt-desc">'+escHtml(it.desc||'')+'</span>'
         +'<span class="pt-art">'+(it.article||'?')+'</span></span>'
@@ -1906,7 +1907,7 @@ function renderParse(){
 }
 function editQty(i){
   const it=items[i];if(!it)return;
-  const v=prompt(tpl('qtyPrompt',{loc:it.loc}),it.qty!=null?it.qty:'');
+  const v=prompt(tpl('qtyPrompt',{loc:locDisp(it.loc)}),it.qty!=null?it.qty:'');
   if(v===null)return;const n=parseInt(v,10);
   if(!isNaN(n)&&n>=0){manualQty[it.loc]=n;it.qty=n;it.conflict=false;renderParse();}
 }
@@ -2017,7 +2018,7 @@ $('btnEdit').addEventListener('click',function(){
 $('qtyBig').addEventListener('click',function(){
   if(!items[idx]||Date.now()<uiShield)return;
   const it=items[idx];
-  const v=prompt(tpl('qtyPrompt',{loc:it.loc}),it.qty!=null?it.qty:'');
+  const v=prompt(tpl('qtyPrompt',{loc:locDisp(it.loc)}),it.qty!=null?it.qty:'');
   if(v===null)return;const n=parseInt(v,10);
   if(!isNaN(n)&&n>=0){manualQty[it.loc]=n;it.qty=n;it.conflict=false;render();saveSession();}
 });
@@ -2310,7 +2311,7 @@ function renderLayout(){
     pos++;
     const eff=it.actualQty!=null?it.actualQty:it.qty;
     html+='<div class="lrow locked"><span class="lspace"></span><span class="lpos">'+pos+'</span>'+
-      '<span class="lloc">'+it.loc+'</span><span class="lqty">×'+(eff!=null?eff:'?')+'</span>'+
+      '<span class="lloc">'+locDisp(it.loc)+'</span><span class="lqty">×'+(eff!=null?eff:'?')+'</span>'+
       '<span class="ldesc">'+escHtml(it.desc)+'</span><span class="lcheck">'+ic('check',14)+'</span></div>';
   });
   layoutFree.forEach(function(it,i){
@@ -2318,7 +2319,7 @@ function renderLayout(){
     const big=(it.qty!=null&&it.qty>=th);
     html+='<div class="lrow free" data-i="'+i+'">'+
       '<button class="ltop" data-i="'+i+'">⤒</button>'+
-      '<span class="lpos">'+pos+'</span><span class="lloc">'+it.loc+'</span>'+
+      '<span class="lpos">'+pos+'</span><span class="lloc">'+locDisp(it.loc)+'</span>'+
       '<span class="lqty'+(big?' big':'')+'">×'+(it.qty!=null?it.qty:'?')+'</span>'+
       '<span class="ldesc">'+escHtml(it.desc)+'</span>'+
       '<span class="lhandle">≡</span></div>';
