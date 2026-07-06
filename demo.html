@@ -314,6 +314,17 @@ body.working{background:#000;}
 .safenote{display:flex;align-items:center;gap:8px;color:var(--faint);font-size:11.5px;margin-top:12px;line-height:1.4;}
 .safenote svg{color:var(--go);flex:none;}
 
+#cfmBack{position:fixed;inset:0;z-index:94;background:rgba(3,6,9,.6);opacity:0;pointer-events:none;transition:opacity .2s;}
+#cfmBack.on{opacity:1;pointer-events:auto;}
+#cfm{position:fixed;left:50%;top:50%;z-index:95;width:min(92vw,360px);
+  background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r);
+  padding:20px 18px 16px;box-shadow:0 24px 60px -18px rgba(0,0,0,.7);
+  transform:translate(-50%,-50%) scale(.94);opacity:0;pointer-events:none;
+  transition:transform .2s var(--ease),opacity .2s;}
+#cfm.on{transform:translate(-50%,-50%);opacity:1;pointer-events:auto;}
+#cfm p{margin:0;font-size:15px;line-height:1.5;}
+#cfm .btn{min-height:44px;padding:12px;font-size:14.5px;}
+
 @media (max-width:420px){
   .wrap{padding:12px 13px calc(24px + env(safe-area-inset-bottom));}
   h2.scr{font-size:21px;}
@@ -340,6 +351,15 @@ body.working{background:#000;}
 
 <div id="sheetBack"></div>
 <div id="sheet"></div>
+
+<div id="cfmBack"></div>
+<div id="cfm" role="alertdialog" aria-modal="true" aria-labelledby="cfmMsg">
+  <p id="cfmMsg"></p>
+  <div class="row">
+    <button class="btn btn-ghost" id="cfmNo" data-act="cfm-no"></button>
+    <button class="btn btn-amber" id="cfmYes" data-act="cfm-yes"></button>
+  </div>
+</div>
 
 <!-- Demo-data engine: real building blocks + synthesizer (see data/README.md).
      Plain script tags, not fetch — the page still opens from a double click.
@@ -613,7 +633,7 @@ const I18N = {
     back:"Back", restart:"Restart demo",
     restartConfirm:"Restart the demo? A fresh warehouse and queue will be generated — current progress is lost.",
     paused:"Paused", pausedTap:"Tap anywhere to resume", ecoTap:"Tap to wake",
-    settings:"Controls", close:"Done",
+    settings:"Controls", close:"Done", cancel:"Cancel",
     handsFree:"Hands-free (earbud)", handsFreeHint:"Control picking with an earbud click — no screen taps. No microphone is used.",
     voiceLab:"Voice guidance", voiceHint:"Reads the location and quantity aloud and repeats on a timer. Plays only on this device.",
     ecoLab:"Eco screen", ecoHint:"Dims the screen between picks to save battery. One tap wakes it.",
@@ -671,7 +691,7 @@ const I18N = {
     back:"Tilbage", restart:"Genstart demo",
     restartConfirm:"Genstart demoen? Et nyt lager og en ny kø genereres — nuværende fremgang går tabt.",
     paused:"På pause", pausedTap:"Tryk for at fortsætte", ecoTap:"Tryk for at vække",
-    settings:"Indstillinger", close:"Færdig",
+    settings:"Indstillinger", close:"Færdig", cancel:"Annuller",
     handsFree:"Håndfri (øreprop)", handsFreeHint:"Styr plukningen med et klik på øreproppen — ingen tryk på skærmen. Ingen mikrofon bruges.",
     voiceLab:"Stemmevejledning", voiceHint:"Læser lokation og antal højt og gentager med jævne mellemrum. Afspilles kun på denne telefon.",
     ecoLab:"Eco-skærm", ecoHint:"Dæmper skærmen mellem plukninger for at spare batteri. Ét tryk vækker den.",
@@ -729,7 +749,7 @@ const I18N = {
     back:"Назад", restart:"Перезапустити демо",
     restartConfirm:"Перезапустити демо? Буде згенеровано новий склад і чергу — поточний прогрес втрачається.",
     paused:"Пауза", pausedTap:"Торкніться, щоб продовжити", ecoTap:"Торкніться, щоб увімкнути",
-    settings:"Керування", close:"Готово",
+    settings:"Керування", close:"Готово", cancel:"Скасувати",
     handsFree:"Без рук (навушник)", handsFreeHint:"Керуйте підбором кліком навушника — без дотиків екрана. Мікрофон не використовується.",
     voiceLab:"Голосові підказки", voiceHint:"Озвучує локацію й кількість і повторює за таймером. Звучить лише на цьому телефоні.",
     ecoLab:"Еко-екран", ecoHint:"Гасить екран між підборами для економії батареї. Один тап вмикає його.",
@@ -1200,6 +1220,24 @@ function renderSheet(){
 }
 function openSheet(){ ensureAudio(); renderSheet(); document.getElementById("sheet").classList.add("on"); document.getElementById("sheetBack").classList.add("on"); }
 function closeSheet(){ document.getElementById("sheet").classList.remove("on"); document.getElementById("sheetBack").classList.remove("on"); }
+
+/* ---- confirm modal (native confirm() blocks the renderer) ---- */
+let cfmYesFn=null;
+function askConfirm(msg, yesLab, yesCls, fn){
+  cfmYesFn=fn;
+  document.getElementById("cfmMsg").textContent=msg;
+  const y=document.getElementById("cfmYes");
+  y.textContent=yesLab; y.className="btn "+yesCls;
+  document.getElementById("cfmNo").textContent=t("cancel");
+  document.getElementById("cfm").classList.add("on");
+  document.getElementById("cfmBack").classList.add("on");
+  setTimeout(()=>{try{document.getElementById("cfmNo").focus();}catch(e){}},60);
+}
+function closeConfirm(){
+  cfmYesFn=null;
+  document.getElementById("cfm").classList.remove("on");
+  document.getElementById("cfmBack").classList.remove("on");
+}
 function toggleSetting(k){
   S.settings[k]=!S.settings[k]; save();
   if(k==="pod") podToggle(S.settings.pod);
@@ -1300,8 +1338,7 @@ function resumeWork(){
   lastTouch=Date.now(); sayItem();
 }
 function endShift(){
-  if(!confirm(t("endConfirm")))return;
-  S.checkOut=Date.now(); save(); rLog();
+  askConfirm(t("endConfirm"), t("endShift"), "btn-go", ()=>{ S.checkOut=Date.now(); save(); rLog(); });
 }
 
 /* ============================================================
@@ -1359,12 +1396,18 @@ document.addEventListener("click", e=>{
     case "end-shift": endShift(); break;
     case "settings": openSheet(); break;
     case "sheet-close": closeSheet(); break;
-    case "restart": closeSheet(); if(confirm(t("restartConfirm"))) resetDemo(); break;
+    case "restart": closeSheet(); askConfirm(t("restartConfirm"), t("restart"), "btn-amber", resetDemo); break;
+    case "cfm-yes": { const fn=cfmYesFn; closeConfirm(); if(fn)fn(); break; }
+    case "cfm-no": closeConfirm(); break;
   }
 });
 
 document.getElementById("paused").addEventListener("click", resumeWork);
 document.getElementById("sheetBack").addEventListener("click", closeSheet);
+document.getElementById("cfmBack").addEventListener("click", closeConfirm);
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape" && document.getElementById("cfm").classList.contains("on")) closeConfirm();
+});
 document.getElementById("eco").addEventListener("click", e=>{
   e.preventDefault(); e.stopPropagation();
   hideEco(); uiShield=Date.now()+350; lastTouch=Date.now();
