@@ -24,7 +24,11 @@
   no installation. Runs on any phone, offline. Sample data only.
 
   The headline order is the real SPOT CHILLED list — Wave 2, Store 7810,
-  18 lines, 105 colli.
+  18 lines, 105 colli. The rest of the queue is synthesized fresh on every
+  demo start by data/warehouse-generator.js, which recombines real building
+  blocks (brands, product types, sizes from data/nomenclature-parts.js) into
+  a big warehouse — restarting the demo rebuilds it. If the data/ scripts
+  are absent (standalone copy of this file), a static seed is used instead.
 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -337,6 +341,16 @@ body.working{background:#000;}
 <div id="sheetBack"></div>
 <div id="sheet"></div>
 
+<!-- Demo-data engine: real building blocks + synthesizer (see data/README.md).
+     Plain script tags, not fetch — the page still opens from a double click.
+     If these files are missing, the inline fallback seed below takes over. -->
+<script src="data/nomenclature-parts.js"></script>
+<script src="data/config.js"></script>
+<script src="data/catalog-chilled-a.js"></script>
+<script src="data/catalog-dry.js"></script>
+<script src="data/stores.js"></script>
+<script src="data/warehouse-generator.js"></script>
+
 <script>
 "use strict";
 /* ============================================================
@@ -398,10 +412,14 @@ const DRY_7732 = [
   {loc:"016-002", qty:3, art:"20990450", desc:"LAMBI TOILETPAPIR 8 RULLER"}
 ];
 
-const sum = a => a.reduce((s,x)=>s+x.qty,0);
+// Named colliSum (not "sum") — data/warehouse-generator.js declares a global
+// const sum; redeclaring it here would throw when the data/ scripts load.
+const colliSum = a => a.reduce((s,x)=>s+x.qty,0);
 
-// The order feed as it would arrive from the system (a FIFO queue once fully
-// connected; in pilot mode the same orders are opened from the paper in hand).
+// STATIC FALLBACK — the order feed exactly as the demo shipped before the
+// data/ generator existed. Used only when the data/ scripts are not loaded
+// (e.g. this file is passed around standalone). With the generator present,
+// buildDemoData() below synthesizes a fresh queue on every demo start.
 const QUEUE_SEED = [
   {id:"o7810c", wave:2, store:"7810", dept:"SPOT CHILLED",  items:REAL_ITEMS},
   {id:"o7810d", wave:2, store:"7810", dept:"DRY/ODD SIZE",  items:DRY_7810},
@@ -411,7 +429,8 @@ const QUEUE_SEED = [
   {id:"o7704c", wave:3, store:"7704", dept:"SPOT CHILLED",  items:ORD_7704_W3}
 ];
 
-// Orders already finished earlier in the shift (seed the log with realistic numbers).
+// Orders already finished earlier in the shift (fallback seed for the log;
+// with the generator present these are synthesized too).
 const DONE_SEED = [
   {wave:1, store:"7704", dept:"SPOT CHILLED", colli:312, planned:312, orders:1, items:24, shortfalls:[]},
   {wave:1, store:"7458", dept:"DRY/ODD SIZE", colli:163, planned:168, orders:1, items:19,
@@ -423,6 +442,92 @@ const TEAMMATES = [{name:"Anders", colli:243},{name:"Sofia", colli:176}];
 
 const BONUS_TARGET = 1000;  // colli to the next bonus step
 const PACE = 150;           // representative live pace, colli/h
+
+/* ============================================================
+   LIVE DATA — a fresh synthetic warehouse on every demo start.
+   data/warehouse-generator.js recombines real building blocks
+   (data/nomenclature-parts.js) on top of the transcribed real
+   catalog (data/catalog-*.js) into thousands of SKUs, then the
+   queue is generated from it. Restarting the demo rebuilds the
+   warehouse. Without those scripts the static seed above wins.
+   ============================================================ */
+const REAL_CHILLED = (typeof CATALOG_CHILLED_A!=="undefined"?CATALOG_CHILLED_A:[])
+  .concat(typeof CATALOG_CHILLED_B!=="undefined"?CATALOG_CHILLED_B:[]);
+const REAL_DRY = typeof CATALOG_DRY!=="undefined"?CATALOG_DRY:[];
+const GEN_OK = typeof buildWarehouse==="function" && typeof CONFIG!=="undefined"
+  && typeof REAL_STORES!=="undefined" && REAL_CHILLED.length>0;
+
+const deepCopy = o => JSON.parse(JSON.stringify(o));
+// UI shows the short category name; the generator emits the full sheet header.
+function tidyOrder(o){ o.dept=o.dept.replace(/\s*-\s*NEW PALLET/,""); delete o.total; return o; }
+// The "small" badge needs one truly small order (≤12 colli) in every queue.
+function makeSmall(o){
+  while(o.items.length>3 && colliSum(o.items)>12) o.items.pop();
+  let guard=0;
+  while(colliSum(o.items)>12 && guard++<200){
+    const it=o.items.find(x=>x.qty>1); if(!it)break; it.qty--;
+  }
+  return o;
+}
+// Nudge an order's colli into a range — keeps demo numbers on the scale the
+// demo has always shown (queue ≈ up to ~150, finished big order ~300-400)
+// instead of the generator's occasional 500+ outliers.
+function makeAbout(o, min, max){
+  while(o.items.length>4 && colliSum(o.items)>max) o.items.pop();
+  let guard=0;
+  while(colliSum(o.items)>max && guard++<400){
+    const it=o.items.find(x=>x.qty>1); if(!it)break; it.qty--;
+  }
+  guard=0; let i=0;
+  while(colliSum(o.items)<min && guard++<2000){
+    const it=o.items[i++ % o.items.length]; if(it.qty<95) it.qty++;
+  }
+  return o;
+}
+function toDone(o, shortfall){
+  const planned=colliSum(o.items);
+  const shorts=shortfall?[shortfall]:[];
+  const colli=planned - shorts.reduce((s,x)=>s+(x.planned-x.actual),0);
+  return {wave:o.wave, store:o.store, dept:o.dept, colli, planned, orders:1, items:o.items.length, shortfalls:shorts};
+}
+function pickShortfall(o){
+  const it=o.items.find(x=>x.qty>=3)||o.items[0];
+  const actual=Math.max(0, it.qty-(1+Math.floor(Math.random()*Math.min(4,it.qty))));
+  return {loc:it.loc, desc:it.desc, planned:it.qty, actual, store:o.store};
+}
+
+function buildDemoData(){
+  if(!GEN_OK) return { orders: deepCopy(QUEUE_SEED), done: deepCopy(DONE_SEED) };
+  const wh = buildWarehouse(CONFIG, REAL_CHILLED, REAL_DRY);
+  // The headline sheet is shown verbatim — keep its articles and shelf
+  // locations out of the generated orders so no two orders contradict.
+  const realLocs=new Set(REAL_ITEMS.map(i=>i.loc)), realArts=new Set(REAL_ITEMS.map(i=>i.art));
+  const pool={ slots: wh.slots.filter(s=>!realLocs.has(s.loc)&&!realArts.has(s.article)), dryPool: wh.dryPool };
+  resetOrderSeq();
+  // Store numbers for the rotating orders come from a large synthetic pool
+  // (same approach as order-database.html) so every demo run spreads across
+  // a different set of stores instead of cycling the same handful. 7810
+  // stays reserved for the headline pair above (real CHILLED + DRY sheet).
+  const synthPool = buildSyntheticStores(rnd(30,60), REAL_STORES.concat(EXTRA_STORES)).filter(s=>s!=="7810");
+  const others=shuffleArr(synthPool).slice(0,4);
+  const st=i=>others[i%others.length];
+  const orders=[
+    // the real photographed list — always the headline
+    {id:"o7810c", wave:2, store:"7810", dept:"SPOT CHILLED", items:deepCopy(REAL_ITEMS)},
+    // same store, second sheet — why a sheet is identified by Store + Colli
+    tidyOrder(generateOrder(pool, CONFIG, 2, "7810", "dry")),
+    tidyOrder(makeAbout(generateOrder(pool, CONFIG, 2, st(0), "chilled", "medium"), 60, 150)),
+    tidyOrder(makeSmall(generateOrder(pool, CONFIG, 2, st(1), "chilled", "small"))),
+    // one future-wave order — stays dimmed until wave 2 is done
+    tidyOrder(makeAbout(generateOrder(pool, CONFIG, 3, st(2), "chilled", "medium"), 60, 150))
+  ];
+  // shift log seed: two wave-1 orders finished earlier, one with a shortfall.
+  // d1 lands at 260-420 colli so the demo picker leads the office board
+  // (teammates sit at 243/176) with bonus progress still visibly unfinished.
+  const d1=tidyOrder(makeAbout(generateOrder(pool, CONFIG, 1, st(3), "chilled", "medium"), 260, 420));
+  const d2=tidyOrder(generateOrder(pool, CONFIG, 1, st(0), "dry"));
+  return { orders, done:[toDone(d1,null), toDone(d2,pickShortfall(d2))] };
+}
 
 /* ============================================================
    ICONS — inline SVG (Lucide-style), no emoji
@@ -506,6 +611,7 @@ const I18N = {
     wDone:"done", wDoing:"in progress", wWaiting:"waiting", noShortYet:"No shortfalls recorded yet.",
     dataLock:"Nothing is sent to an outside service. The office reads it live and owns every number.",
     back:"Back", restart:"Restart demo",
+    restartConfirm:"Restart the demo? A fresh warehouse and queue will be generated — current progress is lost.",
     paused:"Paused", pausedTap:"Tap anywhere to resume", ecoTap:"Tap to wake",
     settings:"Controls", close:"Done",
     handsFree:"Hands-free (earbud)", handsFreeHint:"Control picking with an earbud click — no screen taps. No microphone is used.",
@@ -563,6 +669,7 @@ const I18N = {
     wDone:"færdig", wDoing:"i gang", wWaiting:"venter", noShortYet:"Ingen mangler registreret endnu.",
     dataLock:"Intet sendes til en ekstern tjeneste. Kontoret læser det live og ejer hvert tal.",
     back:"Tilbage", restart:"Genstart demo",
+    restartConfirm:"Genstart demoen? Et nyt lager og en ny kø genereres — nuværende fremgang går tabt.",
     paused:"På pause", pausedTap:"Tryk for at fortsætte", ecoTap:"Tryk for at vække",
     settings:"Indstillinger", close:"Færdig",
     handsFree:"Håndfri (øreprop)", handsFreeHint:"Styr plukningen med et klik på øreproppen — ingen tryk på skærmen. Ingen mikrofon bruges.",
@@ -620,6 +727,7 @@ const I18N = {
     wDone:"готово", wDoing:"у роботі", wWaiting:"очікує", noShortYet:"Нестач поки не зафіксовано.",
     dataLock:"Нічого не йде до зовнішнього сервісу. Офіс читає це наживо й володіє кожною цифрою.",
     back:"Назад", restart:"Перезапустити демо",
+    restartConfirm:"Перезапустити демо? Буде згенеровано новий склад і чергу — поточний прогрес втрачається.",
     paused:"Пауза", pausedTap:"Торкніться, щоб продовжити", ecoTap:"Торкніться, щоб увімкнути",
     settings:"Керування", close:"Готово",
     handsFree:"Без рук (навушник)", handsFreeHint:"Керуйте підбором кліком навушника — без дотиків екрана. Мікрофон не використовується.",
@@ -634,33 +742,36 @@ const I18N = {
 /* ============================================================
    STATE
    ============================================================ */
-const LS = "picker_demo_state_v3";
+const LS = "picker_demo_state_v4";   // v4: orders live in state (generated per demo run)
 let S;
 
 function freshState(){
+  const data=buildDemoData();            // fresh warehouse + order feed for this demo run
   return {
     lang:"en", name:"Mykhailo", screen:"login",
     mode:"paper",                          // "paper" = beside paper (pilot) · "fifo" = straight from system
     skips:2,
-    queue:QUEUE_SEED.map(o=>o.id),         // pending order ids, FIFO
+    orders:data.orders,                    // this run's order feed (generated, or fallback seed)
+    queue:data.orders.map(o=>o.id),        // pending order ids, FIFO
     cur:null,                              // {orderId, idx, taken:[]}
-    done:DONE_SEED.map(d=>({...d, shortfalls:d.shortfalls.map(s=>({...s}))})),
+    done:data.done,
     lastDone:null,
     checkIn:null, checkOut:null,
     settings:{pod:false, voice:false, eco:false}
   };
 }
 function load(){
-  try{ const r=localStorage.getItem(LS); if(r){ S=JSON.parse(r); if(S&&S.queue&&S.settings) return; } }catch(e){}
+  try{ localStorage.removeItem("picker_demo_state_v3"); }catch(e){}   // stale pre-generator schema
+  try{ const r=localStorage.getItem(LS); if(r){ S=JSON.parse(r); if(S&&S.queue&&S.settings&&S.orders) return; } }catch(e){}
   S=freshState();
 }
 function save(){ try{ localStorage.setItem(LS, JSON.stringify(S)); }catch(e){} }
 function resetDemo(){ S=freshState(); save(); document.body.classList.remove("working"); show("login"); }
 
-const order = id => QUEUE_SEED.find(o=>o.id===id);
+const order = id => S.orders.find(o=>o.id===id);
 const shortDept = d => /dry|odd/i.test(d||"") ? "DRY" : "CHILLED";
 function findPending(butik, coli){
-  return S.queue.map(order).find(o=>o.store===String(butik).trim() && sum(o.items)===coli) || null;
+  return S.queue.map(order).find(o=>o.store===String(butik).trim() && colliSum(o.items)===coli) || null;
 }
 function t(k){ return (I18N[S.lang]&&I18N[S.lang][k]) || I18N.en[k] || k; }
 function tpl(k,v){ let s=t(k); for(const p in v) s=s.replace("{"+p+"}", v[p]); return s; }
@@ -865,7 +976,7 @@ function rLogin(){
     +'<div class="card" style="margin-top:18px">'
     +'<div class="kv"><span class="k">'+t("feedLive")+'</span><span class="v" style="color:var(--go);display:flex;align-items:center;gap:7px"><span class="dotlive"></span>'+t("connected")+'</span></div>'
     +'<div class="kv"><span class="k">'+t("categories")+'<small>'+t("zoneHint")+'</small></span><span class="v">SPOT CHILLED · DRY/ODD SIZE</span></div>'
-    +'<div class="kv"><span class="k">'+t("storesLabel")+'</span><span class="v num">7810 · 7732 · 7901 · 7704</span></div>'
+    +'<div class="kv"><span class="k">'+t("storesLabel")+'</span><span class="v num">'+[...new Set(S.orders.map(o=>o.store))].join(" · ")+'</span></div>'
     +'<div class="field"><label>'+t("yourName")+'</label>'
     +'<input id="nameInp" type="text" value="'+esc(S.name)+'" autocomplete="off"></div></div>'
     +'<button class="btn btn-go" data-act="start">'+ic("clock",20)+t("startShift")+'</button>'
@@ -885,7 +996,7 @@ function rPaperBody(){
     '<div class="sheet" data-act="open-chip" data-id="'+o.id+'">'
     +'<div class="si">'+ic("log",18)+'</div>'
     +'<div class="sb"><div class="o">Store '+o.store+' · '+shortDept(o.dept)+'</div>'
-    +'<div class="m">W'+o.wave+' · <span class="num">'+sum(o.items)+'</span> '+t("colli")+' · <span class="num">'+o.items.length+'</span> '+t("lines")+'</div></div>'
+    +'<div class="m">W'+o.wave+' · <span class="num">'+colliSum(o.items)+'</span> '+t("colli")+' · <span class="num">'+o.items.length+'</span> '+t("lines")+'</div></div>'
     +'<span class="sc">'+ic("arrow")+'</span></div>').join("");
   return '<span class="eyebrow">'+t("modePaper")+'</span>'
     +'<h2 class="scr">'+t("paperTitle")+'</h2>'
@@ -902,7 +1013,7 @@ function rFifoBody(){
   const minW = minPendingWave();
   let nextSeen=false;
   const tix = S.queue.map(id=>{
-    const o=order(id), colli=sum(o.items), small=colli<=12;
+    const o=order(id), colli=colliSum(o.items), small=colli<=12;
     const future = o.wave>minW;
     let cls="", status="";
     if(!future && !nextSeen){ cls="next"; nextSeen=true; status=t("nextTo"); }
@@ -947,6 +1058,7 @@ function rQueue(){
     + (S.mode==="paper" ? rPaperBody() : rFifoBody())
     +'<div class="row"><button class="btn btn-small" data-act="open-log">'+ic("log",16)+t("openLog")+'</button>'
     +'<button class="btn btn-small" data-act="open-office">'+ic("office",16)+t("officeView")+'</button></div>'
+    +'<button class="btn btn-small btn-ghost" data-act="restart">'+ic("restart",16)+t("restart")+'</button>'
     +'<p class="foot">'+t("foot")+'</p>';
 }
 
@@ -1169,7 +1281,7 @@ function backItem(){
 function finishOrder(){
   const o=order(S.cur.orderId);
   const colli=S.cur.taken.reduce((s,x)=>s+x,0);
-  const planned=sum(o.items);
+  const planned=colliSum(o.items);
   const shortfalls=[];
   o.items.forEach((it,k)=>{ const a=S.cur.taken[k]; if(a<it.qty) shortfalls.push({loc:it.loc,desc:it.desc,planned:it.qty,actual:a,store:o.store}); });
   S.done.push({wave:o.wave, store:o.store, dept:o.dept, colli, planned, orders:1, items:o.items.length, shortfalls});
@@ -1247,7 +1359,7 @@ document.addEventListener("click", e=>{
     case "end-shift": endShift(); break;
     case "settings": openSheet(); break;
     case "sheet-close": closeSheet(); break;
-    case "restart": closeSheet(); resetDemo(); break;
+    case "restart": closeSheet(); if(confirm(t("restartConfirm"))) resetDemo(); break;
   }
 });
 
