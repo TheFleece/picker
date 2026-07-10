@@ -410,9 +410,15 @@ body.work .card{background:linear-gradient(180deg,#0c1118,#06090d);border-color:
 /* — Модалки: лёгкое размытие фона — */
 #helpModal,#logModal,#summaryModal{-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}
 
-/* — Номер butik в строке работы (вместо «Сводки») — */
+/* — Номер butik в строке работы (вместо «Сводки») — тап открывает журнал; крупная зона тапа — */
 #storeTxt{color:var(--go);font-weight:700;font-size:13.5px;text-align:center;
-  font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+  font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
+  cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
+  display:flex;align-items:center;justify-content:center;box-sizing:border-box;
+  padding:11px 18px;min-height:20px;border-radius:20px;
+  background:rgba(45,212,111,.14);border:1px solid rgba(45,212,111,.32);}
+#storeTxt:active{background:rgba(45,212,111,.26);}
+#storeTxt[hidden]{display:none;}
 
 /* — Эко-экран: верхняя строка + «далее» — */
 #eco .etop{color:#3c4756;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;
@@ -457,6 +463,8 @@ body.work .card{background:linear-gradient(180deg,#0c1118,#06090d);border-color:
   color:var(--dim);font-size:12.5px;font-weight:600;padding:5px 0;text-align:center;font-variant-numeric:tabular-nums;}
 .lh-orders{color:var(--dim);font-size:12.5px;font-weight:600;}
 .lh-num{color:var(--go);font-weight:800;font-size:52px;line-height:1;margin-top:12px;font-variant-numeric:tabular-nums;}
+.lh-num.pulsing{animation:lhPulse 1.6s infinite;}
+@keyframes lhPulse{0%,100%{text-shadow:0 0 0 rgba(255,176,32,0);}50%{text-shadow:0 0 16px rgba(255,176,32,.7);}}
 .lh-lab{color:var(--dim);font-size:13px;margin-top:5px;}
 #logBonus{margin-top:15px;}
 .bz-msg{color:var(--dim);font-size:13px;text-align:center;padding:4px 0 2px;}
@@ -476,6 +484,14 @@ body.work .card{background:linear-gradient(180deg,#0c1118,#06090d);border-color:
 .bz-mlab{color:var(--warn);font-weight:700;}
 .bz-real{color:#9fb0c2;font-size:12.5px;margin-top:11px;text-align:center;}
 .bz-real b{color:var(--txt);}
+
+/* — Журнал: текущий заказ (в процессе, реальное время) — */
+.log-current{display:flex;align-items:center;gap:9px;background:rgba(255,176,32,.13);
+  border:1px solid rgba(255,176,32,.4);border-radius:12px;padding:11px 14px;margin-bottom:13px;
+  color:var(--warn);font-size:13.5px;font-weight:700;}
+.log-current .lc-dot{width:8px;height:8px;flex:0 0 auto;border-radius:50%;background:var(--warn);
+  animation:lcPulse 1.6s infinite;}
+@keyframes lcPulse{0%{box-shadow:0 0 0 0 rgba(255,176,32,.55);}70%{box-shadow:0 0 0 8px rgba(255,176,32,0);}100%{box-shadow:0 0 0 0 rgba(255,176,32,0);}}
 
 /* — Журнал: раскрывашка «Моя смена» — */
 .log-shift{margin-bottom:13px;}
@@ -642,7 +658,7 @@ body.work .card{background:linear-gradient(180deg,#0c1118,#06090d);border-color:
   <div id="doneTable"></div>
   <button class="btn" id="btnBackToWork" data-i18n="backToWork" data-ic="arrowleft">Вернуться к листу</button>
   <button class="btn" id="btnSayAll" data-i18n="sayAllBtn" data-ic="volume">Озвучить итог</button>
-  <button class="btn" id="btnDoneLog" data-i18n="saveToLog" data-ic="log">Записать в журнал</button>
+  <button class="btn" id="btnDoneLog" data-i18n="showLog" data-ic="log">Показать журнал</button>
   <button class="btn btn-go" id="btnNew" data-i18n="newList" data-ic="plus" style="font-size:18px;padding:16px">Новый лист</button>
 </div>
 
@@ -724,6 +740,8 @@ body.work .card{background:linear-gradient(180deg,#0c1118,#06090d);border-color:
       <div class="lh-lab" data-i18n="colliPacked">Всего коли за смену</div>
       <div id="logBonus"></div>
     </div>
+
+    <div class="log-current" id="logCurrent" hidden><i class="lc-dot"></i><span id="logCurrentTxt"></span></div>
 
     <details class="adv log-shift">
       <summary><span class="lead"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span data-i18n="myShift">Моя смена</span><span class="set-prev" id="logMetaPrev"></span><span class="chev2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></summary>
@@ -831,7 +849,7 @@ screenSec:'Экран', ecoLabel:'Эко-экран', ecoSecLabel:'Гаснет 
 finishBtn:'Закончить лист', editBtn:'Назад к списку',
 workHint:'Щелчки AirPods: 1 = ВЗЯЛ · 2 = Назад · 3 = Пауза / Продолжить<br>Кнопки: ВЗЯЛ · Назад · Меньше · Итог<br>Тап × — исправить Qty · тап по цифрам локации — изменить порядок обхода',
 nextLabel:'→ далее:', lastPos:'последняя позиция',
-doneTitle:'Лист готов', backToWork:'Вернуться к листу', sayAllBtn:'Озвучить итог', saveToLog:'Записать в журнал', newList:'Новый лист',
+doneTitle:'Лист готов', backToWork:'Вернуться к листу', sayAllBtn:'Озвучить итог', showLog:'Показать журнал', newList:'Новый лист',
 positions:'позиций', planLabel:'план', diffLabel:'разница', incompleteN:'неполных',
 thLoc:'Локация', thTook:'Взяли', thPlan:'По плану', thPlanShort:'План',
 partialWarn:'{n} позиций — неполное кол-во. Перечеркни на бумаге.',
@@ -851,14 +869,15 @@ jTitle:'Журнал смены', myShift:'Моя смена', colliPacked:'Вс
 jIn:'Пришёл', jOut:'Ушёл', jStart:'Начал', jBreak:'Перерыв', jMin:'мин', jReason:'Причина', jReasonPh:'напр. не было заказов',
 ordersColon:'Заказов:', jButikPh:'Butik №', jColiPh:'Коли',
 jFromList:'Подставить из текущего листа', jCopy:'Скопировать', jClear:'Очистить',
-jHint:'После готового листа жми «Подставить из текущего листа» — № магазина и Total coli подставятся из скана, затем ＋. Сверху — общая сумма коли и число заказов для отчёта лидеру.',
+jHint:'После готового листа заказ уже в журнале — жми «Показать журнал», либо «Подставить из текущего листа» — № магазина и Total coli подставятся из скана, затем ＋. Сверху — общая сумма коли и число заказов для отчёта лидеру.',
 jEmpty:'Пусто. Добавь butik и coli после готового листа.', restoreOrders:'Вернуть {n} заказов',
+jCurrent:'Butik {st} · {co} coli · в процессе',
 cpName:'Имя: ', cpDate:'Дата: ', cpShift:'Смена: ', cpStart:'Начал сбор: ', cpButikColi:'Butik   Coli', cpOrders:'Заказов: {n} · Всего коли: {s}', cpPerHour:'Coli/час ≈ {v}',
 bonusFill:'Заполни «Пришёл» и «Ушёл» — посчитаю coli/час.', bonusCheck:'Проверь время.',
 bandLow:'ниже бонуса (нужно 150+)', bandOn:'в бонусе (150–300)', bandMax:'максимум (300+)',
 coliPerH:'coli / час', coliPerHShort:'coli/ч', realPace:'Реальный пейс от начала сбора',
 bonusNote:'Считается как у лидера: (Ушёл − Пришёл − перерыв) в десятичной записи. Перерыв 36 мин = 0,60.',
-helpTitle:'Как пользоваться', helpClose:'Понятно', helpBody:'<h4>Быстрый старт</h4><p>1. Взял лист → <b>Добавить фото</b> (можно несколько). Жми <b>Сканировать</b>.<br>2. Проверь зелёную строку «Сумма Qty = Total coli ✓». Красные ? — тапни и исправь.<br>3. <b>СТАРТ</b> → надевай AirPods и поехали по конусам.</p><h4>Как фотографировать</h4><ul><li>1-е фото: весь лист целиком, телефон параллельно бумаге, без тени.</li><li>Мелкий шрифт → 2-е фото крупно нижней части. Дубли склеятся сами.</li><li>Резкость важнее количества. Фото сжимаются до 1400px.</li></ul><h4>В пути</h4><ul><li>Взял товар → 1 щелчок ножки AirPods или зелёная кнопка <b>ВЗЯЛ</b>.</li><li>Назад → 2 щелчка или кнопка <b>Назад</b>.</li><li>Товара меньше → кнопка <b>Меньше</b>, введи факт. На бумаге перечеркни.</li><li>Пауза / продолжить → 3 щелчка или кнопка <b>Пауза</b>.</li><li>Локацию, количество и название приложение озвучивает само и показывает на экране и эко-экране.</li><li><b>Итог</b> — тихая сверка с бумагой. Крестик сверху — закрыть.</li><li>Safari закрылся → открой сайт → <b>Продолжить</b> (прогресс хранится 12 часов).</li><li><b>Порядок обхода</b> → тап по крупным цифрам локации. «Крупные» (по убыванию) или вручную. Взятые закреплены.</li></ul><h4>Язык</h4><p>Переключатель <b>RU / EN / DA</b> справа вверху на главном экране меняет язык интерфейса и озвучки.</p><h4>Журнал смены</h4><ul><li>Щелчки AirPods: 1 = ВЗЯЛ · 2 = Назад · 3 = Пауза / Продолжить.</li><li>Тап по × на экране — исправить количество. Тап по цифрам локации — изменить порядок обхода.</li><li>После готового листа: «Записать в журнал», либо в журнале «Подставить из текущего листа» — № магазина и Total coli подставятся, жми ＋. Сверху — сумма коли и число заказов для отчёта лидеру.</li><li>Coli/час считается как у лидера: (Ушёл − Пришёл − перерыв) в десятичной записи. Перерыв 36 мин = 0,60. Бонус: 150–300, максимум 300+.</li></ul><h4>Батарея</h4><ul><li>Эко-экран на OLED почти не ест заряд.</li><li>Настройки → Универсальный доступ → Дисплей → <b>Понижение точки белого</b>.</li><li>Яркость на минимум; повербанк под рукой.</li></ul><h4>Если что-то пошло не так</h4><ul><li>503/429 от Google → подожди и снова <b>Сканировать</b>.</li><li>Щелчки не ловятся → сверни Safari и открой снова; проверь «Щелчки по ножке» в «Ещё».</li><li>Зависло → перезагрузи страницу, прогресс цел.</li></ul>',
+helpTitle:'Как пользоваться', helpClose:'Понятно', helpBody:'<h4>Быстрый старт</h4><p>1. Взял лист → <b>Добавить фото</b> (можно несколько). Жми <b>Сканировать</b>.<br>2. Проверь зелёную строку «Сумма Qty = Total coli ✓». Красные ? — тапни и исправь.<br>3. <b>СТАРТ</b> → надевай AirPods и поехали по конусам.</p><h4>Как фотографировать</h4><ul><li>1-е фото: весь лист целиком, телефон параллельно бумаге, без тени.</li><li>Мелкий шрифт → 2-е фото крупно нижней части. Дубли склеятся сами.</li><li>Резкость важнее количества. Фото сжимаются до 1400px.</li></ul><h4>В пути</h4><ul><li>Взял товар → 1 щелчок ножки AirPods или зелёная кнопка <b>ВЗЯЛ</b>.</li><li>Назад → 2 щелчка или кнопка <b>Назад</b>.</li><li>Товара меньше → кнопка <b>Меньше</b>, введи факт. На бумаге перечеркни.</li><li>Пауза / продолжить → 3 щелчка или кнопка <b>Пауза</b>.</li><li>Локацию, количество и название приложение озвучивает само и показывает на экране и эко-экране.</li><li><b>Итог</b> — тихая сверка с бумагой. Крестик сверху — закрыть.</li><li>Safari закрылся → открой сайт → <b>Продолжить</b> (прогресс хранится 12 часов).</li><li><b>Порядок обхода</b> → тап по крупным цифрам локации. «Крупные» (по убыванию) или вручную. Взятые закреплены.</li></ul><h4>Язык</h4><p>Переключатель <b>RU / EN / DA</b> справа вверху на главном экране меняет язык интерфейса и озвучки.</p><h4>Журнал смены</h4><ul><li>Щелчки AirPods: 1 = ВЗЯЛ · 2 = Назад · 3 = Пауза / Продолжить.</li><li>Тап по × на экране — исправить количество. Тап по цифрам локации — изменить порядок обхода.</li><li>После готового листа заказ уже в журнале автоматически. «Показать журнал» — посмотреть, либо «Подставить из текущего листа» — № магазина и Total coli подставятся, жми ＋. Сверху — сумма коли и число заказов для отчёта лидеру.</li><li>Coli/час считается как у лидера: (Ушёл − Пришёл − перерыв) в десятичной записи. Перерыв 36 мин = 0,60. Бонус: 150–300, максимум 300+.</li></ul><h4>Батарея</h4><ul><li>Эко-экран на OLED почти не ест заряд.</li><li>Настройки → Универсальный доступ → Дисплей → <b>Понижение точки белого</b>.</li><li>Яркость на минимум; повербанк под рукой.</li></ul><h4>Если что-то пошло не так</h4><ul><li>503/429 от Google → подожди и снова <b>Сканировать</b>.</li><li>Щелчки не ловятся → сверни Safari и открой снова; проверь «Щелчки по ножке» в «Ещё».</li><li>Зависло → перезагрузи страницу, прогресс цел.</li></ul>',
 noLoc:'Не нашёл ни одной локации вида 003-002.',
 parsePos:'Позиций: {n} · Сумма Qty: {sum}', eqTotal:' = Total coli ✓',
 neTotal:' ≠ Total coli ({exp}), разница {d}', checkTotal:' — сверь с «Total coli» на листе',
@@ -914,7 +933,7 @@ screenSec:'Screen', ecoLabel:'Eco screen', ecoSecLabel:'Dims after, sec (min 5)'
 finishBtn:'Finish list', editBtn:'Back to list',
 workHint:'AirPods clicks: 1 = PICKED · 2 = Back · 3 = Pause / Continue<br>Buttons: PICKED · Back · Less · Review<br>Tap × — fix Qty · tap the location digits — change pick order',
 nextLabel:'→ next:', lastPos:'last position',
-doneTitle:'List done', backToWork:'Back to list', sayAllBtn:'Read summary aloud', saveToLog:'Save to log', newList:'New list',
+doneTitle:'List done', backToWork:'Back to list', sayAllBtn:'Read summary aloud', showLog:'Show log', newList:'New list',
 positions:'positions', planLabel:'plan', diffLabel:'diff', incompleteN:'incomplete',
 thLoc:'Location', thTook:'Picked', thPlan:'Planned', thPlanShort:'Plan',
 partialWarn:'{n} positions — incomplete amount. Cross them out on paper.',
@@ -934,14 +953,15 @@ jTitle:'Shift log', myShift:'My shift', colliPacked:'Total colli packed', jName:
 jIn:'In', jOut:'Out', jStart:'Started', jBreak:'Break', jMin:'min', jReason:'Reason', jReasonPh:'e.g. no orders',
 ordersColon:'Orders:', jButikPh:'Store no.', jColiPh:'Coli',
 jFromList:'Fill from current list', jCopy:'Copy', jClear:'Clear',
-jHint:'After a finished list tap «Fill from current list» — store no. and Total coli are filled from the scan, then ＋. On top — total coli and number of orders for the team leader.',
+jHint:'After a finished list the order is already in the log — tap «Show log», or «Fill from current list» — store no. and Total coli are filled from the scan, then ＋. On top — total coli and number of orders for the team leader.',
 jEmpty:'Empty. Add butik and coli after a finished list.', restoreOrders:'Restore {n} orders',
+jCurrent:'Butik {st} · {co} coli · in progress',
 cpName:'Name: ', cpDate:'Date: ', cpShift:'Shift: ', cpStart:'Pick start: ', cpButikColi:'Butik   Coli', cpOrders:'Orders: {n} · Total coli: {s}', cpPerHour:'Coli/hour ≈ {v}',
 bonusFill:'Fill «In» and «Out» — I will compute coli/hour.', bonusCheck:'Check the times.',
 bandLow:'below bonus (need 150+)', bandOn:'in bonus (150–300)', bandMax:'maximum (300+)',
 coliPerH:'coli / hour', coliPerHShort:'coli/h', realPace:'Real pace from pick start',
 bonusNote:'Computed like the leader sheet: (Out − In − break) in decimal. Break 36 min = 0.60.',
-helpTitle:'How to use', helpClose:'Got it', helpBody:'<h4>Quick start</h4><p>1. Got the list → <b>Add photo</b> (several is fine). Tap <b>Scan</b>.<br>2. Check the green line «Qty sum = Total coli ✓». Red ? — tap and fix.<br>3. <b>START</b> → put on AirPods and go along the cones.</p><h4>How to photograph</h4><ul><li>1st photo: the whole sheet, phone parallel to the paper, no shadow.</li><li>Small text → 2nd photo close-up of the bottom part. Duplicates merge automatically.</li><li>Sharpness matters more than count. Photos are compressed to 1400px.</li></ul><h4>On the way</h4><ul><li>Picked an item → 1 AirPods stem click or the green <b>PICKED</b> button.</li><li>Back → 2 clicks or the <b>Back</b> button.</li><li>Fewer items → the <b>Less</b> button, enter the real number. Cross it out on paper.</li><li>Pause / continue → 3 clicks or the <b>Pause</b> button.</li><li>The app speaks the location, amount and name and shows them on the screen and the eco screen.</li><li><b>Review</b> — a quiet check against the paper. The cross on top closes it.</li><li>Safari closed → open the site → <b>Continue</b> (progress is kept for 12 hours).</li><li><b>Pick order</b> → tap the large location digits. «Large first» (descending) or manual. Picked items are pinned.</li></ul><h4>Language</h4><p>The <b>RU / EN / DA</b> switch at the top right of the home screen changes the interface and speech language.</p><h4>Shift log</h4><ul><li>AirPods clicks: 1 = PICKED · 2 = Back · 3 = Pause / Continue.</li><li>Tap × on the screen to fix the amount. Tap the location digits to change the pick order.</li><li>After a finished list: «Save to log», or in the log «Fill from current list» — store no. and Total coli are filled, tap ＋. On top — total coli and the number of orders for the team leader.</li><li>Coli/hour is computed like the leader sheet: (Out − In − break) in decimal. Break 36 min = 0.60. Bonus: 150–300, max 300+.</li></ul><h4>Battery</h4><ul><li>The eco screen barely uses charge on OLED.</li><li>Settings → Accessibility → Display → <b>Reduce White Point</b>.</li><li>Minimum brightness; keep a power bank handy.</li></ul><h4>If something goes wrong</h4><ul><li>503/429 from Google → wait and tap <b>Scan</b> again.</li><li>Clicks not registering → minimize Safari and open it again; check «AirPods stem clicks» in «More».</li><li>Frozen → reload the page, progress is safe.</li></ul>',
+helpTitle:'How to use', helpClose:'Got it', helpBody:'<h4>Quick start</h4><p>1. Got the list → <b>Add photo</b> (several is fine). Tap <b>Scan</b>.<br>2. Check the green line «Qty sum = Total coli ✓». Red ? — tap and fix.<br>3. <b>START</b> → put on AirPods and go along the cones.</p><h4>How to photograph</h4><ul><li>1st photo: the whole sheet, phone parallel to the paper, no shadow.</li><li>Small text → 2nd photo close-up of the bottom part. Duplicates merge automatically.</li><li>Sharpness matters more than count. Photos are compressed to 1400px.</li></ul><h4>On the way</h4><ul><li>Picked an item → 1 AirPods stem click or the green <b>PICKED</b> button.</li><li>Back → 2 clicks or the <b>Back</b> button.</li><li>Fewer items → the <b>Less</b> button, enter the real number. Cross it out on paper.</li><li>Pause / continue → 3 clicks or the <b>Pause</b> button.</li><li>The app speaks the location, amount and name and shows them on the screen and the eco screen.</li><li><b>Review</b> — a quiet check against the paper. The cross on top closes it.</li><li>Safari closed → open the site → <b>Continue</b> (progress is kept for 12 hours).</li><li><b>Pick order</b> → tap the large location digits. «Large first» (descending) or manual. Picked items are pinned.</li></ul><h4>Language</h4><p>The <b>RU / EN / DA</b> switch at the top right of the home screen changes the interface and speech language.</p><h4>Shift log</h4><ul><li>AirPods clicks: 1 = PICKED · 2 = Back · 3 = Pause / Continue.</li><li>Tap × on the screen to fix the amount. Tap the location digits to change the pick order.</li><li>After a finished list the order is already in the log automatically. «Show log» — view it, or «Fill from current list» — store no. and Total coli are filled, tap ＋. On top — total coli and the number of orders for the team leader.</li><li>Coli/hour is computed like the leader sheet: (Out − In − break) in decimal. Break 36 min = 0.60. Bonus: 150–300, max 300+.</li></ul><h4>Battery</h4><ul><li>The eco screen barely uses charge on OLED.</li><li>Settings → Accessibility → Display → <b>Reduce White Point</b>.</li><li>Minimum brightness; keep a power bank handy.</li></ul><h4>If something goes wrong</h4><ul><li>503/429 from Google → wait and tap <b>Scan</b> again.</li><li>Clicks not registering → minimize Safari and open it again; check «AirPods stem clicks» in «More».</li><li>Frozen → reload the page, progress is safe.</li></ul>',
 noLoc:'No location like 003-002 found.',
 parsePos:'Positions: {n} · Qty sum: {sum}', eqTotal:' = Total coli ✓',
 neTotal:' ≠ Total coli ({exp}), diff {d}', checkTotal:' — check against «Total coli» on the sheet',
@@ -997,7 +1017,7 @@ screenSec:'Skærm', ecoLabel:'Øko-skærm', ecoSecLabel:'Slukker efter, sek (min
 finishBtn:'Afslut liste', editBtn:'Tilbage til listen',
 workHint:'AirPods-klik: 1 = TAGET · 2 = Tilbage · 3 = Pause / Fortsæt<br>Knapper: TAGET · Tilbage · Færre · Tjek<br>Tryk × — ret Qty · tryk på lokationstal — skift rækkefølge',
 nextLabel:'→ næste:', lastPos:'sidste position',
-doneTitle:'Listen er færdig', backToWork:'Tilbage til listen', sayAllBtn:'Læs resultat højt', saveToLog:'Gem i log', newList:'Ny liste',
+doneTitle:'Listen er færdig', backToWork:'Tilbage til listen', sayAllBtn:'Læs resultat højt', showLog:'Vis log', newList:'Ny liste',
 positions:'positioner', planLabel:'plan', diffLabel:'forskel', incompleteN:'ufuldstændige',
 thLoc:'Lokation', thTook:'Taget', thPlan:'Planlagt', thPlanShort:'Plan',
 partialWarn:'{n} positioner — ufuldstændigt antal. Streg dem ud på papiret.',
@@ -1017,14 +1037,15 @@ jTitle:'Vagtlog', myShift:'Min vagt', colliPacked:'Coli pakket i alt', jName:'Na
 jIn:'Kom', jOut:'Gik', jStart:'Start', jBreak:'Pause', jMin:'min', jReason:'Årsag', jReasonPh:'f.eks. ingen ordrer',
 ordersColon:'Ordrer:', jButikPh:'Butik nr.', jColiPh:'Coli',
 jFromList:'Udfyld fra listen', jCopy:'Kopiér', jClear:'Ryd',
-jHint:'Efter en færdig liste tryk «Udfyld fra listen» — butiksnr. og Total coli udfyldes fra scanningen, derefter ＋. Øverst — samlede coli og antal ordrer til lederen.',
+jHint:'Efter en færdig liste er ordren allerede i loggen — tryk «Vis log», eller «Udfyld fra listen» — butiksnr. og Total coli udfyldes fra scanningen, derefter ＋. Øverst — samlede coli og antal ordrer til lederen.',
 jEmpty:'Tom. Tilføj butik og coli efter en færdig liste.', restoreOrders:'Gendan {n} ordrer',
+jCurrent:'Butik {st} · {co} coli · i gang',
 cpName:'Navn: ', cpDate:'Dato: ', cpShift:'Vagt: ', cpStart:'Plukstart: ', cpButikColi:'Butik   Coli', cpOrders:'Ordrer: {n} · Coli i alt: {s}', cpPerHour:'Coli/time ≈ {v}',
 bonusFill:'Udfyld «Kom» og «Gik» — jeg beregner coli/time.', bonusCheck:'Tjek tiderne.',
 bandLow:'under bonus (kræver 150+)', bandOn:'i bonus (150–300)', bandMax:'maksimum (300+)',
 coliPerH:'coli / time', coliPerHShort:'coli/t', realPace:'Reelt tempo fra start',
 bonusNote:'Beregnes som lederens skema: (Gik − Kom − pause) decimalt. Pause 36 min = 0,60.',
-helpTitle:'Sådan bruges den', helpClose:'Forstået', helpBody:'<h4>Hurtig start</h4><p>1. Fik listen → <b>Tilføj foto</b> (flere er fint). Tryk <b>Scan</b>.<br>2. Tjek den grønne linje «Qty-sum = Total coli ✓». Røde ? — tryk og ret.<br>3. <b>START</b> → tag AirPods på og kør langs keglerne.</p><h4>Sådan fotograferer du</h4><ul><li>1. foto: hele listen, telefonen parallelt med papiret, uden skygge.</li><li>Lille skrift → 2. foto tæt på nederste del. Dubletter samles automatisk.</li><li>Skarphed er vigtigere end antal. Fotos komprimeres til 1400px.</li></ul><h4>Undervejs</h4><ul><li>Taget en vare → 1 AirPods-klik eller den grønne <b>TAGET</b>-knap.</li><li>Tilbage → 2 klik eller <b>Tilbage</b>-knappen.</li><li>Færre varer → <b>Færre</b>-knappen, indtast det reelle antal. Streg ud på papiret.</li><li>Pause / fortsæt → 3 klik eller <b>Pause</b>-knappen.</li><li>Appen læser lokation, antal og navn op og viser dem på skærmen og øko-skærmen.</li><li><b>Tjek</b> — en stille kontrol mod papiret. Krydset øverst lukker.</li><li>Safari lukkede → åbn siden → <b>Fortsæt</b> (fremgang gemmes i 12 timer).</li><li><b>Rækkefølge</b> → tryk på de store lokationstal. «Store først» (faldende) eller manuelt. Tagne varer er låst.</li></ul><h4>Sprog</h4><p><b>RU / EN / DA</b>-knappen øverst til højre på startskærmen skifter sprog for interface og tale.</p><h4>Vagtlog</h4><ul><li>AirPods-klik: 1 = TAGET · 2 = Tilbage · 3 = Pause / Fortsæt.</li><li>Tryk × på skærmen for at rette antal. Tryk på lokationstal for at skifte rækkefølge.</li><li>Efter en færdig liste: «Gem i log», eller i loggen «Udfyld fra listen» — butiksnr. og Total coli udfyldes, tryk ＋. Øverst — samlede coli og antal ordrer til lederen.</li><li>Coli/time beregnes som lederens skema: (Gik − Kom − pause) decimalt. Pause 36 min = 0,60. Bonus: 150–300, maks 300+.</li></ul><h4>Batteri</h4><ul><li>Øko-skærmen bruger næsten ingen strøm på OLED.</li><li>Indstillinger → Tilgængelighed → Skærm → <b>Reducér hvidpunkt</b>.</li><li>Minimal lysstyrke; hav en powerbank klar.</li></ul><h4>Hvis noget går galt</h4><ul><li>503/429 fra Google → vent og tryk <b>Scan</b> igen.</li><li>Klik registreres ikke → minimer Safari og åbn igen; tjek «AirPods-klik» i «Mere».</li><li>Frosset → genindlæs siden, fremgang er sikker.</li></ul>',
+helpTitle:'Sådan bruges den', helpClose:'Forstået', helpBody:'<h4>Hurtig start</h4><p>1. Fik listen → <b>Tilføj foto</b> (flere er fint). Tryk <b>Scan</b>.<br>2. Tjek den grønne linje «Qty-sum = Total coli ✓». Røde ? — tryk og ret.<br>3. <b>START</b> → tag AirPods på og kør langs keglerne.</p><h4>Sådan fotograferer du</h4><ul><li>1. foto: hele listen, telefonen parallelt med papiret, uden skygge.</li><li>Lille skrift → 2. foto tæt på nederste del. Dubletter samles automatisk.</li><li>Skarphed er vigtigere end antal. Fotos komprimeres til 1400px.</li></ul><h4>Undervejs</h4><ul><li>Taget en vare → 1 AirPods-klik eller den grønne <b>TAGET</b>-knap.</li><li>Tilbage → 2 klik eller <b>Tilbage</b>-knappen.</li><li>Færre varer → <b>Færre</b>-knappen, indtast det reelle antal. Streg ud på papiret.</li><li>Pause / fortsæt → 3 klik eller <b>Pause</b>-knappen.</li><li>Appen læser lokation, antal og navn op og viser dem på skærmen og øko-skærmen.</li><li><b>Tjek</b> — en stille kontrol mod papiret. Krydset øverst lukker.</li><li>Safari lukkede → åbn siden → <b>Fortsæt</b> (fremgang gemmes i 12 timer).</li><li><b>Rækkefølge</b> → tryk på de store lokationstal. «Store først» (faldende) eller manuelt. Tagne varer er låst.</li></ul><h4>Sprog</h4><p><b>RU / EN / DA</b>-knappen øverst til højre på startskærmen skifter sprog for interface og tale.</p><h4>Vagtlog</h4><ul><li>AirPods-klik: 1 = TAGET · 2 = Tilbage · 3 = Pause / Fortsæt.</li><li>Tryk × på skærmen for at rette antal. Tryk på lokationstal for at skifte rækkefølge.</li><li>Efter en færdig liste er ordren allerede i loggen automatisk. «Vis log» — se den, eller «Udfyld fra listen» — butiksnr. og Total coli udfyldes, tryk ＋. Øverst — samlede coli og antal ordrer til lederen.</li><li>Coli/time beregnes som lederens skema: (Gik − Kom − pause) decimalt. Pause 36 min = 0,60. Bonus: 150–300, maks 300+.</li></ul><h4>Batteri</h4><ul><li>Øko-skærmen bruger næsten ingen strøm på OLED.</li><li>Indstillinger → Tilgængelighed → Skærm → <b>Reducér hvidpunkt</b>.</li><li>Minimal lysstyrke; hav en powerbank klar.</li></ul><h4>Hvis noget går galt</h4><ul><li>503/429 fra Google → vent og tryk <b>Scan</b> igen.</li><li>Klik registreres ikke → minimer Safari og åbn igen; tjek «AirPods-klik» i «Mere».</li><li>Frosset → genindlæs siden, fremgang er sikker.</li></ul>',
 noLoc:'Ingen lokation som 003-002 fundet.',
 parsePos:'Positioner: {n} · Qty-sum: {sum}', eqTotal:' = Total coli ✓',
 neTotal:' ≠ Total coli ({exp}), forskel {d}', checkTotal:' — tjek mod «Total coli» på listen',
@@ -1150,6 +1171,7 @@ function foldItems(raw){
   return out;
 }
 let scanStore=null;
+let sessionLogged=false;   // текущий лист уже записан в журнал смены (авто на «Закончить лист»)
 function detectStore(raw){
   const m=normalizeScan(raw).match(/store\s*(?:number|nr)?[^0-9]{0,12}(\d{3,5})\b/i);
   return m?m[1]:null;
@@ -1311,7 +1333,9 @@ function render(){
   $('posTxt').textContent=(idx+1)+' / '+items.length;
   const sum=items.filter(i=>i.taken).reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
   $('takenTxt').textContent=t('picked')+' '+sum+' '+t('pcs');
+  $('storeTxt').hidden=!scanStore;
   $('storeTxt').textContent=scanStore?(t('butikLab')+' '+scanStore):'';
+  if(!$('logModal').hidden)updateLogCurrent();   // журнал открыт поверх работы — держим «в процессе» живым
   const lp=locDisp(it.loc).split('-');
   $('locBig').innerHTML='<span class="lg">'+(lp[0]||'')+'</span><span class="sep"></span><span class="lg">'+(lp[1]||'')+'</span>';
   if(renderedIdx!==idx){
@@ -1399,6 +1423,8 @@ function finish(force){
   const taken=items.filter(i=>i.taken);
   const partial=items.filter(i=>i.taken&&i.actualQty!=null);
   const sum=taken.reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
+  if(!sessionLogged){sessionLogged=true;if(scanStore)logAddAuto(scanStore,sum);}
+  if(!$('logModal').hidden)updateLogCurrent();
   const exp=parseInt($('expTotal').value,10);
   let check='';
   if(!isNaN(exp))check=(sum===exp)?t('eqTotal'):' ('+t('planLabel')+': '+exp+', '+t('diffLabel')+' '+(exp-sum)+')';
@@ -1918,6 +1944,7 @@ function startWork(resume){
   if(!resume){
     idx=0;
     items.forEach(function(i){i.taken=false;i.actualQty=null;});
+    sessionLogged=false;
   }
   paused=false;inWork=true;lastTouch=Date.now();
   document.body.classList.add('work');
@@ -2040,6 +2067,9 @@ function saveLog(){
 }
 function logSum(){return shiftLog.reduce(function(s,e){return s+(parseInt(e.coli,10)||0);},0);}
 function pickedSum(){return items.filter(function(i){return i.taken;}).reduce(function(s,i){return s+(i.actualQty!=null?i.actualQty:(i.qty||0));},0);}
+/* Заказ в процессе (ещё не в журнале) — его коли учитываются в общем итоге живьём */
+function liveCurrentColi(){return(inWork&&items.length)?pickedSum():0;}
+function totalWithCurrent(){return logSum()+liveCurrentColi();}
 /* ЧЧ:ММ → число в стиле сводки лидера (минуты как сотые: 23:45 → 23.45) */
 function timeDec(v){
   v=String(v||'').trim().replace(/[.,]/,':');
@@ -2072,7 +2102,7 @@ function updateBonus(){
     mp.textContent=pv.join(' · ');
   }
   const el=$('logBonus');if(!el)return;
-  const sum=logSum();
+  const sum=totalWithCurrent();
   const f=timeDec($('logFrom').value),tt=timeDec($('logTo').value);
   const bm=parseInt($('logBreak').value,10);const bd=isNaN(bm)?0:bm/60;   // их система: 36 мин = 0,60
   if(f==null||tt==null){el.innerHTML='<div class="bz-msg">'+t('bonusFill')+'</div>';return;}
@@ -2098,8 +2128,22 @@ function updateBonus(){
   }
   el.innerHTML=html;
 }
+/* Текущий заказ «в процессе»: жёлтая строка сверху журнала + общий итог смены
+   (большая цифра) пульсирует и получает пометку, пока не сохранённые коли уже
+   учтены в сумме живьём — вызывается и при открытии журнала, и на каждый ВЗЯЛ,
+   если журнал остался открытым поверх работы. */
+function updateLogCurrent(){
+  const live=liveCurrentColi();
+  const el=$('logCurrent');
+  if(el){
+    if(inWork&&items.length){el.hidden=false;$('logCurrentTxt').textContent=tpl('jCurrent',{st:scanStore||'—',co:live});}
+    else{el.hidden=true;}
+  }
+  const numEl=$('logSummary');
+  if(numEl){numEl.textContent=logSum()+live;numEl.classList.toggle('pulsing',live>0);}
+}
 function renderLog(){
-  $('logSummary').textContent=logSum();
+  updateLogCurrent();
   $('logOrders').textContent=t('ordersColon')+' '+shiftLog.length;
   updateBonus();
   const box=$('logList');
@@ -2150,6 +2194,18 @@ function logAddEntry(store,coli){
   try{beep(660,50);setTimeout(function(){beep(990,70);},70);}catch(e){}
   return true;
 }
+/* Тихая авто-запись при «Закончить лист»: без confirm() — если точь-в-точь такая
+   запись уже есть, просто не дублируем (ручной ＋ в журнале всё ещё может добавить дубль). */
+function logAddAuto(store,coli){
+  store=String(store==null?'':store).trim();
+  const co=parseInt(coli,10);
+  if(!store&&isNaN(co))return false;
+  const dup=shiftLog.some(function(e){return String(e.store)===store&&(parseInt(e.coli,10)||null)===(isNaN(co)?null:co);});
+  if(dup)return false;
+  shiftLog.push({store:store,coli:isNaN(co)?null:co,t:Date.now()});
+  if(!saveLog())alert(t('jSaveFail'));
+  return true;
+}
 function openLog(store,coli){
   const meta=loadMeta();
   $('logName').value=meta.name||'';
@@ -2165,6 +2221,7 @@ function openLog(store,coli){
   $('logModal').hidden=false;
 }
 $('btnLog').addEventListener('click',function(){openLog(null,null);});
+$('storeTxt').addEventListener('click',function(){openLog(null,null);});
 $('logClose').addEventListener('click',function(){$('logModal').hidden=true;});
 /* авто-двоеточие: на numpad нет «:», поэтому ставим сами после 2 цифр */
 function fmtTimeInput(el){
@@ -2209,13 +2266,10 @@ $('logClear').addEventListener('click',function(){
   renderLog();
 });
 $('btnDoneLog').addEventListener('click',function(){
-  const coli=pickedSum();
-  if(scanStore){
-    openLog(null,null);          // журнал откроется
-    logAddEntry(scanStore,coli); // и сразу впишем заказ (с защитой от дубля)
-  }else{
-    openLog(scanStore,coli);     // butik не распознан → подставим коли, butik введёшь сам и жми ＋
-  }
+  // заказ уже записан в журнал автоматически при «Закончить лист» (finish()) —
+  // тут просто показываем журнал; butik не распознан → подставим коли для ручного ввода
+  if(scanStore){openLog(null,null);}
+  else{openLog(scanStore,pickedSum());}
 });
 /* настройки */
 $('rate').addEventListener('input',function(){
