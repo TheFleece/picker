@@ -349,6 +349,8 @@ body:not(.work)::before{content:'';position:fixed;inset:0;z-index:-1;pointer-eve
   background:rgba(45,212,111,.05);color:var(--txt);padding:20px;font-size:15.5px;font-weight:600;}
 .btn-upload .ic{width:27px;height:27px;color:var(--go);}
 .btn-upload:active{background:rgba(45,212,111,.1);}
+.btn-upload-sm{padding:16px 8px;font-size:14px;margin-top:0;}
+.btn-upload-sm .ic{width:23px;height:23px;}
 
 /* — Статус распознавания — */
 #aiState{margin-top:12px;font-size:12.5px;line-height:1.5;color:var(--dim);
@@ -514,7 +516,7 @@ body.work .card{background:linear-gradient(180deg,#0c1118,#06090d);border-color:
   <div class="hdr">
     <div class="brand">
       <div class="logo"><svg class="ic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
-      <div class="brand-tx"><h1>Picker <span class="ver">v3.22</span></h1><p class="sub tagline" data-i18n="tagline">Pick-by-voice · личный прототип</p></div>
+      <div class="brand-tx"><h1>Picker <span class="ver">v3.23</span></h1><p class="sub tagline" data-i18n="tagline">Pick-by-voice · личный прототип</p></div>
     </div>
     <div class="lang" id="langSel">
       <button data-lang="ru">RU</button>
@@ -534,14 +536,18 @@ body.work .card{background:linear-gradient(180deg,#0c1118,#06090d);border-color:
 
   <section class="panel">
     <div class="panel-hd"><span class="panel-ic"><svg class="ic" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg></span><h3 data-i18n="secScan">Сканирование листа</h3></div>
-    <button class="btn btn-upload" id="btnPhoto" data-i18n="addPhoto" data-ic="camera">Добавить фото</button>
+    <div class="row">
+      <button class="btn btn-upload btn-upload-sm" id="btnPhotoCam" data-i18n="addPhotoCam" data-ic="camera">Камера</button>
+      <button class="btn btn-upload btn-upload-sm" id="btnPhotoFiles" data-i18n="addPhotoFiles" data-ic="images">Файлы</button>
+    </div>
     <p class="tip" data-i18n="photoHint">Весь лист + нижняя часть при мелком шрифте</p>
     <div id="photoQueue" class="pq" hidden></div>
     <button class="btn btn-go" id="btnScanAI" style="font-size:19px;padding:16px;margin-top:12px" hidden>Сканировать</button>
     <div id="ocrStatus" class="warn-line" hidden></div>
     <div class="hint" id="aiState"></div>
   </section>
-  <input type="file" id="photoInput" accept="image/*" multiple hidden>
+  <input type="file" id="photoInputCam" accept="image/*" capture="environment" hidden>
+  <input type="file" id="photoInputFiles" accept="image/*" multiple hidden>
 
   <div id="parseOut"></div>
 
@@ -803,6 +809,7 @@ const ICO={
   clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
   package:'<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
   camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+  images:'<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
   scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/>',
   pause:'<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
   review:'<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
@@ -830,7 +837,7 @@ ru:{
 tagline:'Pick-by-voice · личный прототип',
 resumeTitle:'Есть незаконченный лист:', positionsShort:'позиций', nextShort:'след.',
 continue:'Продолжить', delete:'Удалить',
-secScan:'Сканирование листа', addPhoto:'Добавить фото',
+secScan:'Сканирование листа', addPhotoCam:'Камера', addPhotoFiles:'Файлы',
 photoHint:'Весь лист + нижняя часть при мелком шрифте',
 scan:'Сканировать', photosWord:'фото',
 aiConnected:'Распознавание фото: <b style="color:var(--go)">подключено ✓</b>',
@@ -897,6 +904,10 @@ ocr503:'Google временно недоступен (503). Подожди ~30 �
 ocr429:'Слишком много запросов (429). Подожди минуту и нажми «Сканировать».',
 ocr400:'Ключ не принят (400). Проверь «Ключ».', ocr403:'Доступ запрещён (403). Проверь «Ключ».',
 ocrErr:'Ошибка: {c}. Нажми «Сканировать» ещё раз.',
+photoTimeout:'Фото не загрузилось (возможно, тянется из iCloud) — выбери его заново или переснять камерой.',
+ocrTimeout:'Google долго не отвечает. Проверь связь и нажми «Сканировать» ещё раз.',
+ocrTrying:'Первая попытка не идеальна — пробую ещё модель ({i}/{n})…',
+ocrWaiting:'Много запросов, жду {s} сек и пробую снова…',
 audioFail:'Не удалось включить аудио-канал.',
 jNeed:'Укажи butik или коли.',
 jDup:'Заказ butik {st} на {co} coli уже в журнале.\n\nЭто ДРУГОЙ заказ под тем же номером (напр. chilled и dry на разных палетах)?\nОК — добавлю отдельной строкой. Отмена — не добавлять.',
@@ -914,7 +925,7 @@ en:{
 tagline:'Pick-by-voice · personal prototype',
 resumeTitle:'Unfinished list:', positionsShort:'positions', nextShort:'next:',
 continue:'Continue', delete:'Delete',
-secScan:'Scan the list', addPhoto:'Add photo',
+secScan:'Scan the list', addPhotoCam:'Camera', addPhotoFiles:'Files',
 photoHint:'Whole sheet + bottom part if the text is small',
 scan:'Scan', photosWord:'photos',
 aiConnected:'Photo recognition: <b style="color:var(--go)">connected ✓</b>',
@@ -981,6 +992,10 @@ ocr503:'Google is temporarily unavailable (503). Wait ~30 sec and tap «Scan».'
 ocr429:'Too many requests (429). Wait a minute and tap «Scan».',
 ocr400:'Key not accepted (400). Check «Key».', ocr403:'Access denied (403). Check «Key».',
 ocrErr:'Error: {c}. Tap «Scan» again.',
+photoTimeout:'Photo failed to load (maybe still downloading from iCloud) — pick it again or retake with the camera.',
+ocrTimeout:'Google is taking too long to respond. Check the connection and tap «Scan» again.',
+ocrTrying:'First attempt wasn\'t perfect — trying another model ({i}/{n})…',
+ocrWaiting:'Too many requests, waiting {s} sec and trying again…',
 audioFail:'Could not start the audio channel.',
 jNeed:'Enter a butik or coli.',
 jDup:'Order butik {st} for {co} coli is already in the log.\n\nIs this a DIFFERENT order under the same number (e.g. chilled and dry on different pallets)?\nOK — I will add a separate line. Cancel — do not add.',
@@ -998,7 +1013,7 @@ da:{
 tagline:'Pick-by-voice · personlig prototype',
 resumeTitle:'Uafsluttet liste:', positionsShort:'positioner', nextShort:'næste:',
 continue:'Fortsæt', delete:'Slet',
-secScan:'Scan listen', addPhoto:'Tilføj foto',
+secScan:'Scan listen', addPhotoCam:'Kamera', addPhotoFiles:'Filer',
 photoHint:'Hele listen + nederste del ved lille skrift',
 scan:'Scan', photosWord:'fotos',
 aiConnected:'Fotogenkendelse: <b style="color:var(--go)">forbundet ✓</b>',
@@ -1065,6 +1080,10 @@ ocr503:'Google er midlertidigt utilgængelig (503). Vent ~30 sek og tryk «Scan�
 ocr429:'For mange forespørgsler (429). Vent et minut og tryk «Scan».',
 ocr400:'Nøgle ikke accepteret (400). Tjek «Nøgle».', ocr403:'Adgang nægtet (403). Tjek «Nøgle».',
 ocrErr:'Fejl: {c}. Tryk «Scan» igen.',
+photoTimeout:'Fotoet blev ikke indlæst (henter måske stadig fra iCloud) — vælg det igen eller tag et nyt med kameraet.',
+ocrTimeout:'Google svarer ikke i tide. Tjek forbindelsen og tryk «Scan» igen.',
+ocrTrying:'Første forsøg var ikke perfekt — prøver en anden model ({i}/{n})…',
+ocrWaiting:'For mange forespørgsler, venter {s} sek og prøver igen…',
 audioFail:'Kunne ikke starte lydkanalen.',
 jNeed:'Angiv butik eller coli.',
 jDup:'Ordre butik {st} på {co} coli er allerede i loggen.\n\nEr dette en ANDEN ordre under samme nummer (f.eks. chilled og dry på forskellige paller)?\nOK — tilføjer som ny linje. Annullér — tilføj ikke.',
@@ -1353,6 +1372,7 @@ function render(){
   const nx=items[idx+1];
   $('nextTxt').textContent=nx?(t('nextLabel')+' '+locDisp(nx.loc)):t('lastPos');
   if(ecoShown)fillEco();
+  updateMediaMeta();   // лок-скрин/AirPods-виджет: держим локацию+кол-во свежими на каждую позицию
 }
 function sayItem(){if(!paused){render();speak(itemPhrase(items[idx]));}}
 
@@ -1587,7 +1607,7 @@ let pod=null,podGuard=0,podIgnorePause=0;
 function registerPodHandlers(){
   if(!('mediaSession'in navigator)||!pod)return;
   try{
-    navigator.mediaSession.metadata=new MediaMetadata({title:'Picker'});
+    updateMediaMeta();
     navigator.mediaSession.playbackState='playing';
     navigator.mediaSession.setActionHandler('pause',function(){stemAction('take');pod.play();});
     navigator.mediaSession.setActionHandler('play',function(){stemAction('take');pod.play();});
@@ -1595,14 +1615,46 @@ function registerPodHandlers(){
     navigator.mediaSession.setActionHandler('previoustrack',function(){stemAction('third');});
   }catch(e){}
 }
+// Экран блокировки/лок-скрин AirPods-виджета: название — статично «Picker», artist — живая
+// локация+кол-во текущей позиции (обновляется на каждый render() во время пика), картинка — иконка
+// приложения (PICKER_ARTWORK, генерится canvas'ом ниже). Порядок виджетов на лок-скрине относительно
+// системных (таймер и т.п.) и других медиа-приложений — вне контроля веб-страницы, это решает iOS.
+function updateMediaMeta(){
+  if(!('mediaSession'in navigator))return;
+  try{
+    let artist='';
+    if(inWork&&items[idx]){
+      const it=items[idx];
+      const q=it.actualQty!=null?it.actualQty:(it.qty!=null?it.qty:'?');
+      artist=locDisp(it.loc)+' × '+q;
+    }
+    navigator.mediaSession.metadata=new MediaMetadata({
+      title:'Picker',artist:artist,
+      artwork:PICKER_ARTWORK?[{src:PICKER_ARTWORK,sizes:'512x512',type:'image/png'}]:[]
+    });
+  }catch(e){}
+}
 function stemAction(kind){
-  if(!inWork)return;
-  if(layoutHold||summaryHold)return;
   const now=Date.now();if(now<podGuard)return;podGuard=now+300;
+  if(!inWork)return stemOutOfWork(kind);
+  if(layoutHold||summaryHold)return;
   if(kind==='third'){if(paused)resumeWork();else pauseWork();return;}  // 3 клика
   if(paused)return;
   if(kind==='take')takeBtn();
   else if(kind==='back')back();
+}
+// Один щелчок «жмёт» ближайшую зелёную кнопку экрана вне работы — сканировать/старт/раскладка/новый
+// лист/продолжить лист. Двойной/тройной клик здесь не назначены — риск случайного срабатывания
+// на экранах, где нет парного действия «назад»/«пауза».
+function stemOutOfWork(kind){
+  if(kind!=='take')return;
+  if(!$('layoutModal').hidden){$('btnLayoutApply').click();return;}
+  if(!$('scrDone').hidden){$('btnNew').click();return;}
+  if(!$('scrSetup').hidden){
+    if(!$('btnScanAI').hidden&&!$('btnScanAI').disabled){$('btnScanAI').click();return;}
+    if(!$('btnStart').hidden){$('btnStart').click();return;}
+    if(!$('resumeBar').hidden){$('btnResumeSession').click();return;}
+  }
 }
 async function podToggle(on){
   settings.pod=!!on;saveSettings();
@@ -1612,7 +1664,7 @@ async function podToggle(on){
     if(!pod){pod=new Audio(silentWavURL());pod.loop=true;pod.volume=0.01;
       pod.addEventListener('pause',function(){
         if(Date.now()<podIgnorePause)return;          // мы сами поставили на паузу
-        if(settings.pod&&inWork)pod.play().catch(function(){});
+        if(settings.pod)pod.play().catch(function(){});   // канал живой на любом экране, не только в работе
       });}
     try{await pod.play();}catch(e){
       alert(t('audioFail'));
@@ -1627,7 +1679,9 @@ async function podToggle(on){
 let lastTouch=Date.now(),ecoShown=false;
 document.addEventListener('pointerdown',function(){
   lastTouch=Date.now();
-  if(settings.pod&&pod&&pod.paused)pod.play().catch(function(){});
+  if(!settings.pod)return;
+  if(!pod)podToggle(true);   // первый тап где угодно (жест для iOS) — оживляем щелчки ещё до старта работы
+  else if(pod.paused)pod.play().catch(function(){});
 });
 setInterval(function(){
   if(inWork&&!paused&&!summaryHold&&!layoutHold&&!partialHold&&settings.eco&&!ecoShown&&Date.now()-lastTouch>Math.max(5,settings.ecoSec||20)*1000)showEco();
@@ -1648,26 +1702,52 @@ $('eco').addEventListener('click',function(e){
 });
 
 /* ================= CANVAS ================= */
+const PHOTO_LOAD_TIMEOUT=20000;   // локальный декод зависает, если галерея тянет оригинал из iCloud по слабой сети
 function loadToCanvas(file,maxSide){
   return new Promise(function(res,rej){
     const img=new Image();
+    let done=false;
+    const timer=setTimeout(function(){
+      if(done)return;done=true;
+      img.onload=img.onerror=null;rej(new Error('photo_timeout'));
+    },PHOTO_LOAD_TIMEOUT);
     img.onload=function(){
+      if(done)return;done=true;clearTimeout(timer);
       const k=Math.min(1,maxSide/Math.max(img.width,img.height));
       const c=document.createElement('canvas');
       c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
       c.getContext('2d').drawImage(img,0,0,c.width,c.height);
       URL.revokeObjectURL(img.src);res(c);
     };
-    img.onerror=rej;img.src=URL.createObjectURL(file);
+    img.onerror=function(e){
+      if(done)return;done=true;clearTimeout(timer);rej(e);
+    };
+    img.src=URL.createObjectURL(file);
   });
 }
 
 /* ================= Распознавание — все фото одним запросом ================= */
 // Ключ только в localStorage этого телефона. В код/GitHub НЕ вставлять.
-// Порядок = приоритет: быстрые/щедрые lite-модели впереди (15 RPM / 1000 RPD, thinking OFF),
-// тяжёлые flash — в fallback на качество артикулов. Мише критична связка loc+qty, артикул вторичен → скорость важнее.
-const AI_MODELS=['gemini-2.5-flash-lite','gemini-2.0-flash-lite','gemini-2.5-flash','gemini-2.0-flash','gemini-1.5-flash-latest'];
+// Модели и РЕАЛЬНЫЕ лимиты бесплатного тира — сверено по aistudio.google.com/rate-limit 2026-07-10
+// (Мишин кабинет, не веб-доки — там точных цифр нет). gemini-2.0-flash/-lite и gemini-1.5* давно
+// закрыты Google (0/0 в кабинете) — в каскаде их больше нет, гарантированный 404 = чистая трата времени.
+// Ключевой факт: gemini-3.1-flash-lite имеет RPD 500 — в 25 РАЗ больше, чем у 2.5-flash-lite/2.5-flash/
+// 3.5-flash (у всех троих RPD 20, тесно уже при 20 листах/день). Поэтому она — ОСНОВНАЯ ставка (один
+// запрос, дёшево по квоте); тесные по квоте модели идут в фолбэк — гонка (RACE_MODELS, параллельно,
+// только если основная не идеальна) и затем SEQUENTIAL_MODELS по очереди как последний резерв.
+const PRIMARY_MODEL='gemini-3.1-flash-lite';
+const RACE_MODELS=['gemini-2.5-flash-lite','gemini-2.5-flash'];
+const SEQUENTIAL_MODELS=['gemini-3.5-flash'];
 const AI_MAXSIDE=1536, AI_JPEG_Q=0.85;   // 1536: легче аплоад на мобильной сети (быстрее), тайлов распознавания для портретного листа столько же — квоту не теряем
+// lite-модели легче/быстрее → короче таймаут (быстрее падаем на следующую попытку при зависании);
+// тяжёлые flash получают запас побольше, т.к. и в норме отвечают не так резво.
+function timeoutForModel(model){return /flash-lite/.test(model)?15000:30000;}
+function fetchWithTimeout(url,opts,ms){
+  const ctrl=new AbortController();
+  const timer=setTimeout(function(){ctrl.abort();},ms);
+  const merged=Object.assign({},opts,{signal:ctrl.signal});
+  return fetch(url,merged).finally(function(){clearTimeout(timer);});
+}
 // Дубли локаций на чистом листе невозможны — это подпись сдвига колонок при распознавании. Используем как метрику качества.
 function locDupCount(txt){
   const seen=Object.create(null);let dups=0;
@@ -1749,58 +1829,123 @@ function parseRetryDelay(data){
 function encodeCanvases(canvases){
   return canvases.map(function(c){return c.toDataURL('image/jpeg',AI_JPEG_Q).split(',')[1];});
 }
-async function aiRecognizeAll(canvases,keys,b64){
+async function aiRecognizeAll(canvases,keys,b64,onProgress){
   const parts=[{text:buildPrompt(canvases.length)}];
   for(const data of b64)
     parts.push({inline_data:{mime_type:'image/jpeg',data:data}});
   // Тело собираем ПО-МОДЕЛЬНО: thinkingConfig:{thinkingBudget:0} только для gemini-2.5* (выключаем
-  // «мышление» → быстрее/дешевле). Для 2.0/1.5 это поле слать НЕЛЬЗЯ — вернут 400.
+  // «мышление» → быстрее/дешевле). Для новых 3.x моделей это поле не проверено — не шлём (риск 400).
   function bodyFor(model){
     const cfg={temperature:0};
     if(model.indexOf('gemini-2.5')===0)cfg.thinkingConfig={thinkingBudget:0};
     return JSON.stringify({contents:[{parts:parts}],generationConfig:cfg});
   }
   const sleep=function(ms){return new Promise(function(r){setTimeout(r,ms);});};
-  let lastErr='all_models_failed',best=null;
-  // До 2 проходов. Внутри прохода — каждый ключ × каждая модель (лимиты free-tier у сервиса
-  // раздельные по моделям и по ключам). Если ВЕСЬ проход упёрся в 429 — смотрим retryDelay:
-  // ≤15 с → поминутный RPM, ждём ровно столько и повторяем; >15 с или поля нет → вероятно
-  // суточный RPD, долгая пауза бессмысленна (короткий фолбэк). Любой реальный ответ возвращаем сразу.
-  let retrySec=null;
+  // Один запрос модель+ключ → структурированный результат (не throw), чтобы гонку (raceTwo) и
+  // последовательный фолбэк можно было разбирать одинаково через applyResult. throw остаётся только
+  // для настоящего обрыва связи (no_network) — тогда пробовать другие модели бессмысленно.
+  async function attempt(model,key){
+    const url='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key);
+    let resp;
+    try{resp=await fetchWithTimeout(url,{method:'POST',headers:{'Content-Type':'application/json'},body:bodyFor(model)},timeoutForModel(model));}
+    catch(e){
+      if(e&&e.name==='AbortError')return {kind:'timeout'};
+      throw new Error('no_network');
+    }
+    if(resp.status===429){
+      let rd=null;try{rd=parseRetryDelay(await resp.json());}catch(e){}
+      return {kind:'429',retryDelay:rd};
+    }
+    if(resp.status===503||resp.status===502)return {kind:'503'};
+    if(resp.status===400)return {kind:'400'};
+    if(resp.status===403)return {kind:'403'};
+    if(resp.status===404)return {kind:'404',model:model};
+    if(!resp.ok)return {kind:'http',status:resp.status};
+    const data=await resp.json();
+    const rp=(((data.candidates||[])[0]||{}).content||{}).parts||[];
+    const txt=rp.map(p=>p.text||'').join('\n').replace(/```[a-z]*\n?/gi,'').trim();
+    if(!txt)return {kind:'empty'};
+    return {kind:'ok',txt:txt,pen:ocrPenalty(txt)};
+  }
+  // no_network тоже приходит результатом (не исключением) — нужно для гонки, где нельзя ловить
+  // throw из двух параллельных промисов по отдельности.
+  function attemptSafe(model,key){
+    return attempt(model,key).catch(function(e){return {kind:'fatal',error:e};});
+  }
+  // Настоящая гонка: как только ОДНА из двух моделей даёт идеальный ответ (pen=0) — отдаём его сразу,
+  // не дожидаясь второй (в этом и есть выигрыш в скорости на «грязном» фото). Если обе неидеальны —
+  // ждём обе и отдаём пару на разбор вызывающему коду. Обрыв связи у любой — тоже не ждём вторую.
+  function raceTwo(pA,pB){
+    return new Promise(function(resolve){
+      let settled=false,pending=2;const last={a:null,b:null};
+      function onResult(slot,r){
+        last[slot]=r;pending--;
+        if(settled)return;
+        if(r.kind==='ok'&&r.pen===0){settled=true;resolve({early:r});return;}
+        if(r.kind==='fatal'){settled=true;resolve({fatal:r.error});return;}
+        if(pending===0){settled=true;resolve({a:last.a,b:last.b});}
+      }
+      pA.then(function(r){onResult('a',r);});
+      pB.then(function(r){onResult('b',r);});
+    });
+  }
+  let lastErr='all_models_failed',best=null,retrySec=null;
+  // Разбирает структурированный результат в lastErr/best/retrySec; true = идеальный ответ, можно
+  // возвращать немедленно. rateLimited — объект-обёртка {v}, т.к. примитив по ссылке не поменять.
+  function applyResult(r,rateLimited){
+    if(!r)return false;
+    if(r.kind==='ok'){
+      if(!best||r.pen<best.pen)best={txt:r.txt,pen:r.pen};
+      lastErr='lowquality_'+r.pen;
+      return r.pen===0;
+    }
+    if(r.kind==='429'){
+      lastErr='429_ratelimit';rateLimited.v=true;
+      if(r.retryDelay!=null&&(retrySec==null||r.retryDelay<retrySec))retrySec=r.retryDelay;
+    }
+    else if(r.kind==='503')lastErr='503_unavailable';
+    else if(r.kind==='400')lastErr='400_badkey';
+    else if(r.kind==='403')lastErr='403_forbidden';
+    else if(r.kind==='404')lastErr='404_'+r.model;
+    else if(r.kind==='timeout')lastErr='ai_timeout';
+    else if(r.kind==='http')lastErr='http_'+r.status;
+    else if(r.kind==='empty')lastErr='empty_response';
+    return false;
+  }
+  // До 2 проходов. Внутри прохода — каждый ключ: PRIMARY_MODEL один раз (дешёвый по квоте, RPD 500),
+  // затем — только если не идеально — гонка RACE_MODELS параллельно, затем SEQUENTIAL_MODELS по очереди
+  // (обе группы тесные по квоте, RPD 20 — трогаем их только на «грязном» фото). Если ВЕСЬ проход
+  // упёрся в 429 — смотрим retryDelay: ≤15 с → поминутный RPM, ждём ровно столько и повторяем; >15 с
+  // или поля нет → вероятно суточный RPD, долгая пауза бессмысленна (короткий фолбэк).
+  const FALLBACK_STAGES=1+SEQUENTIAL_MODELS.length;   // гонка считается одним этапом + по одному на каждую seq-модель
   for(let pass=0;pass<2;pass++){
-    let rateLimited=false;
+    const rateLimited={v:false};
     for(const key of keys){
-      for(const model of AI_MODELS){
-        const url='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key);
-        let resp;
-        try{resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:bodyFor(model)});}
-        catch(e){throw new Error('no_network');}
-        if(resp.status===429){
-          lastErr='429_ratelimit';rateLimited=true;
-          let rd=null;try{rd=parseRetryDelay(await resp.json());}catch(e){}
-          if(rd!=null&&(retrySec==null||rd<retrySec))retrySec=rd;   // берём минимальную подсказку по всем моделям/ключам
-          continue;
-        }
-        if(resp.status===503||resp.status===502){lastErr='503_unavailable';continue;}
-        if(resp.status===400){lastErr='400_badkey';continue;}
-        if(resp.status===403){lastErr='403_forbidden';continue;}
-        if(resp.status===404){lastErr='404_'+model;continue;}
-        if(!resp.ok){lastErr='http_'+resp.status;continue;}
-        const data=await resp.json();
-        const rp=(((data.candidates||[])[0]||{}).content||{}).parts||[];
-        const txt=rp.map(p=>p.text||'').join('\n').replace(/```[a-z]*\n?/gi,'').trim();
-        if(!txt){lastErr='empty_response';continue;}
-        const pen=ocrPenalty(txt);
-        if(pen===0)return txt;                            // 0 дублей И сумма Qty == Total coli — берём сразу
-        if(!best||pen<best.pen)best={txt:txt,pen:pen};    // битый: запомнить наименее битый и пробовать др. модель/ключ
-        lastErr='lowquality_'+pen;
+      if(onProgress)onProgress('primary');
+      const r0=await attemptSafe(PRIMARY_MODEL,key);
+      if(r0.kind==='fatal')throw r0.error;
+      if(applyResult(r0,rateLimited))return best.txt;
+
+      if(onProgress)onProgress('race',{i:1,n:FALLBACK_STAGES});
+      const raced=await raceTwo(attemptSafe(RACE_MODELS[0],key),attemptSafe(RACE_MODELS[1],key));
+      if(raced.fatal)throw raced.fatal;
+      let perfect=false;
+      if(raced.early)perfect=applyResult(raced.early,rateLimited);
+      else{applyResult(raced.a,rateLimited);applyResult(raced.b,rateLimited);}
+      if(perfect)return best.txt;
+      for(let i=0;i<SEQUENTIAL_MODELS.length;i++){
+        if(onProgress)onProgress('fallback',{i:i+2,n:FALLBACK_STAGES});
+        const r=await attemptSafe(SEQUENTIAL_MODELS[i],key);
+        if(r.kind==='fatal')throw r.error;
+        if(applyResult(r,rateLimited))return best.txt;
       }
     }
     if(best)return best.txt;          // получили хоть какой-то ответ — отдаём (приложение покажет при битом)
-    if(!rateLimited)throw new Error(lastErr);   // упали не из-за лимита — повтор бессмыслен
+    if(!rateLimited.v)throw new Error(lastErr);   // упали не из-за лимита — повтор бессмыслен
     if(pass===0){
       // retryDelay ≤15 с → поминутный RPM, ждём ровно столько (+0.5 с запас). Иначе вероятно суточный RPD — короткий фолбэк ~4 с.
       const wait=(retrySec!=null&&retrySec<=15)?(retrySec*1000+500):4000;
+      if(onProgress)onProgress('wait',{s:Math.ceil(wait/1000)});
       await sleep(wait);
     }
   }
@@ -1843,7 +1988,7 @@ async function runAI(){
   if(ocrBusy||!photoQ.length)return;
   const keys=aiKeys();
   if(!keys.length){showOcrErr(t('ocrNoKey'));return;}
-  ocrBusy=true;$('btnScanAI').disabled=true;$('btnPhoto').disabled=true;
+  ocrBusy=true;$('btnScanAI').disabled=true;$('btnPhotoCam').disabled=true;$('btnPhotoFiles').disabled=true;
   keepAwake();   // экран не гаснет пока AI читает лист (главный экран, inWork=false)
   const st=$('ocrStatus');st.hidden=false;
   try{
@@ -1852,13 +1997,20 @@ async function runAI(){
     const b64=encodeCanvases(canvases);   // один toDataURL на фото: и для счётчика МБ, и для запроса
     const bytes=b64.reduce(function(s,d){return s+Math.round(d.length*0.75);},0);
     st.textContent=tpl('ocrReading',{n:canvases.length,mb:(bytes/1048576).toFixed(1)});
-    const txt=await aiRecognizeAll(canvases,keys,b64);
+    const txt=await aiRecognizeAll(canvases,keys,b64,function(stage,p){
+      if(stage==='primary')st.textContent=tpl('ocrReading',{n:canvases.length,mb:(bytes/1048576).toFixed(1)});
+      else if(stage==='race'||stage==='fallback')st.textContent=tpl('ocrTrying',{i:p.i,n:p.n});
+      else if(stage==='wait')st.textContent=tpl('ocrWaiting',{s:p.s});
+    });
     $('raw').value=txt;st.hidden=true;
     clearQueue();doParse();
+    if(!$('btnStart').hidden)try{$('btnStart').scrollIntoView({behavior:'smooth',block:'center'});}catch(e){}
   }catch(err){
     const c=err.message||'';
     let msg;
     if(c==='no_network')msg=t('ocrNoNet');
+    else if(c==='photo_timeout')msg=t('photoTimeout');
+    else if(c==='ai_timeout')msg=t('ocrTimeout');
     else if(c==='503_unavailable')msg=t('ocr503');
     else if(c==='429_ratelimit')msg=t('ocr429');
     else if(c==='400_badkey')msg=t('ocr400');
@@ -1866,7 +2018,7 @@ async function runAI(){
     else msg=tpl('ocrErr',{c:c});
     showOcrErr(msg);   // фото остаются в очереди
   }
-  ocrBusy=false;$('btnScanAI').disabled=false;$('btnPhoto').disabled=false;
+  ocrBusy=false;$('btnScanAI').disabled=false;$('btnPhotoCam').disabled=false;$('btnPhotoFiles').disabled=false;
 }
 
 /* ================= ЭКРАН 1: ПАРСЕР ================= */
@@ -1961,8 +2113,8 @@ window.addEventListener('popstate',function(){
 
 /* ================= UI НАСТРОЕК ================= */
 function updateModeUI(){
-  // Щелчки AirPods — единственный режим управления; держим тихий аудио-канал живым.
-  if(pod&&settings.pod&&inWork)pod.play().catch(function(){});
+  // Щелчки AirPods работают и вне работы (скан/старт/раскладка) — держим тихий аудио-канал живым всегда.
+  if(pod&&settings.pod)pod.play().catch(function(){});
 }
 function applySettingsToUI(){
   $('rate').value=settings.rate;$('rateVal').textContent=settings.rate.toFixed(2).replace(/0$/,'')+'×';
@@ -1973,8 +2125,10 @@ function applySettingsToUI(){
 }
 
 /* ================= ПРИВЯЗКА ================= */
-$('btnPhoto').addEventListener('click',function(){$('photoInput').click();});
-$('photoInput').addEventListener('change',function(e){addPhotos(e.target.files);e.target.value='';});
+$('btnPhotoCam').addEventListener('click',function(){$('photoInputCam').click();});
+$('btnPhotoFiles').addEventListener('click',function(){$('photoInputFiles').click();});
+$('photoInputCam').addEventListener('change',function(e){addPhotos(e.target.files);e.target.value='';});
+$('photoInputFiles').addEventListener('change',function(e){addPhotos(e.target.files);e.target.value='';});
 $('btnScanAI').addEventListener('click',runAI);
 $('btnKey').addEventListener('click',function(){
   const v=prompt(t('aiKeyPrompt'),aiKeys().join(', '));
@@ -2539,22 +2693,46 @@ document.addEventListener('gestureend',function(e){e.preventDefault();},{passive
 // надёжнее gesture-событий: глушим любой жест двумя+ пальцами (зум проходил во время скролла)
 document.addEventListener('touchmove',function(e){if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
 
-// PWA иконка — canvas, добавляется при загрузке → iOS берёт при Add to Home Screen
+// Иконка бренда — canvas, любой размер. Метка «локация» (pin) с вырезанной галочкой внутри головки —
+// pin = loc (главная сущность приложения, важнее артикула — см. историю проекта), галочка = «взял».
+// Используется и для PWA (Add to Home Screen), и как artwork в MediaMetadata (лок-скрин/AirPods-виджет).
+// iOS сама маскирует углы под сквиркл — фон рисуем ПОЛНЫМ квадратом, без ручного скругления.
+function pickerIconDataURL(size){
+  const cv=document.createElement('canvas');
+  cv.width=cv.height=size;const cx=cv.getContext('2d');
+  // фон: насыщенный диагональный градиент + мягкий блик сверху-слева (премиальная глубина)
+  const gr=cx.createLinearGradient(0,0,size,size);
+  gr.addColorStop(0,'#42ea86');gr.addColorStop(.55,'#22c06a');gr.addColorStop(1,'#128a4c');
+  cx.fillStyle=gr;cx.fillRect(0,0,size,size);
+  const hi=cx.createRadialGradient(size*.28,size*.22,0,size*.28,size*.22,size*.55);
+  hi.addColorStop(0,'rgba(255,255,255,.24)');hi.addColorStop(1,'rgba(255,255,255,0)');
+  cx.fillStyle=hi;cx.fillRect(0,0,size,size);
+  // pin: круглая головка + треугольный хвост тем же заливом — бесшовно сливаются в каплю
+  const pcx=size*.5,headY=size*.4,r=size*.2,tipY=size*.78;
+  cx.save();
+  cx.shadowColor='rgba(0,0,0,.35)';cx.shadowBlur=size*.05;cx.shadowOffsetY=size*.025;
+  cx.fillStyle='#fff';
+  cx.beginPath();cx.arc(pcx,headY,r,0,Math.PI*2);cx.fill();
+  cx.beginPath();
+  cx.moveTo(pcx-r*.866,headY+r*.5);cx.lineTo(pcx+r*.866,headY+r*.5);cx.lineTo(pcx,tipY);cx.closePath();
+  cx.fill();
+  cx.restore();
+  // галочка «взял» — вырезаем прозрачностью через головку pin, сквозь неё виден зелёный фон
+  cx.save();
+  cx.globalCompositeOperation='destination-out';
+  cx.strokeStyle='#000';cx.lineWidth=size*.055;cx.lineCap='round';cx.lineJoin='round';
+  cx.beginPath();
+  cx.moveTo(pcx-r*.42,headY+r*.03);cx.lineTo(pcx-r*.12,headY+r*.33);cx.lineTo(pcx+r*.48,headY-r*.35);
+  cx.stroke();
+  cx.restore();
+  return cv.toDataURL('image/png');
+}
+let PICKER_ARTWORK=null;
+try{PICKER_ARTWORK=pickerIconDataURL(512);}catch(e){}
 (function(){
   try{
-    const cv=document.createElement('canvas');
-    cv.width=cv.height=180;const cx=cv.getContext('2d');
-    const gr=cx.createLinearGradient(0,0,180,180);
-    gr.addColorStop(0,'#35e078');gr.addColorStop(1,'#1aa856');
-    cx.fillStyle=gr;cx.fillRect(0,0,180,180);
-    cx.fillStyle='rgba(0,0,0,.12)';
-    cx.beginPath();cx.arc(148,38,78,0,Math.PI*2);cx.fill();
-    cx.fillStyle='#fff';
-    cx.font='bold 108px -apple-system,BlinkMacSystemFont,sans-serif';
-    cx.textAlign='center';cx.textBaseline='middle';
-    cx.fillText('P',90,96);
     const lk=document.createElement('link');
-    lk.rel='apple-touch-icon';lk.href=cv.toDataURL('image/png');
+    lk.rel='apple-touch-icon';lk.href=pickerIconDataURL(180);
     document.head.appendChild(lk);
   }catch(e){}
 })();
