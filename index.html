@@ -516,7 +516,7 @@ body.work .card{background:linear-gradient(180deg,#0c1118,#06090d);border-color:
   <div class="hdr">
     <div class="brand">
       <div class="logo"><svg class="ic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
-      <div class="brand-tx"><h1>Picker <span class="ver">v3.23</span></h1><p class="sub tagline" data-i18n="tagline">Pick-by-voice · личный прототип</p></div>
+      <div class="brand-tx"><h1>Picker <span class="ver">v3.24</span></h1><p class="sub tagline" data-i18n="tagline">Pick-by-voice · личный прототип</p></div>
     </div>
     <div class="lang" id="langSel">
       <button data-lang="ru">RU</button>
@@ -1130,6 +1130,7 @@ let repeatTimer=null;
 let manualQty={};
 let layoutHold=false;     // открыта «Раскладка»: мик/озвучка/эко на паузе
 let summaryHold=false;   // открыт «Итог»: озвучка/мик/эко на паузе
+let logHold=false;       // открыт «Журнал смены»: озвучка/мик/эко на паузе (был пропущен — баг v3.23)
 let partialHold=false;   // открыт ввод «Меньше»: эко/автоповтор на паузе
 let renderedIdx=-1;      // для анимации смены позиции
 let photoQ=[];           // очередь фото: {file,url}
@@ -1190,7 +1191,7 @@ function foldItems(raw){
   return out;
 }
 let scanStore=null;
-let sessionLogged=false;   // текущий лист уже записан в журнал смены (авто на «Закончить лист»)
+let sessionLogId=null;   // id записи журнала ТЕКУЩЕГО листа (null = ещё не залогирован в этой сессии)
 function detectStore(raw){
   const m=normalizeScan(raw).match(/store\s*(?:number|nr)?[^0-9]{0,12}(\d{3,5})\b/i);
   return m?m[1]:null;
@@ -1443,7 +1444,13 @@ function finish(force){
   const taken=items.filter(i=>i.taken);
   const partial=items.filter(i=>i.taken&&i.actualQty!=null);
   const sum=taken.reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
-  if(!sessionLogged){sessionLogged=true;if(scanStore)logAddAuto(scanStore,sum);}
+  if(scanStore)logSyncSession(scanStore,sum);
+  // patch logId в уже сохранённую сессию (saveSession() выше уже отработал ДО того, как logSyncSession
+  // обновил sessionLogId) — иначе «Продолжить» после закрытия приложения не найдёт свою запись журнала.
+  try{
+    const raw=localStorage.getItem(SES_KEY);
+    if(raw){const s=JSON.parse(raw);s.logId=sessionLogId;localStorage.setItem(SES_KEY,JSON.stringify(s));}
+  }catch(e){}
   if(!$('logModal').hidden)updateLogCurrent();
   const exp=parseInt($('expTotal').value,10);
   let check='';
@@ -1524,7 +1531,7 @@ function saveSession(){
   if(!inWork)return;
   try{
     localStorage.setItem(SES_KEY,JSON.stringify({
-      v:1,items:items,idx:idx,exp:$('expTotal').value,store:scanStore,ts:Date.now()
+      v:1,items:items,idx:idx,exp:$('expTotal').value,store:scanStore,ts:Date.now(),logId:sessionLogId
     }));
   }catch(e){}
 }
@@ -1541,6 +1548,7 @@ function checkSavedSession(){
     items=s.items;idx=Math.min(s.idx,items.length-1);
     if(s.exp)$('expTotal').value=s.exp;
     if(s.store)scanStore=s.store;
+    sessionLogId=s.logId||null;   // без этого «Продолжить» после закрытия приложения плодит дубль в журнале
     $('resumeBar').hidden=true;
     startWork(true);   // true = не сбрасывать прогресс
   };
@@ -1615,27 +1623,38 @@ function registerPodHandlers(){
     navigator.mediaSession.setActionHandler('previoustrack',function(){stemAction('third');});
   }catch(e){}
 }
-// Экран блокировки/лок-скрин AirPods-виджета: название — статично «Picker», artist — живая
-// локация+кол-во текущей позиции (обновляется на каждый render() во время пика), картинка — иконка
-// приложения (PICKER_ARTWORK, генерится canvas'ом ниже). Порядок виджетов на лок-скрине относительно
-// системных (таймер и т.п.) и других медиа-приложений — вне контроля веб-страницы, это решает iOS.
+// Экран блокировки/лок-скрин AirPods-виджета: макет самого виджета целиком рисует iOS, веб-странице
+// доступны только поля title/artist/album/artwork (MediaSession API) — ни размер карточки, ни доп.
+// строки текста не настраиваются кодом. Тап по обложке разворачивает системный крупный плеер (не наш
+// код — сам iOS), где artwork рендерится намного крупнее, чем на компактном виджете — поэтому в
+// картинку теперь зашиты И локация, И количество, не только qty. Во время пика: title статично
+// «Picker», artist — loc×qty (дублирует картинку текстом — на компактном виджете он надёжнее мелкой
+// картинки), album — позиция N/M. Вне работы — статичная брендовая иконка (PICKER_ARTWORK).
 function updateMediaMeta(){
   if(!('mediaSession'in navigator))return;
   try{
-    let artist='';
+    let artist='',album='',artwork=PICKER_ARTWORK;
     if(inWork&&items[idx]){
       const it=items[idx];
       const q=it.actualQty!=null?it.actualQty:(it.qty!=null?it.qty:'?');
       artist=locDisp(it.loc)+' × '+q;
+      album=(idx+1)+' / '+items.length;
+      try{artwork=pickerQtyArtworkDataURL(512,locDisp(it.loc),'× '+q);}catch(e){}
     }
     navigator.mediaSession.metadata=new MediaMetadata({
-      title:'Picker',artist:artist,
-      artwork:PICKER_ARTWORK?[{src:PICKER_ARTWORK,sizes:'512x512',type:'image/png'}]:[]
+      title:'Picker',artist:artist,album:album,
+      artwork:artwork?[{src:artwork,sizes:'512x512',type:'image/png'}]:[]
     });
   }catch(e){}
 }
 function stemAction(kind){
   const now=Date.now();if(now<podGuard)return;podGuard=now+300;
+  // Долгая TTS-озвучка (напр. итог листа на finish()) занимает аудио-канал и может не отпустить
+  // «тихий» pod обратно iOS — если щёлкнули посреди неё, обрываем речь и явно оживляем канал,
+  // иначе клик по кнопке вне работы (напр. «Новый лист») может потеряться.
+  if(ttsSpeaking){try{speechSynthesis.cancel();}catch(e){}ttsSpeaking=false;}
+  if(pod&&pod.paused&&settings.pod)pod.play().catch(function(){});
+  if(logHold)return;   // журнал открыт (в работе или поверх др. экрана) — щелчки не должны его пробивать
   if(!inWork)return stemOutOfWork(kind);
   if(layoutHold||summaryHold)return;
   if(kind==='third'){if(paused)resumeWork();else pauseWork();return;}  // 3 клика
@@ -1684,7 +1703,7 @@ document.addEventListener('pointerdown',function(){
   else if(pod.paused)pod.play().catch(function(){});
 });
 setInterval(function(){
-  if(inWork&&!paused&&!summaryHold&&!layoutHold&&!partialHold&&settings.eco&&!ecoShown&&Date.now()-lastTouch>Math.max(5,settings.ecoSec||20)*1000)showEco();
+  if(inWork&&!paused&&!summaryHold&&!layoutHold&&!logHold&&!partialHold&&settings.eco&&!ecoShown&&Date.now()-lastTouch>Math.max(5,settings.ecoSec||20)*1000)showEco();
 },3000);
 function showEco(){
   if(!items.length)return;
@@ -2096,7 +2115,7 @@ function startWork(resume){
   if(!resume){
     idx=0;
     items.forEach(function(i){i.taken=false;i.actualQty=null;});
-    sessionLogged=false;
+    sessionLogId=null;
   }
   paused=false;inWork=true;lastTouch=Date.now();
   document.body.classList.add('work');
@@ -2330,6 +2349,7 @@ function todayStr(){const d=new Date(),p=function(n){return(n<10?'0':'')+n;};ret
 const META_KEY='picker_shiftmeta_v1';
 function loadMeta(){try{return JSON.parse(localStorage.getItem(META_KEY)||'{}')||{};}catch(e){return{};}}
 function saveMeta(){try{localStorage.setItem(META_KEY,JSON.stringify({name:$('logName').value,from:$('logFrom').value,to:$('logTo').value,start:$('logStart').value,brk:$('logBreak').value,reason:$('logReason').value}));}catch(e){}}
+function newLogId(){return Date.now()+'_'+Math.random().toString(36).slice(2,7);}
 /* Добавление заказа с защитой от СЛУЧАЙНОГО дубля.
    Тот же butik + то же кол-во уже есть → спрашиваем (вдруг это другой заказ
    под тем же номером: chilled на одной палете + dry на другой). Никогда не
@@ -2342,25 +2362,45 @@ function logAddEntry(store,coli){
   if(dup){
     if(!confirm(tpl('jDup',{st:(store||'—'),co:(isNaN(co)?'?':co)})))return false;
   }
-  shiftLog.push({store:store,coli:isNaN(co)?null:co,t:Date.now()});
+  shiftLog.push({id:newLogId(),store:store,coli:isNaN(co)?null:co,t:Date.now()});
   if(!saveLog()){alert(t('jSaveFail'));}
   renderLog();
   try{beep(660,50);setTimeout(function(){beep(990,70);},70);}catch(e){}
   return true;
 }
-/* Тихая авто-запись при «Закончить лист»: без confirm() — если точь-в-точь такая
-   запись уже есть, просто не дублируем (ручной ＋ в журнале всё ещё может добавить дубль). */
-function logAddAuto(store,coli){
+/* Синхронизация записи журнала для ТЕКУЩЕГО листа при «Закончить лист» — вызывается
+   КАЖДЫЙ раз (не один раз за сессию!), поэтому корректно переживает: (1) «Вернуться
+   к листу» → довзял/поменял кол-во → «Закончить лист» снова — обновляет ТУ ЖЕ запись
+   по id, а не молчит и не плодит дубль; (2) запись вручную удалили из журнала, потом
+   вернулись к листу и закончили снова — id не находится → заводим новую запись (не
+   теряем заказ молча). Без confirm() — это тихий авто-учёт, не ручной ввод. */
+function logSyncSession(store,coli){
   store=String(store==null?'':store).trim();
   const co=parseInt(coli,10);
-  if(!store&&isNaN(co))return false;
+  if(!store&&isNaN(co))return;
+  if(sessionLogId!=null){
+    const i=shiftLog.findIndex(function(e){return e.id===sessionLogId;});
+    if(i>=0){
+      shiftLog[i].store=store;shiftLog[i].coli=isNaN(co)?null:co;
+      if(!saveLog())alert(t('jSaveFail'));
+      return;
+    }
+    // запись пропала (удалена вручную из журнала) — заведём новую ниже, sessionLogId перезапишется
+  }
   const dup=shiftLog.some(function(e){return String(e.store)===store&&(parseInt(e.coli,10)||null)===(isNaN(co)?null:co);});
-  if(dup)return false;
-  shiftLog.push({store:store,coli:isNaN(co)?null:co,t:Date.now()});
+  if(dup)return;   // точно такая же запись уже есть от чего-то другого — не дублируем молча
+  const id=newLogId();
+  shiftLog.push({id:id,store:store,coli:isNaN(co)?null:co,t:Date.now()});
+  sessionLogId=id;
   if(!saveLog())alert(t('jSaveFail'));
-  return true;
 }
 function openLog(store,coli){
+  // как «Итог»: журнал — сверка, не часть пика. Озвучка/автоповтор/эко на паузе, щелчки AirPods
+  // не должны переключать позиции поверх открытого журнала (баг v3.23 — logHold отсутствовал).
+  logHold=true;clearTimeout(repeatTimer);
+  try{if(window.speechSynthesis)speechSynthesis.cancel();}catch(e){}
+  curUtter=null;ttsSpeaking=false;
+  hideEco();
   const meta=loadMeta();
   $('logName').value=meta.name||'';
   $('logFrom').value=meta.from||'';
@@ -2374,9 +2414,14 @@ function openLog(store,coli){
   renderLog();
   $('logModal').hidden=false;
 }
+function closeLog(){
+  $('logModal').hidden=true;
+  logHold=false;
+  if(inWork&&!paused)sayItem();   // журнал закрыт поверх работы — переозвучим текущую позицию
+}
 $('btnLog').addEventListener('click',function(){openLog(null,null);});
 $('storeTxt').addEventListener('click',function(){openLog(null,null);});
-$('logClose').addEventListener('click',function(){$('logModal').hidden=true;});
+$('logClose').addEventListener('click',closeLog);
 /* авто-двоеточие: на numpad нет «:», поэтому ставим сами после 2 цифр */
 function fmtTimeInput(el){
   const d=el.value.replace(/\D/g,'').slice(0,4);
@@ -2676,6 +2721,16 @@ document.addEventListener('touchmove',function(e){
   if(e.target.closest&&e.target.closest('#layoutListWrap'))return;
   e.preventDefault();
 },{passive:false});
+// Та же защита для журнала/помощи/итога: без неё фон (соседний экран) может проскроллиться под
+// «фиксированной» модалкой и оказаться видимым/кликабельным сквозь неё на iOS (баг v3.23 — журнал
+// смены полупрозрачно пропускал «Новый лист»/локации позади себя). Каждая из этих модалок сама себе
+// скролл-контейнер — скролл внутри неё разрешён, наружу (в body) — нет.
+document.addEventListener('touchmove',function(e){
+  const openModal=[$('logModal'),$('helpModal'),$('summaryModal')].find(function(m){return m&&!m.hidden;});
+  if(!openModal)return;
+  if(e.target.closest&&e.target.closest('#'+openModal.id))return;
+  e.preventDefault();
+},{passive:false});
 $('locBig').addEventListener('click',function(){if(Date.now()<uiShield)return;beep(660,50);openLayout('edit');});
 
 document.querySelectorAll('#langSel button').forEach(function(b){
@@ -2724,6 +2779,44 @@ function pickerIconDataURL(size){
   cx.beginPath();
   cx.moveTo(pcx-r*.42,headY+r*.03);cx.lineTo(pcx-r*.12,headY+r*.33);cx.lineTo(pcx+r*.48,headY-r*.35);
   cx.stroke();
+  cx.restore();
+  return cv.toDataURL('image/png');
+}
+// Живая карточка для лок-скрина во время пика: локация сверху + крупное количество снизу, вместо
+// мелкого сочетания pin+галочка — на превью виджета (~60-70pt) составной значок нечитаем, а в
+// развёрнутом системном плеере (тап по обложке) картинка большая — обе строки читаются. Тот же
+// фон/блик, что у pickerIconDataURL — единый бренд.
+function pickerQtyArtworkDataURL(size, locText, qtyText){
+  const cv=document.createElement('canvas');
+  cv.width=cv.height=size;const cx=cv.getContext('2d');
+  const gr=cx.createLinearGradient(0,0,size,size);
+  gr.addColorStop(0,'#42ea86');gr.addColorStop(.55,'#22c06a');gr.addColorStop(1,'#128a4c');
+  cx.fillStyle=gr;cx.fillRect(0,0,size,size);
+  const hi=cx.createRadialGradient(size*.28,size*.22,0,size*.28,size*.22,size*.55);
+  hi.addColorStop(0,'rgba(255,255,255,.24)');hi.addColorStop(1,'rgba(255,255,255,0)');
+  cx.fillStyle=hi;cx.fillRect(0,0,size,size);
+  cx.textAlign='center';cx.textBaseline='middle';
+  // локация — верхняя строка, скромнее по размеру
+  cx.save();
+  cx.shadowColor='rgba(0,0,0,.25)';cx.shadowBlur=size*.02;cx.shadowOffsetY=size*.01;
+  cx.fillStyle='rgba(255,255,255,.92)';
+  let lfs=size*.15;
+  cx.font='700 '+Math.round(lfs)+'px -apple-system,BlinkMacSystemFont,sans-serif';
+  while(lfs>size*.08&&cx.measureText(locText).width>size*.86){
+    lfs-=size*.01;cx.font='700 '+Math.round(lfs)+'px -apple-system,BlinkMacSystemFont,sans-serif';
+  }
+  cx.fillText(locText,size*.5,size*.27);
+  cx.restore();
+  // количество — крупная главная строка снизу
+  cx.save();
+  cx.shadowColor='rgba(0,0,0,.3)';cx.shadowBlur=size*.03;cx.shadowOffsetY=size*.015;
+  cx.fillStyle='#fff';
+  let fs=size*.36;
+  cx.font='800 '+Math.round(fs)+'px -apple-system,BlinkMacSystemFont,sans-serif';
+  while(fs>size*.14&&cx.measureText(qtyText).width>size*.86){
+    fs-=size*.02;cx.font='800 '+Math.round(fs)+'px -apple-system,BlinkMacSystemFont,sans-serif';
+  }
+  cx.fillText(qtyText,size*.5,size*.62);
   cx.restore();
   return cv.toDataURL('image/png');
 }
