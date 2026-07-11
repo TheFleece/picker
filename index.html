@@ -516,7 +516,7 @@ body.work .card{background:linear-gradient(180deg,#0c1118,#06090d);border-color:
   <div class="hdr">
     <div class="brand">
       <div class="logo"><svg class="ic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
-      <div class="brand-tx"><h1>Picker <span class="ver">v3.24</span></h1><p class="sub tagline" data-i18n="tagline">Pick-by-voice · личный прототип</p></div>
+      <div class="brand-tx"><h1>Picker <span class="ver">v3.25</span></h1><p class="sub tagline" data-i18n="tagline">Pick-by-voice · личный прототип</p></div>
     </div>
     <div class="lang" id="langSel">
       <button data-lang="ru">RU</button>
@@ -1633,17 +1633,20 @@ function registerPodHandlers(){
 function updateMediaMeta(){
   if(!('mediaSession'in navigator))return;
   try{
-    let artist='',album='',artwork=PICKER_ARTWORK;
+    let artist='',album='';
     if(inWork&&items[idx]){
       const it=items[idx];
       const q=it.actualQty!=null?it.actualQty:(it.qty!=null?it.qty:'?');
       artist=locDisp(it.loc)+' × '+q;
       album=(idx+1)+' / '+items.length;
-      try{artwork=pickerQtyArtworkDataURL(512,locDisp(it.loc),'× '+q);}catch(e){}
     }
+    // artwork — ВСЕГДА статичная PICKER_ARTWORK, не перегенерируется на каждый render(). Пробовали
+    // печь loc/qty прямо в картинку (v3.24) — похоже, частая смена artwork data URI на каждую
+    // позицию сбивала iOS (разворот в крупный плеер тапом по обложке стал ненадёжным, текст иногда
+    // не показывался). loc×qty и так есть текстом в artist/album — картинка того не стоит.
     navigator.mediaSession.metadata=new MediaMetadata({
       title:'Picker',artist:artist,album:album,
-      artwork:artwork?[{src:artwork,sizes:'512x512',type:'image/png'}]:[]
+      artwork:PICKER_ARTWORK?[{src:PICKER_ARTWORK,sizes:'512x512',type:'image/png'}]:[]
     });
   }catch(e){}
 }
@@ -2239,10 +2242,19 @@ function saveLog(){
   catch(e){return false;}
 }
 function logSum(){return shiftLog.reduce(function(s,e){return s+(parseInt(e.coli,10)||0);},0);}
+// id записи ТЕКУЩЕГО заказа, если он ещё «в процессе» (лист открыт resume-ом после finish()) —
+// её значение в shiftLog УСТАРЕЛО (обновится только на следующий finish()), поэтому в живых
+// суммах/списке она заменяется на liveCurrentColi(), а не считается вместе с ним (иначе двойной
+// счёт — баг v3.24: «Вернуться к листу» → заказ виден и как «в процессе», и как уже завершённый).
+function currentSessionEntryId(){return(inWork&&sessionLogId!=null)?sessionLogId:null;}
+function logSumExcludingCurrent(){
+  const skip=currentSessionEntryId();
+  return shiftLog.reduce(function(s,e){return(skip!=null&&e.id===skip)?s:s+(parseInt(e.coli,10)||0);},0);
+}
 function pickedSum(){return items.filter(function(i){return i.taken;}).reduce(function(s,i){return s+(i.actualQty!=null?i.actualQty:(i.qty||0));},0);}
-/* Заказ в процессе (ещё не в журнале) — его коли учитываются в общем итоге живьём */
+/* Заказ в процессе (ещё не синхронизирован повторным finish()) — его коли учитываются в общем итоге живьём */
 function liveCurrentColi(){return(inWork&&items.length)?pickedSum():0;}
-function totalWithCurrent(){return logSum()+liveCurrentColi();}
+function totalWithCurrent(){return logSumExcludingCurrent()+liveCurrentColi();}
 /* ЧЧ:ММ → число в стиле сводки лидера (минуты как сотые: 23:45 → 23.45) */
 function timeDec(v){
   v=String(v||'').trim().replace(/[.,]/,':');
@@ -2313,11 +2325,16 @@ function updateLogCurrent(){
     else{el.hidden=true;}
   }
   const numEl=$('logSummary');
-  if(numEl){numEl.textContent=logSum()+live;numEl.classList.toggle('pulsing',live>0);}
+  if(numEl){numEl.textContent=logSumExcludingCurrent()+live;numEl.classList.toggle('pulsing',live>0);}
 }
 function renderLog(){
   updateLogCurrent();
-  $('logOrders').textContent=t('ordersColon')+' '+shiftLog.length;
+  // Заказ «в процессе» уже виден жёлтой строкой сверху (updateLogCurrent) — не дублируем его
+  // ещё раз как обычную строку таблицы «завершённых» заказов, пока лист не закрыт по-настоящему.
+  const skipId=currentSessionEntryId();
+  const visibleIdx=[];
+  shiftLog.forEach(function(e,i){if(skipId==null||e.id!==skipId)visibleIdx.push(i);});
+  $('logOrders').textContent=t('ordersColon')+' '+visibleIdx.length;
   updateBonus();
   const box=$('logList');
   if(!shiftLog.length){
@@ -2329,8 +2346,13 @@ function renderLog(){
     if(rb)rb.addEventListener('click',function(){shiftLog=lastClearedLog.slice();lastClearedLog=null;if(!saveLog())alert(t('jSaveFail2'));renderLog();try{beep(760,60);}catch(e){}});
     return;
   }
+  if(!visibleIdx.length){
+    box.innerHTML='<div class="log-empty">'+t('jEmpty')+'</div>';
+    return;
+  }
   let h='';
-  shiftLog.forEach(function(e,i){
+  visibleIdx.forEach(function(i){
+    const e=shiftLog[i];
     h+='<div class="tr"><span class="bk">'+escHtml(e.store||'—')+'</span><span class="co">'+(e.coli!=null?e.coli:'?')+'</span><span class="del"><button data-i="'+i+'">×</button></span></div>';
   });
   box.innerHTML=h;
@@ -2779,44 +2801,6 @@ function pickerIconDataURL(size){
   cx.beginPath();
   cx.moveTo(pcx-r*.42,headY+r*.03);cx.lineTo(pcx-r*.12,headY+r*.33);cx.lineTo(pcx+r*.48,headY-r*.35);
   cx.stroke();
-  cx.restore();
-  return cv.toDataURL('image/png');
-}
-// Живая карточка для лок-скрина во время пика: локация сверху + крупное количество снизу, вместо
-// мелкого сочетания pin+галочка — на превью виджета (~60-70pt) составной значок нечитаем, а в
-// развёрнутом системном плеере (тап по обложке) картинка большая — обе строки читаются. Тот же
-// фон/блик, что у pickerIconDataURL — единый бренд.
-function pickerQtyArtworkDataURL(size, locText, qtyText){
-  const cv=document.createElement('canvas');
-  cv.width=cv.height=size;const cx=cv.getContext('2d');
-  const gr=cx.createLinearGradient(0,0,size,size);
-  gr.addColorStop(0,'#42ea86');gr.addColorStop(.55,'#22c06a');gr.addColorStop(1,'#128a4c');
-  cx.fillStyle=gr;cx.fillRect(0,0,size,size);
-  const hi=cx.createRadialGradient(size*.28,size*.22,0,size*.28,size*.22,size*.55);
-  hi.addColorStop(0,'rgba(255,255,255,.24)');hi.addColorStop(1,'rgba(255,255,255,0)');
-  cx.fillStyle=hi;cx.fillRect(0,0,size,size);
-  cx.textAlign='center';cx.textBaseline='middle';
-  // локация — верхняя строка, скромнее по размеру
-  cx.save();
-  cx.shadowColor='rgba(0,0,0,.25)';cx.shadowBlur=size*.02;cx.shadowOffsetY=size*.01;
-  cx.fillStyle='rgba(255,255,255,.92)';
-  let lfs=size*.15;
-  cx.font='700 '+Math.round(lfs)+'px -apple-system,BlinkMacSystemFont,sans-serif';
-  while(lfs>size*.08&&cx.measureText(locText).width>size*.86){
-    lfs-=size*.01;cx.font='700 '+Math.round(lfs)+'px -apple-system,BlinkMacSystemFont,sans-serif';
-  }
-  cx.fillText(locText,size*.5,size*.27);
-  cx.restore();
-  // количество — крупная главная строка снизу
-  cx.save();
-  cx.shadowColor='rgba(0,0,0,.3)';cx.shadowBlur=size*.03;cx.shadowOffsetY=size*.015;
-  cx.fillStyle='#fff';
-  let fs=size*.36;
-  cx.font='800 '+Math.round(fs)+'px -apple-system,BlinkMacSystemFont,sans-serif';
-  while(fs>size*.14&&cx.measureText(qtyText).width>size*.86){
-    fs-=size*.02;cx.font='800 '+Math.round(fs)+'px -apple-system,BlinkMacSystemFont,sans-serif';
-  }
-  cx.fillText(qtyText,size*.5,size*.62);
   cx.restore();
   return cv.toDataURL('image/png');
 }
