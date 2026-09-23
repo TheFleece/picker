@@ -523,7 +523,7 @@ body.work .card{background:linear-gradient(180deg,#0c1118,#06090d);border-color:
   <div class="hdr">
     <div class="brand">
       <div class="logo"><svg class="ic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
-      <div class="brand-tx"><h1>Picker <span class="ver" id="verPill">v3.27</span></h1><p class="sub tagline" data-i18n="tagline">Pick-by-voice · личный прототип</p></div>
+      <div class="brand-tx"><h1>Picker <span class="ver" id="verPill">v3.28</span></h1><p class="sub tagline" data-i18n="tagline">Pick-by-voice · личный прототип</p></div>
     </div>
     <div class="lang" id="langSel">
       <button data-lang="ru">RU</button>
@@ -1307,7 +1307,12 @@ function itemPhrase(it){
 /* ================= TTS ================= */
 let ruVoice=null, daVoice=null, enVoice=null, ttsSpeaking=false, curUtter=null;
 let ttsGen=0, ttsStartT=null, ttsCancelAt=0, ttsKeep=[], podAfterTts=false, ttsLog=[];
-let podKickAt=0, podYield=false;   // см. pod 'pause' в podToggle()
+// Safari 27+ (iOS 27): pod.play() посреди речи ГЛУШИТ TTS молча — без end/error, speaking остаётся
+// true (диагностика v3.27 на iPhone, 2026-09-23: pod-pause → pod-play → тишина после «локация»).
+// Детектор обрыва такое не ловит, поэтому на 27+ сразу уступаем речи: pod оживает после фразы.
+// Цена: щелчок AirPods, пока звучит фраза, не доходит (iOS не шлёт команды на приглушённый канал).
+function safariMajor(){const m=navigator.userAgent.match(/Version\/(\d+)/);return m?parseInt(m[1],10):0;}
+let podKickAt=0, podYield=safariMajor()>=27;   // см. pod 'pause' в podToggle()
 function pickVoice(){
   const vs=window.speechSynthesis?speechSynthesis.getVoices():[];
   ruVoice=vs.find(v=>/^ru/i.test(v.lang)&&/milena/i.test(v.name))||vs.find(v=>/^ru/i.test(v.lang))||null;
@@ -1325,9 +1330,8 @@ if(window.speechSynthesis){speechSynthesis.onvoiceschanged=pickVoice;pickVoice()
    - фразы очереди говорим цепочкой (следующая — по onend предыдущей), а не пачкой speak();
    - ссылки на utterance держим до конца (GC в Safari рвёт речь и глотает onend);
    - фразу, которую оборвали НЕ мы (error / onend раньше физически возможного), повторяем 1 раз;
-   - тихий pod, который iOS ставит на паузу ради речи, оживляем СРАЗУ — иначе щелчки AirPods
-     не доходят, пока идёт озвучка (регресс v3.26). Если на этом iPhone play() посреди речи
-     режет фразу — один раз это замечаем (podYield) и до перезагрузки уступаем речи. */
+   - тихий pod, который iOS ставит на паузу ради речи: на Safari ≤26 оживляем сразу (щелчки работают
+     и посреди озвучки); на 27+ — только после фразы (podYield, см. ниже), иначе речь глохнет. */
 const TTS_GAP=220;   // мс после реального cancel(), прежде чем говорить новое
 function ttsBusy(){try{return !!(speechSynthesis.speaking||speechSynthesis.pending);}catch(e){return false;}}
 function ttsNote(ev,x){ttsLog.push(new Date().toTimeString().slice(0,8)+' '+ev+(x?' '+x:''));if(ttsLog.length>40)ttsLog.shift();}
