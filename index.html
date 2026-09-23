@@ -327,7 +327,7 @@ body:not(.work)::before{content:'';position:fixed;inset:0;z-index:-1;pointer-eve
 .brand-tx{min-width:0;}
 .brand h1{display:flex;align-items:center;gap:8px;margin:0;font-size:22px;line-height:1.05;letter-spacing:-.3px;}
 .ver{font-size:10.5px;font-weight:800;color:var(--go);background:rgba(45,212,111,.13);
-  border:1px solid rgba(45,212,111,.32);border-radius:7px;padding:2px 7px;letter-spacing:.4px;}
+  border:1px solid rgba(45,212,111,.32);border-radius:7px;padding:2px 7px;letter-spacing:.4px;cursor:pointer;}
 .brand .tagline{margin:3px 0 0;font-size:12px;}
 .copyline{font-size:10.5px;line-height:1.5;margin:11px 2px 16px;opacity:.5;color:var(--dim);}
 .copyline a{color:var(--dim);text-decoration:underline;}
@@ -363,6 +363,13 @@ body:not(.work)::before{content:'';position:fixed;inset:0;z-index:-1;pointer-eve
 .totline input{width:88px;font-size:18px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;
   background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px;}
 .totline .hint{flex-basis:100%;margin-top:0;}
+/* — Butik № (обязателен для старта): need — не нашёлся в скане, err — нажали СТАРТ без него — */
+.totline.req>span:first-child::after{content:' *';color:var(--bad);}
+.totline.need,.totline.need input{border-color:var(--warn);}
+.totline.err,.totline.err input{border-color:var(--bad);}
+.field-err{flex-basis:100%;display:flex;gap:6px;align-items:flex-start;font-size:13.5px;font-weight:600;line-height:1.35;color:var(--warn);}
+.totline.err .field-err{color:var(--bad);}
+.field-err .ic{flex:none;margin-top:1px;}
 
 /* — «Ввести вручную» (disclosure) — */
 .adv{margin-top:13px;border:1px solid var(--line2);border-radius:var(--r);background:var(--card2);overflow:hidden;}
@@ -516,7 +523,7 @@ body.work .card{background:linear-gradient(180deg,#0c1118,#06090d);border-color:
   <div class="hdr">
     <div class="brand">
       <div class="logo"><svg class="ic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
-      <div class="brand-tx"><h1>Picker <span class="ver">v3.25</span></h1><p class="sub tagline" data-i18n="tagline">Pick-by-voice · личный прототип</p></div>
+      <div class="brand-tx"><h1>Picker <span class="ver" id="verPill">v3.26</span></h1><p class="sub tagline" data-i18n="tagline">Pick-by-voice · личный прототип</p></div>
     </div>
     <div class="lang" id="langSel">
       <button data-lang="ru">RU</button>
@@ -550,6 +557,12 @@ body.work .card{background:linear-gradient(180deg,#0c1118,#06090d);border-color:
   <input type="file" id="photoInputFiles" accept="image/*" multiple hidden>
 
   <div id="parseOut"></div>
+
+  <label class="totline req" id="storeLine"><span data-i18n="storeLabel">Butik №:</span>
+    <input type="text" id="storeNo" inputmode="numeric" pattern="[0-9]*" maxlength="5" autocomplete="off" aria-required="true" aria-describedby="storeErr">
+    <span class="hint" id="storeHint" data-i18n="storeHint">(из скана; не нашёлся — впиши сам)</span>
+    <span class="field-err" id="storeErr" role="alert" hidden></span>
+  </label>
 
   <label class="totline"><span data-i18n="totalLabel">Total coli с листа:</span>
     <input type="number" id="expTotal" inputmode="numeric">
@@ -845,6 +858,10 @@ aiNotSet:'Распознавание не настроено. Нажми «Кл�
 rawPh:'Текст с фото — или вставь вручную',
 parseBtn:'Распознать лист', manualTitle:'Ввести вручную',
 totalLabel:'Total coli с листа:', totalHint:'(заполнится само, если попало в скан)',
+storeLabel:'Butik №:', storeHint:'(из скана; не нашёлся — впиши сам)',
+storeMissing:'Butik не найден в скане — впиши номер вручную.',
+storeNeed:'Без номера butik старт невозможен — впиши 3–5 цифр.',
+ttsNeedStore:'Впиши номер бутика на экране.', ttsDiagTitle:'Диагностика озвучки',
 help:'Помощь', aiKey:'Ключ', clear:'Очистить', shiftLog:'Журнал смены', start:'СТАРТ',
 copyPrompt:'Копировать промт', copied:'Скопировано ✓',
 copyPromptHint:'Запасной вариант при ошибке 429: скопируй промт, вставь полученный текст листа в поле ниже и нажми «Распознать лист».',
@@ -933,6 +950,10 @@ aiNotSet:'Recognition not set up. Tap «Key» and paste a free key from <b>aistu
 rawPh:'Text from the photo — or paste manually',
 parseBtn:'Parse the list', manualTitle:'Manual entry',
 totalLabel:'Total coli from sheet:', totalHint:'(fills in automatically if scanned)',
+storeLabel:'Store no.:', storeHint:'(from the scan; missing — type it in)',
+storeMissing:'Store number not found in the scan — type it in.',
+storeNeed:'Can’t start without a store number — enter 3–5 digits.',
+ttsNeedStore:'Enter the store number on the screen.', ttsDiagTitle:'Voice diagnostics',
 help:'Help', aiKey:'Key', clear:'Clear', shiftLog:'Shift log', start:'START',
 copyPrompt:'Copy prompt', copied:'Copied ✓',
 copyPromptHint:'Backup when error 429 hits: copy the prompt, paste the resulting list text in the field below, then «Parse the list».',
@@ -1021,6 +1042,10 @@ aiNotSet:'Genkendelse ikke konfigureret. Tryk «Nøgle» og indsæt en gratis n�
 rawPh:'Tekst fra foto — eller indsæt manuelt',
 parseBtn:'Analysér listen', manualTitle:'Indtast manuelt',
 totalLabel:'Total coli fra listen:', totalHint:'(udfyldes automatisk hvis scannet)',
+storeLabel:'Butik nr.:', storeHint:'(fra scanningen; mangler — skriv det selv)',
+storeMissing:'Butiksnummer ikke fundet i scanningen — skriv det ind.',
+storeNeed:'Kan ikke starte uden butiksnummer — skriv 3–5 cifre.',
+ttsNeedStore:'Skriv butiksnummeret på skærmen.', ttsDiagTitle:'Tale-diagnostik',
 help:'Hjælp', aiKey:'Nøgle', clear:'Ryd', shiftLog:'Vagtlog', start:'START',
 copyPrompt:'Kopiér prompt', copied:'Kopieret ✓',
 copyPromptHint:'Backup ved fejl 429: kopiér prompten, indsæt den modtagne listetekst i feltet nedenfor, derefter «Analysér listen».',
@@ -1111,6 +1136,7 @@ function applyLang(){
   try{updateAiState();}catch(e){}
   try{renderQueue();}catch(e){}
   try{if(items&&items.length&&$('scrSetup')&&!$('scrSetup').hidden)renderParse();}catch(e){}
+  try{paintStore();}catch(e){}
   try{if(inWork)render();}catch(e){}
   try{if(!$('logModal').hidden)renderLog();}catch(e){}
   try{if(!$('layoutModal').hidden)renderLayout();}catch(e){}
@@ -1192,6 +1218,33 @@ function foldItems(raw){
 }
 let scanStore=null;
 let sessionLogId=null;   // id записи журнала ТЕКУЩЕГО листа (null = ещё не залогирован в этой сессии)
+/* Butik № — обязателен для старта (без него лист не попадает в журнал смены). Скан заполняет поле сам;
+   не нашёлся — правится прямо в поле, без правки текста листа и повторного «Распознать». */
+let storeManual=false;   // номер вписан руками — перескан его не затирает (до «Очистить»/нового листа)
+let storeErrKey='';      // '' | 'storeMissing' (нет в скане) | 'storeNeed' (СТАРТ без номера / неполный)
+function validStore(s){return /^\d{3,5}$/.test(String(s||''));}
+function setStore(v){
+  v=String(v||'').replace(/\D/g,'').slice(0,5);
+  $('storeNo').value=v;
+  scanStore=validStore(v)?v:null;
+}
+function paintStore(){
+  const key=scanStore?'':storeErrKey,er=$('storeErr');
+  $('storeLine').classList.toggle('need',key==='storeMissing');
+  $('storeLine').classList.toggle('err',key==='storeNeed');
+  $('storeHint').hidden=!!key;
+  er.hidden=!key;
+  er.innerHTML=key?ic('alert',15)+'<span>'+escHtml(t(key))+'</span>':'';
+}
+function requireStore(){
+  if(scanStore)return true;
+  storeErrKey='storeNeed';paintStore();
+  beep(300,140);                 // низкий «нет»
+  speak(t('ttsNeedStore'));      // руки/AirPods — голосом объясняем, почему старт не пошёл
+  try{$('storeNo').focus({preventScroll:true});}catch(e){}
+  try{$('storeLine').scrollIntoView({behavior:'smooth',block:'center'});}catch(e){}
+  return false;
+}
 function detectStore(raw){
   const m=normalizeScan(raw).match(/store\s*(?:number|nr)?[^0-9]{0,12}(\d{3,5})\b/i);
   return m?m[1]:null;
@@ -1251,8 +1304,9 @@ function itemPhrase(it){
   return tpl('ttsLoc',{loc:loc})+' '+q;
 }
 
-/* ================= TTS (полудуплекс с микрофоном) ================= */
+/* ================= TTS ================= */
 let ruVoice=null, daVoice=null, enVoice=null, ttsSpeaking=false, curUtter=null;
+let ttsGen=0, ttsStartT=null, ttsCancelAt=0, ttsKeep=[], podAfterTts=false, ttsLog=[];
 function pickVoice(){
   const vs=window.speechSynthesis?speechSynthesis.getVoices():[];
   ruVoice=vs.find(v=>/^ru/i.test(v.lang)&&/milena/i.test(v.name))||vs.find(v=>/^ru/i.test(v.lang))||null;
@@ -1262,38 +1316,93 @@ function pickVoice(){
 function ttsVoice(){return lang==='da'?{v:daVoice,c:'da-DK'}:lang==='en'?{v:enVoice,c:'en-US'}:{v:ruVoice,c:'ru-RU'};}
 if(window.speechSynthesis){speechSynthesis.onvoiceschanged=pickVoice;pickVoice();}
 
-function speak(text){
-  if(!window.speechSynthesis)return;
-  // Полный дуплекс: мик слушает ПОВЕРХ озвучки. AirPods в телефонном профиле
-  // сами вырезают эхо, а озвучка не содержит командных слов («взять», не «взял»).
-  speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);
-  curUtter=u;
-  var vc=ttsVoice();u.lang=vc.c;if(vc.v)u.voice=vc.v;
-  u.rate=parseFloat($('rate').value)||1.1;
-  ttsSpeaking=true;
-  const done=function(){
-    if(curUtter!==u)return;       // отменили — это уже не наша озвучка
-    ttsSpeaking=false;
-  };
-  u.onend=done;u.onerror=done;
-  // страховка: iOS иногда глотает onend
-  const est=Math.min(15000,1200+text.length*70);
-  setTimeout(function(){if(curUtter===u&&ttsSpeaking)ttsSpeaking=false;},est);
-  setTimeout(function(){speechSynthesis.speak(u);},60);
-  scheduleRepeat();
+/* После iOS 27 фразы стали обрываться («локаци…»). Safari 27 поменял семантику speechSynthesis.cancel()
+   (WebKit 46151521: cancel() больше не выкидывает speak(), вызванные ПОСЛЕ него) — наиболее вероятно,
+   старая схема «cancel() на КАЖДУЮ фразу → speak() через 60 мс» теперь ловит запоздалый стоп уже
+   в новой реплике. На устройстве не воспроизведено — поэтому лечим все известные причины сразу:
+   - cancel() только если что-то реально звучит, и после него пауза, пока движок не затихнет;
+   - фразы очереди говорим цепочкой (следующая — по onend предыдущей), а не пачкой speak();
+   - ссылки на utterance держим до конца (GC в Safari рвёт речь и глотает onend);
+   - фразу, которую оборвали НЕ мы (error / onend раньше физически возможного), повторяем 1 раз;
+   - тихий pod не дёргаем play() посреди речи — iOS мог сам поставить его на паузу ради TTS,
+     а мгновенный play() отбирал аудио-сессию и резал фразу. Оживляем его после конца речи. */
+const TTS_GAP=220;   // мс после реального cancel(), прежде чем говорить новое
+function ttsBusy(){try{return !!(speechSynthesis.speaking||speechSynthesis.pending);}catch(e){return false;}}
+function ttsNote(ev,x){ttsLog.push(new Date().toTimeString().slice(0,8)+' '+ev+(x?' '+x:''));if(ttsLog.length>40)ttsLog.shift();}
+function ttsDone(){
+  ttsSpeaking=false;
+  if(podAfterTts){podAfterTts=false;if(pod&&pod.paused&&settings.pod)pod.play().catch(function(){});}
 }
-function speakSeq(arr){
-  if(!window.speechSynthesis)return;
-  speechSynthesis.cancel();curUtter=null;ttsSpeaking=false;
-  setTimeout(function(){
-    arr.forEach(function(t){
-      const u=new SpeechSynthesisUtterance(t);
-      var vc=ttsVoice();u.lang=vc.c;if(vc.v)u.voice=vc.v;
-      u.rate=parseFloat($('rate').value)||1.1;
-      speechSynthesis.speak(u);
-    });
-  },60);
+function ttsStop(){
+  clearTimeout(ttsStartT);ttsStartT=null;
+  const live=!!curUtter&&ttsSpeaking;   // speak() уже вызван (а не просто ждём паузу перед ним)
+  ttsGen++;curUtter=null;
+  if(window.speechSynthesis&&(live||ttsBusy())){
+    try{speechSynthesis.cancel();}catch(e){}
+    ttsCancelAt=Date.now();ttsNote('cancel');
+  }
+  ttsKeep=[];ttsDone();
+}
+function ttsMake(text,da,rate,plain){
+  const u=new SpeechSynthesisUtterance(text);
+  if(da){if(daVoice&&!plain){u.voice=daVoice;u.lang=daVoice.lang;}else u.lang='da-DK';}
+  else{const vc=ttsVoice();u.lang=vc.c;if(vc.v&&!plain)u.voice=vc.v;}
+  u.rate=rate;
+  return u;
+}
+// parts — фразы подряд; opt.da — датский голос (названия товаров), opt.rate — своя скорость
+function ttsSay(parts,opt){
+  if(!window.speechSynthesis||!parts.length)return;
+  opt=opt||{};
+  ttsStop();
+  const gen=ttsGen,rate=opt.rate||parseFloat($('rate').value)||1.1;
+  let i=0,retry=0,plain=false;
+  ttsSpeaking=true;
+  function part(){
+    if(gen!==ttsGen)return;
+    if(i>=parts.length){ttsKeep=[];ttsDone();return;}
+    const text=parts[i],u=ttsMake(text,opt.da,rate,plain);
+    curUtter=u;ttsKeep.push(u);
+    const at=Date.now(),minMs=text.length*22/rate;   // быстрее этого фраза физически не звучит
+    let began=0,fin=false;
+    function end(e,byGuard){
+      if(fin||gen!==ttsGen||curUtter!==u)return;   // отменили мы сами — не наше дело
+      fin=true;clearTimeout(guard);
+      const ms=Date.now()-(began||at),err=e&&e.error;
+      ttsNote(err?'error':'end',(err||'')+' '+ms+'ms/'+text.length);
+      if(!byGuard&&retry<1&&err!=='not-allowed'&&(err||ms<minMs)){
+        retry++;
+        if(err==='voice-unavailable'||err==='language-unavailable')plain=true;   // голос пропал после апдейта iOS
+        ttsNote('retry');
+        ttsStartT=setTimeout(part,TTS_GAP);return;
+      }
+      retry=0;i++;part();
+    }
+    u.onstart=function(){began=Date.now();ttsNote('start',text.length+'ch');};
+    u.onend=function(){end(null);};
+    u.onerror=function(e){end(e||{error:'?'});};
+    // страховка: iOS иногда глотает onend — не даём очереди/флагу зависнуть
+    const guard=setTimeout(function(){end(null,true);},Math.min(20000,1500+text.length*90/rate));
+    try{speechSynthesis.speak(u);}catch(e){end({error:'throw'});}
+  }
+  // после реального cancel() ждём, пока движок затихнет (≤700 мс), иначе стоп прилетит в новую фразу
+  const t0=Date.now();
+  (function kick(){
+    if(gen!==ttsGen)return;
+    const gap=ttsCancelAt+TTS_GAP-Date.now();
+    if(gap>0){ttsStartT=setTimeout(kick,gap);return;}
+    if(ttsBusy()&&Date.now()-t0<700){ttsStartT=setTimeout(kick,40);return;}
+    part();
+  })();
+}
+function speak(text){ttsSay([text]);scheduleRepeat();}
+function speakSeq(arr){ttsSay(arr);}
+// Диагностика озвучки: тап по пилюле версии — последние события TTS (для разбора сбоев на новых iOS)
+function ttsDiag(){
+  const vc=ttsVoice(),ua=(navigator.userAgent.match(/OS [\d_]+|Version\/[\d.]+/g)||[]).join(' ');
+  alert(t('ttsDiagTitle')+'\n'+ua+'\n'+'voice: '+(vc.v?vc.v.name+' ('+vc.v.lang+')':'—')+
+    '\nspeaking='+ttsBusy()+' flag='+ttsSpeaking+' pod='+(pod?(pod.paused?'paused':'playing'):'—')+
+    '\n\n'+(ttsLog.slice(-20).join('\n')||'—'));
 }
 
 /* ================= АВТОПОВТОР ================= */
@@ -1312,18 +1421,7 @@ function applyAudioSession(){updateAudio();}
 function speakDesc(){
   const it=items[idx];
   if(!it||!it.desc){speak(t('ttsEmptyDesc'));return;}
-  if(!window.speechSynthesis)return;
-  speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(it.desc);
-  curUtter=u;
-  if(daVoice){u.voice=daVoice;u.lang=daVoice.lang;}else{u.lang='da-DK';}
-  u.rate=1.0;
-  ttsSpeaking=true;
-  const done=function(){if(curUtter!==u)return;ttsSpeaking=false;};
-  u.onend=done;u.onerror=done;
-  setTimeout(function(){if(curUtter===u&&ttsSpeaking)ttsSpeaking=false;},
-    Math.min(12000,1500+it.desc.length*90));
-  setTimeout(function(){speechSynthesis.speak(u);},60);
+  ttsSay([it.desc],{da:true,rate:1.0});
   scheduleRepeat();
 }
 /* ================= ЛОГИКА СБОРКИ ================= */
@@ -1486,8 +1584,7 @@ function showInterimSummary(){
   // сверка с бумагой: озвучка и мик молчат, автоповтор стоит
   summaryHold=true;hidePartial();
   clearTimeout(repeatTimer);
-  try{if(window.speechSynthesis)speechSynthesis.cancel();}catch(e){}
-  curUtter=null;ttsSpeaking=false;
+  ttsStop();
   hideEco();
   const takenN=items.filter(i=>i.taken).length;
   const takenQ=items.filter(i=>i.taken).reduce((s,i)=>s+(i.actualQty!=null?i.actualQty:(i.qty||0)),0);
@@ -1512,8 +1609,7 @@ function pauseWork(){
   if(!inWork)return;
   hidePartial();
   paused=true;clearTimeout(repeatTimer);
-  if(window.speechSynthesis)speechSynthesis.cancel();
-  curUtter=null;ttsSpeaking=false;
+  ttsStop();
   hideEco();updateAudio();
   $('summaryModal').hidden=true;summaryHold=false;
   $('pauseInfo').textContent=t('positionWord')+' '+(idx+1)+' / '+items.length+' · '+locDisp(items[idx].loc);
@@ -1547,7 +1643,7 @@ function checkSavedSession(){
   $('btnResumeSession').onclick=function(){
     items=s.items;idx=Math.min(s.idx,items.length-1);
     if(s.exp)$('expTotal').value=s.exp;
-    if(s.store)scanStore=s.store;
+    if(s.store)setStore(s.store);
     sessionLogId=s.logId||null;   // без этого «Продолжить» после закрытия приложения плодит дубль в журнале
     $('resumeBar').hidden=true;
     startWork(true);   // true = не сбрасывать прогресс
@@ -1615,7 +1711,7 @@ let pod=null,podGuard=0,podIgnorePause=0;
 function registerPodHandlers(){
   if(!('mediaSession'in navigator)||!pod)return;
   try{
-    updateMediaMeta();
+    updateMediaMeta(true);
     navigator.mediaSession.playbackState='playing';
     navigator.mediaSession.setActionHandler('pause',function(){stemAction('take');pod.play();});
     navigator.mediaSession.setActionHandler('play',function(){stemAction('take');pod.play();});
@@ -1630,7 +1726,8 @@ function registerPodHandlers(){
 // картинку теперь зашиты И локация, И количество, не только qty. Во время пика: title статично
 // «Picker», artist — loc×qty (дублирует картинку текстом — на компактном виджете он надёжнее мелкой
 // картинки), album — позиция N/M. Вне работы — статичная брендовая иконка (PICKER_ARTWORK).
-function updateMediaMeta(){
+let metaKey=null;
+function updateMediaMeta(force){
   if(!('mediaSession'in navigator))return;
   try{
     let artist='',album='';
@@ -1640,6 +1737,11 @@ function updateMediaMeta(){
       artist=locDisp(it.loc)+' × '+q;
       album=(idx+1)+' / '+items.length;
     }
+    // render() зовётся и на каждый автоповтор — не пересоздаём Now Playing без изменений:
+    // лишняя смена metadata прямо перед speak() — ещё один повод для iOS дёрнуть аудио-сессию.
+    const key=artist+'|'+album;
+    if(!force&&key===metaKey)return;
+    metaKey=key;
     // artwork — ВСЕГДА статичная PICKER_ARTWORK, не перегенерируется на каждый render(). Пробовали
     // печь loc/qty прямо в картинку (v3.24) — похоже, частая смена artwork data URI на каждую
     // позицию сбивала iOS (разворот в крупный плеер тапом по обложке стал ненадёжным, текст иногда
@@ -1655,7 +1757,7 @@ function stemAction(kind){
   // Долгая TTS-озвучка (напр. итог листа на finish()) занимает аудио-канал и может не отпустить
   // «тихий» pod обратно iOS — если щёлкнули посреди неё, обрываем речь и явно оживляем канал,
   // иначе клик по кнопке вне работы (напр. «Новый лист») может потеряться.
-  if(ttsSpeaking){try{speechSynthesis.cancel();}catch(e){}ttsSpeaking=false;}
+  if(ttsSpeaking)ttsStop();
   if(pod&&pod.paused&&settings.pod)pod.play().catch(function(){});
   if(logHold)return;   // журнал открыт (в работе или поверх др. экрана) — щелчки не должны его пробивать
   if(!inWork)return stemOutOfWork(kind);
@@ -1686,7 +1788,9 @@ async function podToggle(on){
     if(!pod){pod=new Audio(silentWavURL());pod.loop=true;pod.volume=0.01;
       pod.addEventListener('pause',function(){
         if(Date.now()<podIgnorePause)return;          // мы сами поставили на паузу
-        if(settings.pod)pod.play().catch(function(){});   // канал живой на любом экране, не только в работе
+        if(!settings.pod)return;
+        if(ttsSpeaking){podAfterTts=true;return;}     // iOS приглушил канал ради речи — оживим после неё (ttsDone)
+        pod.play().catch(function(){});               // канал живой на любом экране, не только в работе
       });}
     try{await pod.play();}catch(e){
       alert(t('audioFail'));
@@ -2048,11 +2152,14 @@ function doParse(){
   const raw=$('raw').value;
   const det=detectTotal(raw);
   if(det!=null&&!$('expTotal').value)$('expTotal').value=det;
-  scanStore=detectStore(raw);
+  // вписанный руками номер главнее скана; иначе — что нашёл скан (или пусто)
+  if(!(storeManual&&validStore($('storeNo').value)))setStore(detectStore(raw)||'');
+  storeErrKey=scanStore?'':'storeMissing';
   items=foldItems(parseList(raw));
   items.forEach(function(it){if(manualQty[it.loc]!=null){it.qty=manualQty[it.loc];it.conflict=false;}});
   items.sort(function(a,b){return a.loc<b.loc?-1:a.loc>b.loc?1:0;});
   renderParse();
+  paintStore();
 }
 function renderParse(){
   const out=$('parseOut');
@@ -2179,10 +2286,21 @@ $('btnClear').addEventListener('click',function(){
   $('raw').value='';$('parseOut').innerHTML='';$('expTotal').value='';
   $('btnStart').hidden=true;$('ocrStatus').hidden=true;
   items=[];manualQty={};clearQueue();
+  setStore('');storeManual=false;storeErrKey='';paintStore();
 });
 $('btnParse').addEventListener('click',doParse);
 $('expTotal').addEventListener('input',function(){if(items.length)renderParse();});
-$('btnStart').addEventListener('click',function(){openLayout('start');});
+$('storeNo').addEventListener('input',function(){
+  const v=this.value.replace(/\D/g,'').slice(0,5);
+  if(v!==this.value)this.value=v;
+  scanStore=validStore(v)?v:null;storeManual=!!v;
+  if(scanStore&&storeErrKey){storeErrKey='';paintStore();}   // ошибку снимаем сразу, как только номер валиден
+});
+$('storeNo').addEventListener('blur',function(){
+  if(this.value&&!scanStore){storeErrKey='storeNeed';paintStore();}   // неполный номер — говорим на blur, не на каждый символ
+});
+$('btnStart').addEventListener('click',function(){if(requireStore())openLayout('start');});
+$('verPill').addEventListener('click',ttsDiag);
 
 $('btnTake').addEventListener('click',takeBtn);
 $('btnPause').addEventListener('click',pauseWork);
@@ -2420,8 +2538,7 @@ function openLog(store,coli){
   // как «Итог»: журнал — сверка, не часть пика. Озвучка/автоповтор/эко на паузе, щелчки AirPods
   // не должны переключать позиции поверх открытого журнала (баг v3.23 — logHold отсутствовал).
   logHold=true;clearTimeout(repeatTimer);
-  try{if(window.speechSynthesis)speechSynthesis.cancel();}catch(e){}
-  curUtter=null;ttsSpeaking=false;
+  ttsStop();
   hideEco();
   const meta=loadMeta();
   $('logName').value=meta.name||'';
@@ -2542,8 +2659,7 @@ function openLayout(ctx){
     // взятые закреплены, переставляем ТОЛЬКО оставшиеся → прогресс не сбить
     layoutHold=true;
     clearTimeout(repeatTimer);
-    try{if(window.speechSynthesis)speechSynthesis.cancel();}catch(e){}
-    curUtter=null;ttsSpeaking=false;
+    ttsStop();
     hideEco();updateAudio();
     layoutLocked=items.filter(function(i){return i.taken;});
     layoutFree=items.filter(function(i){return !i.taken;});
