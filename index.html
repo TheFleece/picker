@@ -523,7 +523,7 @@ body.work .card{background:linear-gradient(180deg,#0c1118,#06090d);border-color:
   <div class="hdr">
     <div class="brand">
       <div class="logo"><svg class="ic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
-      <div class="brand-tx"><h1>Picker <span class="ver" id="verPill">v3.26</span></h1><p class="sub tagline" data-i18n="tagline">Pick-by-voice · личный прототип</p></div>
+      <div class="brand-tx"><h1>Picker <span class="ver" id="verPill">v3.27</span></h1><p class="sub tagline" data-i18n="tagline">Pick-by-voice · личный прототип</p></div>
     </div>
     <div class="lang" id="langSel">
       <button data-lang="ru">RU</button>
@@ -1307,6 +1307,7 @@ function itemPhrase(it){
 /* ================= TTS ================= */
 let ruVoice=null, daVoice=null, enVoice=null, ttsSpeaking=false, curUtter=null;
 let ttsGen=0, ttsStartT=null, ttsCancelAt=0, ttsKeep=[], podAfterTts=false, ttsLog=[];
+let podKickAt=0, podYield=false;   // см. pod 'pause' в podToggle()
 function pickVoice(){
   const vs=window.speechSynthesis?speechSynthesis.getVoices():[];
   ruVoice=vs.find(v=>/^ru/i.test(v.lang)&&/milena/i.test(v.name))||vs.find(v=>/^ru/i.test(v.lang))||null;
@@ -1324,8 +1325,9 @@ if(window.speechSynthesis){speechSynthesis.onvoiceschanged=pickVoice;pickVoice()
    - фразы очереди говорим цепочкой (следующая — по onend предыдущей), а не пачкой speak();
    - ссылки на utterance держим до конца (GC в Safari рвёт речь и глотает onend);
    - фразу, которую оборвали НЕ мы (error / onend раньше физически возможного), повторяем 1 раз;
-   - тихий pod не дёргаем play() посреди речи — iOS мог сам поставить его на паузу ради TTS,
-     а мгновенный play() отбирал аудио-сессию и резал фразу. Оживляем его после конца речи. */
+   - тихий pod, который iOS ставит на паузу ради речи, оживляем СРАЗУ — иначе щелчки AirPods
+     не доходят, пока идёт озвучка (регресс v3.26). Если на этом iPhone play() посреди речи
+     режет фразу — один раз это замечаем (podYield) и до перезагрузки уступаем речи. */
 const TTS_GAP=220;   // мс после реального cancel(), прежде чем говорить новое
 function ttsBusy(){try{return !!(speechSynthesis.speaking||speechSynthesis.pending);}catch(e){return false;}}
 function ttsNote(ev,x){ttsLog.push(new Date().toTimeString().slice(0,8)+' '+ev+(x?' '+x:''));if(ttsLog.length>40)ttsLog.shift();}
@@ -1370,6 +1372,8 @@ function ttsSay(parts,opt){
       fin=true;clearTimeout(guard);
       const ms=Date.now()-(began||at),err=e&&e.error;
       ttsNote(err?'error':'end',(err||'')+' '+ms+'ms/'+text.length);
+      // фразу оборвало сразу после того, как мы оживили pod, — значит, на этом iPhone они не уживаются
+      if(!byGuard&&!podYield&&podKickAt>=at&&(err||ms<minMs)){podYield=true;ttsNote('pod-yield');}
       if(!byGuard&&retry<1&&err!=='not-allowed'&&(err||ms<minMs)){
         retry++;
         if(err==='voice-unavailable'||err==='language-unavailable')plain=true;   // голос пропал после апдейта iOS
@@ -1401,7 +1405,7 @@ function speakSeq(arr){ttsSay(arr);}
 function ttsDiag(){
   const vc=ttsVoice(),ua=(navigator.userAgent.match(/OS [\d_]+|Version\/[\d.]+/g)||[]).join(' ');
   alert(t('ttsDiagTitle')+'\n'+ua+'\n'+'voice: '+(vc.v?vc.v.name+' ('+vc.v.lang+')':'—')+
-    '\nspeaking='+ttsBusy()+' flag='+ttsSpeaking+' pod='+(pod?(pod.paused?'paused':'playing'):'—')+
+    '\nspeaking='+ttsBusy()+' flag='+ttsSpeaking+' pod='+(pod?(pod.paused?'paused':'playing'):'—')+(podYield?' yield':'')+
     '\n\n'+(ttsLog.slice(-20).join('\n')||'—'));
 }
 
@@ -1753,6 +1757,7 @@ function updateMediaMeta(force){
   }catch(e){}
 }
 function stemAction(kind){
+  ttsNote('click',kind+(ttsSpeaking?' (tts)':''));
   const now=Date.now();if(now<podGuard)return;podGuard=now+300;
   // Долгая TTS-озвучка (напр. итог листа на finish()) занимает аудио-канал и может не отпустить
   // «тихий» pod обратно iOS — если щёлкнули посреди неё, обрываем речь и явно оживляем канал,
@@ -1789,9 +1794,17 @@ async function podToggle(on){
       pod.addEventListener('pause',function(){
         if(Date.now()<podIgnorePause)return;          // мы сами поставили на паузу
         if(!settings.pod)return;
-        if(ttsSpeaking){podAfterTts=true;return;}     // iOS приглушил канал ради речи — оживим после неё (ttsDone)
-        pod.play().catch(function(){});               // канал живой на любом экране, не только в работе
-      });}
+        if(ttsSpeaking){
+          ttsNote('pod-pause');
+          if(podYield){podAfterTts=true;return;}      // речь режется от play() — оживим после неё (ttsDone)
+          const since=Date.now()-podKickAt;podKickAt=Date.now();
+          if(since<400){                              // iOS снова глушит сразу — не пинг-понгуем, ещё раз чуть позже
+            setTimeout(function(){if(pod.paused&&settings.pod)pod.play().catch(function(){});},400);return;
+          }
+        }
+        pod.play().catch(function(){});               // канал живой всегда — щелчки работают и посреди озвучки
+      });
+      pod.addEventListener('playing',function(){if(ttsSpeaking)ttsNote('pod-play');});}
     try{await pod.play();}catch(e){
       alert(t('audioFail'));
       $('podChk').checked=false;settings.pod=false;saveSettings();updateModeUI();return;
